@@ -1,0 +1,27 @@
+{% load i18n %}
+
+{% block subject %}
+    ¡Cuenta activada con éxito!
+{% endblock subject %}
+
+{% block text_body %}
+    Hola {{ user.first_name }},
+    
+    Tu cuenta ha sido activada exitosamente. Ahora puedes iniciar sesión y acceder a todos los servicios de nuestra plataforma.
+    
+    Si no realizaste esta solicitud, por favor ignora este correo.
+    
+    Saludos,  
+    El equipo de {{ site_name }}
+{% endblock text_body %}
+
+{% block html_body %}
+    <p>Hola {{ user.first_name }},</p>
+
+    <p>Tu cuenta ha sido activada exitosamente. Ahora puedes <a href="{{ protocol }}://{{ domain }}/login">iniciar sesión</a> y acceder a todos los servicios de nuestra plataforma.</p>
+
+    <p>Si no realizaste esta solicitud, por favor ignora este correo.</p>
+
+    <p>Saludos,</p>
+    <p><strong>El equipo de {{ site_name }}</strong></p>
+{% endblock html_body %}

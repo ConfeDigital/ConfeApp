@@ -1,0 +1,10 @@
+env/
+venv/
+.DS_Store
+backend/.DS_Store
+backend/backend/.DS_Store
+Pipfile
+Pipfile.lock
+**/migrations
+dump.rdb
+CONFEvenv/

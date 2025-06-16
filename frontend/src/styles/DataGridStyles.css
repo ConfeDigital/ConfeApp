@@ -1,0 +1,59 @@
+/* Remove default border 
+.custom-datagrid .MuiDataGrid-root {
+    border: none;
+  }
+  */
+  /* Remove cell borders */
+  .custom-datagrid .MuiDataGrid-cell {
+    border-bottom: none;
+  }
+
+  .custom-datagrid .name-column--cell {
+    color: var(--mui-customTokens-greenAccent-300)
+  }
+  
+  /* Column headers styling */
+  .custom-datagrid .MuiDataGrid-columnHeaders {
+    background-color: var(--mui-customTokens-blueAccent-700);
+    border-bottom: none;
+  }
+  
+  /* Virtual scroller (background) */
+  .custom-datagrid .MuiDataGrid-virtualScroller {
+    background-color: var(--mui-customTokens-primaryBackground-400);
+  }
+  
+  /* Footer container styling */
+  .custom-datagrid .MuiDataGrid-footerContainer {
+    border-top: none;
+    background-color: var(--mui-customTokens-blueAccent-700);
+  }
+  
+  /* Checkbox styling */
+  .custom-datagrid .MuiCheckbox-root {
+    color: var(--mui-customTokens-greenAccent-200) !important;
+  }
+  
+  /* src/styles/DataGridStyles.css */
+.row-success .MuiDataGrid-cell {
+  background-color: var(--mui-palette-success-light);
+}
+
+.row-warning .MuiDataGrid-cell {
+  background-color: var(--mui-palette-warning-light);
+}
+
+.row-info .MuiDataGrid-cell {
+  background-color: var(--mui-palette-info-light);
+}
+
+.MuiDataGrid-row.inactive-row-opaque {
+  opacity: 0.5 !important;
+  background-color: rgba(240, 240, 240, 0.7) !important;
+}
+
+/* If you want to disable hover effects for inactive rows */
+.MuiDataGrid-row.inactive-row-opaque:hover {
+  background-color: rgba(240, 240, 240, 0.7) !important; /* Keep the background consistent on hover */
+  cursor: default; /* Change cursor if interactions are implied to be disabled */
+}

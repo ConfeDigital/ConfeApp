@@ -1,0 +1,15 @@
+{% load i18n %}
+
+{% block subject %}
+{% blocktrans %}Activación de cuenta en {{ site_name }}{% endblocktrans %}
+{% endblock subject %}
+
+{% block html_body %}
+<p>{% blocktrans %}Gracias por registrarte en {{ site_name }}. Para activar tu cuenta, haz clic en el siguiente enlace:{% endblocktrans %}</p>
+
+<p><a href="{{ protocol }}://{{ domain }}/{{ url|safe }}">{{ protocol }}://{{ domain }}/{{ url|safe }}</a></p>
+
+<p>{% trans "Si no solicitaste este registro, ignora este correo." %}</p>
+
+<p>{% blocktrans %}El equipo de {{ site_name }}{% endblocktrans %}</p>
+{% endblock html_body %}

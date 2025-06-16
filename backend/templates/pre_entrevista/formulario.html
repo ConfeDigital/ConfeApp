@@ -1,0 +1,24 @@
+<h1>{{ form.title }}</h1>
+<p>{{ form.description }}</p>
+
+<form method="post" action="{% url 'submit_response' form.id %}">
+    {% csrf_token %}
+
+    {% for question in questions %}
+        <div>
+            <label>{{ question.question_text }}</label><br>
+
+            {% if question.question_type == 'text' %}
+                <input type="text" name="text_{{ question.id }}">
+            {% elif question.question_type == 'multiple_choice' %}
+                {% for choice in question.choices.all %}
+                    <input type="radio" name="choice_{{ question.id }}" value="{{ choice.id }}">
+                    {{ choice.choice_text }}<br>
+                {% endfor %}
+            {% endif %}
+        </div>
+        <br>
+    {% endfor %}
+
+    <button type="submit">Submit</button>
+</form>
