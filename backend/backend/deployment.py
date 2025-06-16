@@ -1,16 +1,28 @@
-import os 
-from .settings import *
-from .settings import BASE_DIR
+import os
+import logging
+from .settings import * # Importa todo de settings.py
+from .settings import BASE_DIR # Asegura que BASE_DIR esté disponible
 
+logger = logging.getLogger(__name__)
+
+# --- Configuración del Host y CSRF ---
 ALLOWED_HOSTS = [os.environ['WEBSITE_HOSTNAME']]
 CSRF_TRUSTED_ORIGINS = ['https://'+os.environ['WEBSITE_HOSTNAME']]
-DEBUG = False
+DEBUG = False # Crucial para producción
 SECRET_KEY = os.environ['MY_SECRET_KEY']
 
+# Verificar WEBSITE_HOSTNAME (temporalmente para depuración)
+try:
+    hostname_check = os.environ['WEBSITE_HOSTNAME']
+    logger.warning(f"DEBUGGING: WEBSITE_HOSTNAME is: {hostname_check}")
+except KeyError:
+    logger.error("DEBUGGING: WEBSITE_HOSTNAME environment variable not found!")
+
+# --- Middlewares (se mantiene como lo tenías) ---
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # Importante para estáticos
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -19,6 +31,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_auth_adfs.middleware.LoginRequiredMiddleware',
+    'simple_history.middleware.HistoryRequestMiddleware', # Si no lo tienes en general, asegúrate que esté
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -26,7 +39,7 @@ CORS_ALLOWED_ORIGINS = [
     'https://zealous-desert-08853fc0f.6.azurestaticapps.net'
 ]
 
-
+# --- Configuración de Static Files ---
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
@@ -35,27 +48,71 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
+STATIC_ROOT = BASE_DIR / 'staticfiles' # Asegúrate de que esta línea esté activa
 
-# CONNECTION = os.environ['AZURE_POSTGRESQL_CONNECTIONSTRING']
-CONNECTION = os.environ['AZURE_SQL_CONNECTIONSTRING']
-CONNECTION_STR = {pair.split('=')[0]:pair.split('=')[1] for pair in CONNECTION.split(' ')}
+# --- Configuración de la Base de Datos (AZURE SQL con Managed Identity) ---
+# Necesitas estas importaciones para Managed Identity
+from azure.identity import DefaultAzureCredential
+import pyodbc # Necesario para mssql engine
 
-# En deployment.py
+CONNECTION_STRING_RAW = os.environ['AZURE_SQL_CONNECTIONSTRING']
+
+# Parsear la cadena de conexión correctamente
+CONNECTION_PARAMS = {}
+for part in CONNECTION_STRING_RAW.split(';'):
+    if '=' in part:
+        key, value = part.split('=', 1)
+        CONNECTION_PARAMS[key.strip()] = value.strip()
+
+SQL_SERVER_HOST = CONNECTION_PARAMS.get('Server', '').split(',')[0].strip()
+SQL_SERVER_PORT = CONNECTION_PARAMS.get('Port', '1433').strip() # 'Port' puede no estar, usa 1433 por defecto
+SQL_SERVER_DATABASE = CONNECTION_PARAMS.get('Initial Catalog', '').strip() # El nombre de la base de datos es 'Initial Catalog'
+
+# Obtener token de acceso para Managed Identity
+def get_access_token():
+    try:
+        credential = DefaultAzureCredential()
+        # Scope para Azure SQL Database
+        token = credential.get_token("https://database.windows.net/.default")
+        return token.token
+    except Exception as e:
+        logger.error(f"Error getting Azure AD token: {e}")
+        return None
+
+# Función para la conexión de Django con el token
+class AzureSQLDatabaseWrapper:
+    def __init__(self, *args, **kwargs):
+        self.access_token = get_access_token()
+        if not self.access_token:
+            raise Exception("Failed to get Azure AD access token for database connection.")
+        # Elimina las credenciales de usuario/contraseña si las hubiera para usar token
+        kwargs['OPTIONS'] = kwargs.get('OPTIONS', {})
+        kwargs['OPTIONS']['attrs_before'] = {1256: self.access_token} # Atributo para token de acceso de ODBC
+        super().__init__(*args, **kwargs)
+
+# Configuración DATABASES
 DATABASES = {
     "default": {
-        "ENGINE": "mssql", # o 'sqlserver_pyodbc' si usas el paquete django-sqlserver
-        "NAME": CONNECTION_STR['Database'], # Usar 'Database' en lugar de 'dbname'
-        "HOST": CONNECTION_STR['Server'].split(',')[0], # Extraer solo el host, sin el puerto
-        "PORT": CONNECTION_STR['Port'] if 'Port' in CONNECTION_STR else '1433', # El puerto suele ser 1433
-        "USER": CONNECTION_STR['User ID'],
-        "PASSWORD": CONNECTION_STR['Password'],
+        "ENGINE": "mssql", # Usa el backend mssql (requiere django-mssql)
+        "NAME": SQL_SERVER_DATABASE,
+        "HOST": SQL_SERVER_HOST,
+        "PORT": SQL_SERVER_PORT,
+        # 'USER' y 'PASSWORD' NO se especifican para Managed Identity
         "OPTIONS": {
-            "driver": "ODBC Driver 17 for SQL Server", # Asegúrate de que este driver esté disponible en el contenedor de Azure
-        }
+            "driver": "ODBC Driver 17 for SQL Server", # Confirma este driver en App Service
+            "TrustServerCertificate": "yes",
+            "Encrypt": "yes",
+            # 'Connection Timeout': '30', # Puedes añadirlo aquí o confiar en el valor por defecto
+        },
+        # Aquí es donde se inyectará el token de acceso
+        "AUTOCOMMIT": True, # O False si prefieres manejarlo manualmente
+        "ATOMIC_REQUESTS": True, # Recomendado para APIs REST
+        "CLIENT_CLASS": "backend.deployment.AzureSQLDatabaseWrapper", # Ruta a tu clase wrapper
     }
 }
 
-# Redis Cache Configuration for Azure
+
+# --- Configuración de Redis Cache y Channels (se mantiene como lo tenías) ---
 REDISCACHE_HOST = os.environ.get('REDISCACHE_HOST')
 REDISCACHE_PORT = os.environ.get('REDISCACHE_PORT', 6379)
 REDISCACHE_PASSWORD = os.environ.get('REDISCACHE_PASSWORD')
@@ -72,7 +129,6 @@ if REDISCACHE_HOST and REDISCACHE_PASSWORD:
         }
     }
 
-    # Channels Redis Configuration for Azure
     CHANNEL_LAYERS = {
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
@@ -83,7 +139,6 @@ if REDISCACHE_HOST and REDISCACHE_PASSWORD:
         },
     }
 else:
-    # Fallback to in-memory or other default if Redis environment variables are not set
     CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
@@ -96,36 +151,11 @@ else:
         },
     }
 
-# LOGGING = {
-#     'version': 1,
-#     'disable_existing_loggers': False,
-#     'handlers': {
-#         'mail_admins': {
-#             'level': 'ERROR',
-#             'class': 'django.utils.log.AdminEmailHandler',
-#         },
-#     },
-#     'loggers': {
-#         'django': {
-#             'handlers': ['mail_admins'],
-#             'level': 'ERROR',
-#             'propagate': True,
-#         },
-#     },
-# }
+# Asegúrate de que estas variables estén en settings.py o aquí si las usas.
+# AD_TENANT_ID = os.environ.get('TENANT_ID')
+# AD_CLIENT_ID = os.environ.get('CLIENT_ID')
+# AD_CLIENT_SECRET = os.environ.get('CLIENT_SECRET')
 
-
-
-# ADMINS = [("Nick", "YOURMAIL.com")]
-
-# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-# EMAIL_HOST = 'smtp.gmail.com'
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = os.environ.get('EMAIL_USER')
-# EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_PASSWORD')
-# DEFAULT_FROM_EMAIL = 'default from email'
-
-
-
-# STATIC_ROOT = BASE_DIR/'staticfiles'
+# Asegúrate de que AUTH_ADFS en settings.py use variables de entorno si están ahí.
+# Por ejemplo, si client_id, client_secret y tenant_id se definen usando os.getenv en settings.py,
+# esos valores de environment variables deben estar configurados en Azure App Service.
