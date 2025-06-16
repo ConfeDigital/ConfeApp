@@ -22,7 +22,8 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = [
-    'https://kaiuki.com'
+    'https://kaiuki.com',
+    'https://zealous-desert-08853fc0f.6.azurestaticapps.net'
 ]
 
 
