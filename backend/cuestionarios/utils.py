@@ -8,6 +8,8 @@ from tablas_de_equivalencia.utils import get_filtered_and_formatted_puntuaciones
 from io import BytesIO
 from django.http import JsonResponse, HttpResponse
 import re
+import os
+from django.conf import settings
 
 from openpyxl import load_workbook
 from openpyxl.drawing.image import Image as OpenpyxlImage
@@ -228,23 +230,42 @@ def cargar_cuestionarios_desde_excel(ruta_archivo, cuestionario_id):
         logger.error(f"Error al cargar el archivo Excel: {str(e)}")
         return {'status': 'error', 'message': str(e)}
     
-def generar_plantilla_cuestionarios():
+def descargar_plantilla_cuestionario():
+    """
+    Función para descargar la plantilla de precarga de cuestionarios.
+    Retorna un HttpResponse con el archivo Excel o un JsonResponse con error.
+    """
     try:
-        # Ruta al archivo de plantilla
-        file_path = 'cuestionarios/plantillas/plantilla_de_carga_CUESTIONARIOS.xlsx'
+        # Construir la ruta absoluta al archivo
+        template_path = os.path.join(settings.BASE_DIR, 'cuestionarios', 'plantilla', 'Plantilla_cuestionarios_precarga.xlsx')
         
         # Verificar si el archivo existe
-        try:
-            with open(file_path, 'rb') as f:
-                response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-                response['Content-Disposition'] = 'attachment; filename=plantilla_de_carga_CUESTIONARIOS.xlsx'
-                return response
-        except FileNotFoundError:
-            logger.error(f"Archivo no encontrado: {file_path}")
-            return JsonResponse({'error': 'Archivo de plantilla no encontrado'}, status=404)
+        if not os.path.exists(template_path):
+            logger.error(f"Archivo de plantilla no encontrado en: {template_path}")
+            return JsonResponse({
+                'error': 'Archivo de plantilla no encontrado',
+                'detalle': 'La plantilla no está disponible en el servidor'
+            }, status=404)
+
+        # Leer el archivo
+        with open(template_path, 'rb') as excel_file:
+            response = HttpResponse(
+                excel_file.read(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            
+            # Configurar los headers para la descarga
+            response['Content-Disposition'] = 'attachment; filename=Plantilla_cuestionarios_precarga.xlsx'
+            response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+            
+            return response
+
     except Exception as e:
-        logger.error(f"Error al generar la plantilla: {str(e)}")
-        return JsonResponse({'error': 'Error al generar la plantilla'}, status=500)
+        logger.error(f"Error al procesar la plantilla: {str(e)}")
+        return JsonResponse({
+            'error': 'Error al procesar la plantilla',
+            'detalle': str(e)
+        }, status=500)
 
 def get_resumen_sis(usuario_id=None):
     """

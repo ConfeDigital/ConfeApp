@@ -41,7 +41,14 @@ from .serializers import (
     RespuestaSISSerializer, ResumenSISSerializer, 
 )
 
-from .utils import cargar_cuestionarios_desde_excel, evaluar_rango, generar_plantilla_cuestionarios, get_resumen_sis, get_user_evaluation_summary, validar_columnas_excel
+from .utils import (
+    cargar_cuestionarios_desde_excel,
+    evaluar_rango,
+    descargar_plantilla_cuestionario,
+    get_resumen_sis,
+    get_user_evaluation_summary,
+    validar_columnas_excel
+)
 
 
 class CuestionarioSeleccion(APIView):
@@ -209,8 +216,6 @@ def validar_columnas_excel_view(request):
         resultado_validacion = validar_columnas_excel(ruta_archivo)
         return JsonResponse(resultado_validacion)
 
-    return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
-
 
 
 @csrf_exempt
@@ -231,9 +236,13 @@ def upload_excel(request):
 
 class DescargarPlantillaCuestionarios(APIView):
     permission_classes = [permissions.AllowAny]
+    
     def get(self, request, *args, **kwargs):
-        permission_classes = [permissions.AllowAny]
-        return generar_plantilla_cuestionarios()
+        """
+        Endpoint para descargar la plantilla de precarga de cuestionarios.
+        Retorna el archivo Excel o un mensaje de error.
+        """
+        return descargar_plantilla_cuestionario()
 
 
 class UsuarioRespuestasView(APIView):
