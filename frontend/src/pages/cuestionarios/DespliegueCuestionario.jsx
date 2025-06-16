@@ -342,19 +342,55 @@ function DespliegueCuestionario({
 
   // Función para obtener el texto de la respuesta
   const obtenerRespuestaTexto = (respuesta) => {
-    if (respuesta.tipo_pregunta === "checkbox") {
-      return respuesta.respuesta.map((opcion) => opcion.texto).join(", ");
-    } else if (respuesta.tipo_pregunta === "sis") {
-      return JSON.stringify(respuesta.respuesta);
-    } else if (
-      respuesta.tipo_pregunta === "multiple" ||
-      respuesta.tipo_pregunta === "dropdown"
-    ) {
-      return respuesta.respuesta.texto;
-    } else if (respuesta.respuesta) {
-      return respuesta.respuesta;
-    } else {
+    try {
+      // Si no hay respuesta, retornar "Sin respuesta"
+      if (!respuesta.respuesta) {
+        return "Sin respuesta";
+      }
+
+      // Si es un string directo, retornarlo
+      if (typeof respuesta.respuesta === "string") {
+        return respuesta.respuesta;
+      }
+
+      // Si es un objeto JSON (parseado)
+      if (typeof respuesta.respuesta === "object") {
+        // Para respuestas tipo checkbox
+        if (respuesta.tipo_pregunta === "checkbox") {
+          return Array.isArray(respuesta.respuesta)
+            ? respuesta.respuesta.map((opcion) => opcion.texto).join(", ")
+            : "Sin respuesta";
+        }
+
+        // Para respuestas tipo SIS
+        if (respuesta.tipo_pregunta === "sis") {
+          return JSON.stringify(respuesta.respuesta);
+        }
+
+        // Para respuestas tipo multiple o dropdown
+        if (
+          respuesta.tipo_pregunta === "multiple" ||
+          respuesta.tipo_pregunta === "dropdown"
+        ) {
+          return respuesta.respuesta.texto || "Sin respuesta";
+        }
+
+        // Para otros tipos de respuestas con texto
+        if (respuesta.respuesta.texto) {
+          return respuesta.respuesta.texto;
+        }
+      }
+
+      // Si es un array
+      if (Array.isArray(respuesta.respuesta)) {
+        return respuesta.respuesta.join(", ");
+      }
+
+      // Si no se pudo procesar la respuesta
       return "Sin respuesta";
+    } catch (error) {
+      console.error("Error al procesar respuesta:", error);
+      return "Error al procesar la respuesta";
     }
   };
 
@@ -514,79 +550,99 @@ function DespliegueCuestionario({
                     },
                   }}
                 >
-                  {respuestasCuestionarioFinalizado.map((respuesta, idx) => (
-                    <React.Fragment key={idx}>
-                      <ListItem
-                        sx={{
-                          mb: 2,
-                          pb: 2,
-                          borderRadius: 3,
-                          background: "#fff",
-                          boxShadow: 1,
-                          transition: "box-shadow 0.2s, background 0.2s",
-                          "&:hover": {
-                            background: "#f1f5fb",
-                            boxShadow: 3,
-                          },
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "flex-start",
-                        }}
-                      >
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", mb: 1 }}
+                  {respuestasCuestionarioFinalizado
+                    .filter((respuesta) => {
+                      const respuestaTexto = obtenerRespuestaTexto(respuesta);
+                      return (
+                        respuestaTexto &&
+                        respuestaTexto !== "Sin respuesta" &&
+                        respuestaTexto !== "Error al procesar la respuesta"
+                      );
+                    })
+                    .map((respuesta, idx) => (
+                      <React.Fragment key={idx}>
+                        <ListItem
+                          sx={{
+                            mb: 2,
+                            pb: 2,
+                            borderRadius: 3,
+                            background: "#fff",
+                            boxShadow: 1,
+                            transition: "box-shadow 0.2s, background 0.2s",
+                            "&:hover": {
+                              background: "#f1f5fb",
+                              boxShadow: 3,
+                            },
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                          }}
                         >
                           <Box
                             sx={{
-                              minWidth: 32,
-                              minHeight: 32,
-                              bgcolor: "primary.light",
-                              color: "primary.main",
-                              fontWeight: "bold",
-                              borderRadius: "50%",
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "center",
-                              mr: 2,
-                              fontSize: "1.1rem",
-                              boxShadow: 1,
+                              mb: 1,
                             }}
                           >
-                            {idx + 1}
+                            <Box
+                              sx={{
+                                minWidth: 32,
+                                minHeight: 32,
+                                bgcolor: "primary.light",
+                                color: "primary.main",
+                                fontWeight: "bold",
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                mr: 2,
+                                fontSize: "1.1rem",
+                                boxShadow: 1,
+                              }}
+                            >
+                              {idx + 1}
+                            </Box>
+                            <Typography
+                              variant="subtitle1"
+                              sx={{
+                                fontWeight: "bold",
+                                color: "#1a237e",
+                                fontSize: { xs: "1rem", sm: "1.1rem" },
+                              }}
+                            >
+                              {respuesta.pregunta_texto}
+                            </Typography>
                           </Box>
                           <Typography
-                            variant="subtitle1"
+                            variant="body2"
                             sx={{
-                              fontWeight: "bold",
-                              color: "#1a237e",
-                              fontSize: { xs: "1rem", sm: "1.1rem" },
+                              backgroundColor: "#f3f6fa",
+                              padding: "10px 14px",
+                              borderRadius: "8px",
+                              width: "100%",
+                              textAlign: "left",
+                              wordWrap: "break-word",
+                              fontSize: { xs: "0.98rem", sm: "1.05rem" },
+                              color: "#374151",
+                              fontFamily: "inherit",
                             }}
                           >
-                            {respuesta.pregunta_texto}
+                            {`Respuesta: ${obtenerRespuestaTexto(respuesta)}`}
                           </Typography>
-                        </Box>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            backgroundColor: "#f3f6fa",
-                            padding: "10px 14px",
-                            borderRadius: "8px",
-                            width: "100%",
-                            textAlign: "left",
-                            wordWrap: "break-word",
-                            fontSize: { xs: "0.98rem", sm: "1.05rem" },
-                            color: "#374151",
-                            fontFamily: "inherit",
-                          }}
-                        >
-                          {`Respuesta: ${obtenerRespuestaTexto(respuesta)}`}
-                        </Typography>
-                      </ListItem>
-                      {idx !== respuestasCuestionarioFinalizado.length - 1 && (
-                        <Divider sx={{ my: 1, width: "100%" }} />
-                      )}
-                    </React.Fragment>
-                  ))}
+                        </ListItem>
+                        {idx !==
+                          respuestasCuestionarioFinalizado.filter((r) => {
+                            const rt = obtenerRespuestaTexto(r);
+                            return (
+                              rt &&
+                              rt !== "Sin respuesta" &&
+                              rt !== "Error al procesar la respuesta"
+                            );
+                          }).length -
+                            1 && <Divider sx={{ my: 1, width: "100%" }} />}
+                      </React.Fragment>
+                    ))}
                 </List>
               )}
             </Paper>
