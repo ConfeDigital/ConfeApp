@@ -40,13 +40,18 @@ STORAGES = {
 CONNECTION = os.environ['AZURE_SQL_CONNECTIONSTRING']
 CONNECTION_STR = {pair.split('=')[0]:pair.split('=')[1] for pair in CONNECTION.split(' ')}
 
+# En deployment.py
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": CONNECTION_STR['dbname'],
-        "HOST": CONNECTION_STR['host'],
-        "USER": CONNECTION_STR['user'],
-        "PASSWORD": CONNECTION_STR['password'],
+        "ENGINE": "mssql", # o 'sqlserver_pyodbc' si usas el paquete django-sqlserver
+        "NAME": CONNECTION_STR['Database'], # Usar 'Database' en lugar de 'dbname'
+        "HOST": CONNECTION_STR['Server'].split(',')[0], # Extraer solo el host, sin el puerto
+        "PORT": CONNECTION_STR['Port'] if 'Port' in CONNECTION_STR else '1433', # El puerto suele ser 1433
+        "USER": CONNECTION_STR['User ID'],
+        "PASSWORD": CONNECTION_STR['Password'],
+        "OPTIONS": {
+            "driver": "ODBC Driver 17 for SQL Server", # Asegúrate de que este driver esté disponible en el contenedor de Azure
+        }
     }
 }
 

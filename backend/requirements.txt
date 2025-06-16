@@ -23,3 +23,4 @@ PyPDF2
 whitenoise
 django-simple-history
 python-pptx
+mssql-django
