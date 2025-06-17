@@ -86,4 +86,4 @@ jobs:
         with:
           inlineScript: |
             az webapp config set --name confe-lin-webapp --resource-group confe-lin-webapp --startup-file "cd backend && ./startup.sh"
-          azcliversion: '2.0.0'
+          azcliversion: '2.55.0'
