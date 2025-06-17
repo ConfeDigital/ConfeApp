@@ -6,7 +6,7 @@ from .settings import BASE_DIR # Asegura que BASE_DIR esté disponible
 logger = logging.getLogger(__name__)
 
 # --- Configuración del Host y CSRF ---
-ALLOWED_HOSTS = [os.environ['WEBSITE_HOSTNAME']]
+ALLOWED_HOSTS = [os.environ['WEBSITE_HOSTNAME'], 'localhost', '127.0.0.1']
 CSRF_TRUSTED_ORIGINS = ['https://'+os.environ['WEBSITE_HOSTNAME']]
 DEBUG = False # Crucial para producción
 SECRET_KEY = os.environ['MY_SECRET_KEY']
@@ -31,7 +31,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django_auth_adfs.middleware.LoginRequiredMiddleware',
-    'simple_history.middleware.HistoryRequestMiddleware', # Si no lo tienes en general, asegúrate que esté
+    'simple_history.middleware.HistoryRequestMiddleware',
 ]
 
 CORS_ALLOWED_ORIGINS = [
@@ -48,12 +48,13 @@ STORAGES = {
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
-STATIC_ROOT = BASE_DIR / 'staticfiles' # Asegúrate de que esta línea esté activa
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = '/static/'
 
 # --- Configuración de la Base de Datos (AZURE SQL con Managed Identity) ---
 # Necesitas estas importaciones para Managed Identity
 from azure.identity import DefaultAzureCredential
-import pyodbc # Necesario para mssql engine
+import pyodbc
 
 CONNECTION_STRING_RAW = os.environ['AZURE_SQL_CONNECTIONSTRING']
 
@@ -65,14 +66,13 @@ for part in CONNECTION_STRING_RAW.split(';'):
         CONNECTION_PARAMS[key.strip()] = value.strip()
 
 SQL_SERVER_HOST = CONNECTION_PARAMS.get('Server', '').split(',')[0].strip()
-SQL_SERVER_PORT = CONNECTION_PARAMS.get('Port', '1433').strip() # 'Port' puede no estar, usa 1433 por defecto
-SQL_SERVER_DATABASE = CONNECTION_PARAMS.get('Initial Catalog', '').strip() # El nombre de la base de datos es 'Initial Catalog'
+SQL_SERVER_PORT = CONNECTION_PARAMS.get('Port', '1433').strip()
+SQL_SERVER_DATABASE = CONNECTION_PARAMS.get('Initial Catalog', '').strip()
 
 # Obtener token de acceso para Managed Identity
 def get_access_token():
     try:
         credential = DefaultAzureCredential()
-        # Scope para Azure SQL Database
         token = credential.get_token("https://database.windows.net/.default")
         return token.token
     except Exception as e:
@@ -85,34 +85,29 @@ class AzureSQLDatabaseWrapper:
         self.access_token = get_access_token()
         if not self.access_token:
             raise Exception("Failed to get Azure AD access token for database connection.")
-        # Elimina las credenciales de usuario/contraseña si las hubiera para usar token
         kwargs['OPTIONS'] = kwargs.get('OPTIONS', {})
-        kwargs['OPTIONS']['attrs_before'] = {1256: self.access_token} # Atributo para token de acceso de ODBC
+        kwargs['OPTIONS']['attrs_before'] = {1256: self.access_token}
         super().__init__(*args, **kwargs)
 
 # Configuración DATABASES
 DATABASES = {
     "default": {
-        "ENGINE": "mssql", # Usa el backend mssql (requiere django-mssql)
+        "ENGINE": "mssql",
         "NAME": SQL_SERVER_DATABASE,
         "HOST": SQL_SERVER_HOST,
         "PORT": SQL_SERVER_PORT,
-        # 'USER' y 'PASSWORD' NO se especifican para Managed Identity
         "OPTIONS": {
-            "driver": "ODBC Driver 17 for SQL Server", # Confirma este driver en App Service
+            "driver": "ODBC Driver 17 for SQL Server",
             "TrustServerCertificate": "yes",
             "Encrypt": "yes",
-            # 'Connection Timeout': '30', # Puedes añadirlo aquí o confiar en el valor por defecto
         },
-        # Aquí es donde se inyectará el token de acceso
-        "AUTOCOMMIT": True, # O False si prefieres manejarlo manualmente
-        "ATOMIC_REQUESTS": True, # Recomendado para APIs REST
-        "CLIENT_CLASS": "backend.deployment.AzureSQLDatabaseWrapper", # Ruta a tu clase wrapper
+        "AUTOCOMMIT": True,
+        "ATOMIC_REQUESTS": True,
+        "CLIENT_CLASS": "backend.deployment.AzureSQLDatabaseWrapper",
     }
 }
 
-
-# --- Configuración de Redis Cache y Channels (se mantiene como lo tenías) ---
+# --- Configuración de Redis Cache y Channels ---
 REDISCACHE_HOST = os.environ.get('REDISCACHE_HOST')
 REDISCACHE_PORT = os.environ.get('REDISCACHE_PORT', 6379)
 REDISCACHE_PASSWORD = os.environ.get('REDISCACHE_PASSWORD')
@@ -150,6 +145,9 @@ else:
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
     }
+
+# --- Configuración de ASGI ---
+ASGI_APPLICATION = "backend.asgi.application"
 
 # Asegúrate de que estas variables estén en settings.py o aquí si las usas.
 # AD_TENANT_ID = os.environ.get('TENANT_ID')

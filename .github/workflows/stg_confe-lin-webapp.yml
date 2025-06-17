@@ -46,6 +46,7 @@ jobs:
       - name: Zip artifact for deployment
         run: |
           cd backend
+          chmod +x startup.sh
           zip release.zip ./* -r
 
       - name: Upload artifact for deployment jobs
@@ -72,7 +73,6 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
 
-      
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
         id: deploy-to-webapp
@@ -80,3 +80,4 @@ jobs:
           app-name: 'confe-lin-webapp'
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9FCFC18F720B4177B65FCAD2F702E3FA }}
+          startup-command: 'cd backend && ./startup.sh'
