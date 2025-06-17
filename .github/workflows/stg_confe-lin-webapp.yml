@@ -80,4 +80,10 @@ jobs:
           app-name: 'confe-lin-webapp'
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9FCFC18F720B4177B65FCAD2F702E3FA }}
-          startup-command: 'cd backend && ./startup.sh'
+
+      - name: 'Configure startup command'
+        uses: azure/cli@v1
+        with:
+          inlineScript: |
+            az webapp config set --name confe-lin-webapp --resource-group confe-lin-webapp --startup-file "cd backend && ./startup.sh"
+          azcliversion: '2.0.0'
