@@ -38,19 +38,21 @@ const Preguntas = ({
   technicalAids,
   chAids,
   esEditable,
+  onQuestionUnlock,
 }) => {
   // Estados principales
   const [respuestas, setRespuestas] = useState({});
   const [unlockedQuestions, setUnlockedQuestions] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  // const [preguntasEditables, setPreguntasEditables] = useState(new Set());
   const [preguntasEditables, setPreguntasEditables] = useState([]);
   const [groupedQuestions, setGroupedQuestions] = useState({});
   const [expandedSection, setExpandedSection] = useState(null);
+  const [preguntasNoRespondidas, setPreguntasNoRespondidas] = useState(
+    new Set()
+  );
   const accordionRefs = useRef({});
   const topRef = useRef(null);
-  // const [subitems, setSubitems] = useState([]);
 
   const navigate = useNavigate();
   // Notificaciones
@@ -142,16 +144,189 @@ const Preguntas = ({
     [cuestionario]
   );
 
+  // Función para determinar si una pregunta debe mostrarse
+  const isQuestionVisible = useCallback(
+    (pregunta) => {
+      // Si la pregunta no tiene desbloqueos recibidos, siempre es visible
+      if (pregunta.desbloqueos_recibidos.length === 0) return true;
+      // Si tiene desbloqueos, solo es visible si está en unlockedQuestions
+      return unlockedQuestions.has(pregunta.id);
+    },
+    [unlockedQuestions]
+  );
+
+  // Función para validar si una respuesta es válida
+  const isRespuestaValida = useCallback((respuesta, tipoPregunta) => {
+    // Validación base para respuestas nulas o indefinidas
+    if (respuesta === undefined || respuesta === null) {
+      return false;
+    }
+
+    // Validaciones específicas por tipo de pregunta
+    switch (tipoPregunta) {
+      case "abierta":
+        // Para preguntas abiertas, el texto no puede estar vacío y debe tener al menos un carácter
+        return typeof respuesta === "string" && respuesta.trim().length > 0;
+
+      case "numero":
+        // Para preguntas numéricas, debe ser un número válido y no estar vacío
+        return (
+          !isNaN(Number(respuesta)) && respuesta !== "" && respuesta !== null
+        );
+
+      case "multiple":
+      case "dropdown":
+        // Para opciones múltiples y dropdown, debe tener un valor seleccionado
+        return (
+          respuesta !== "" && respuesta !== null && respuesta !== undefined
+        );
+
+      case "checkbox":
+        // Para checkbox, debe tener al menos una opción seleccionada
+        return Array.isArray(respuesta) && respuesta.length > 0;
+
+      case "sis":
+      case "sis2":
+        // Para preguntas SIS, debe tener al menos un valor seleccionado
+        return (
+          typeof respuesta === "object" &&
+          respuesta !== null &&
+          Object.keys(respuesta).length > 0
+        );
+
+      case "ed":
+      case "ch":
+        // Para preguntas especiales, debe tener al menos un valor seleccionado
+        return (
+          typeof respuesta === "object" &&
+          respuesta !== null &&
+          Object.keys(respuesta).length > 0
+        );
+
+      case "binaria":
+        // Para preguntas binarias, debe tener un valor seleccionado
+        return respuesta === true || respuesta === false;
+
+      default:
+        // Para otros tipos, validación genérica
+        if (typeof respuesta === "string") {
+          return respuesta.trim().length > 0;
+        }
+        if (Array.isArray(respuesta)) {
+          return respuesta.length > 0;
+        }
+        if (typeof respuesta === "object") {
+          return respuesta !== null && Object.keys(respuesta).length > 0;
+        }
+        return false;
+    }
+  }, []);
+
+  // Efecto para actualizar el contador cuando cambian las respuestas o las preguntas desbloqueadas
+  useEffect(() => {
+    // Obtener todas las preguntas
+    const todasLasPreguntas = Object.values(groupedQuestions).flat();
+
+    // Obtener preguntas no visibles (las que tienen desbloqueos pero no están desbloqueadas)
+    const preguntasNoVisibles = todasLasPreguntas.filter(
+      (p) => p.desbloqueos_recibidos.length > 0 && !unlockedQuestions.has(p.id)
+    );
+
+    // Calcular el total de preguntas a considerar
+    const totalPreguntas =
+      todasLasPreguntas.length -
+      preguntasNoVisibles.length +
+      unlockedQuestions.size;
+
+    // Contar todas las respuestas válidas
+    const respondidas = Object.entries(respuestas).filter(
+      ([preguntaId, respuesta]) => {
+        const pregunta = todasLasPreguntas.find(
+          (p) => p.id === parseInt(preguntaId)
+        );
+        return pregunta && isRespuestaValida(respuesta, pregunta.tipo);
+      }
+    ).length;
+
+    // Logs detallados
+    console.log("=== ESTADO DE PREGUNTAS ===");
+    console.log("Total de preguntas:", todasLasPreguntas.length);
+    console.log("Preguntas no visibles:", preguntasNoVisibles.length);
+    console.log("Preguntas desbloqueadas:", unlockedQuestions.size);
+    console.log("Total a considerar:", totalPreguntas);
+    console.log("Total de respuestas válidas:", respondidas);
+    console.log(
+      "IDs de preguntas desbloqueadas:",
+      Array.from(unlockedQuestions)
+    );
+    console.log("Respuestas actuales:", respuestas);
+    console.log("========================");
+
+    // Notificar al componente padre sobre el cambio en el contador
+    if (onQuestionUnlock) {
+      onQuestionUnlock("counter", {
+        total: totalPreguntas,
+        answered: respondidas,
+      });
+    }
+  }, [
+    unlockedQuestions,
+    respuestas,
+    groupedQuestions,
+    onQuestionUnlock,
+    isRespuestaValida,
+  ]);
+
   // Handler para cambios en respuestas
   const handleRespuestaChange = useCallback(
     debounce(async (preguntaId, respuesta) => {
       try {
+        // Validar la respuesta antes de guardar
+        const preguntaActual = cuestionario.preguntas.find(
+          (p) => p.id === preguntaId
+        );
+
+        // Validación específica para preguntas abiertas
+        if (
+          preguntaActual.tipo === "abierta" &&
+          (!respuesta || respuesta.trim() === "")
+        ) {
+          setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
+          setNotificacion({
+            mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, ingresa un texto.`,
+            tipo: "error",
+          });
+          return;
+        }
+
+        if (!isRespuestaValida(respuesta, preguntaActual.tipo)) {
+          setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
+          setNotificacion({
+            mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, completa la respuesta antes de continuar.`,
+            tipo: "error",
+          });
+          return;
+        }
+
+        // Si la respuesta es válida, remover de preguntas no respondidas
+        setPreguntasNoRespondidas((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(preguntaId);
+          return newSet;
+        });
+
         await api.post("/api/cuestionarios/respuestas/", {
-          usuario,
+          usuario: usuario.id,
           cuestionario: cuestionario.id,
           pregunta: preguntaId,
           respuesta: JSON.stringify(respuesta),
         });
+
+        // Actualizar respuestas locales
+        setRespuestas((prev) => ({
+          ...prev,
+          [preguntaId]: respuesta,
+        }));
 
         // Actualizar preguntas desbloqueadas
         setUnlockedQuestions((prev) => {
@@ -159,17 +334,22 @@ const Preguntas = ({
           const pregunta = cuestionario.preguntas.find(
             (p) => p.id === preguntaId
           );
+
           // Eliminar posibles desbloqueos antiguos
           pregunta?.opciones?.forEach((op) => {
             op.desbloqueos?.forEach((d) =>
               nuevos.delete(d.pregunta_desbloqueada)
             );
           });
+
           // Agregar desbloqueos de la opción seleccionada
           const opcionSeleccionada = pregunta?.opciones?.[respuesta];
-          opcionSeleccionada?.desbloqueos?.forEach((d) =>
-            nuevos.add(d.pregunta_desbloqueada)
-          );
+          if (opcionSeleccionada?.desbloqueos) {
+            opcionSeleccionada.desbloqueos.forEach((d) => {
+              nuevos.add(d.pregunta_desbloqueada);
+            });
+          }
+
           return nuevos;
         });
       } catch (error) {
@@ -180,63 +360,247 @@ const Preguntas = ({
         });
       }
     }, 600),
-    [usuario, cuestionario]
+    [usuario, cuestionario, isRespuestaValida]
   );
 
   // Función para obtener preguntas visibles que no tienen respuesta
   const getUnansweredQuestions = () => {
-    // 1. Obtener todas las preguntas VISIBLES según tus reglas de desbloqueo
-    const preguntasVisibles = Object.values(groupedQuestions)
-      .flat()
-      .filter((pregunta) => {
-        // Si la pregunta no recibe ningún "desbloqueo" (no depende de otra), es visible por defecto
-        if (pregunta.desbloqueos_recibidos.length === 0) return true;
-        // De lo contrario, es visible solo si está en la lista de 'unlockedQuestions'
-        return pregunta.desbloqueos_recibidos.some((desbloqueo) =>
-          unlockedQuestions.has(desbloqueo.pregunta_desbloqueada)
-        );
-      });
+    const todasLasPreguntas = Object.values(groupedQuestions).flat();
+    return todasLasPreguntas.filter((pregunta) => {
+      // Si la pregunta no es visible, no la contamos
+      if (
+        pregunta.desbloqueos_recibidos.length > 0 &&
+        !unlockedQuestions.has(pregunta.id)
+      ) {
+        return false;
+      }
 
-    // 2. Filtrar las que no tienen respuesta "válida" (tomando en cuenta checkboxes vacíos, strings vacíos, etc.)
-    const unanswered = preguntasVisibles.filter((pregunta) => {
+      // Validar la respuesta según el tipo de pregunta
       const respuesta = respuestas[pregunta.id];
-      if (respuesta === undefined || respuesta === null || respuesta === "") {
-        return true;
-      }
-      // Si es un arreglo (ej. checkbox), verificar si está vacío
-      if (Array.isArray(respuesta) && respuesta.length === 0) {
-        return true;
-      }
-      return false;
+      return !isRespuestaValida(respuesta, pregunta.tipo);
     });
+  };
 
-    return unanswered;
+  // Función para obtener el total de preguntas visibles
+  const getTotalUnlockedQuestions = () => {
+    const todasLasPreguntas = Object.values(groupedQuestions).flat();
+    const preguntasNoVisibles = todasLasPreguntas.filter(
+      (p) => p.desbloqueos_recibidos.length > 0 && !unlockedQuestions.has(p.id)
+    );
+    return (
+      todasLasPreguntas.length -
+      preguntasNoVisibles.length +
+      unlockedQuestions.size
+    );
+  };
+
+  // Función para obtener el total de respuestas válidas
+  const getAnsweredUnlockedQuestions = () => {
+    const todasLasPreguntas = Object.values(groupedQuestions).flat();
+    return Object.entries(respuestas).filter(([preguntaId, respuesta]) => {
+      const pregunta = todasLasPreguntas.find(
+        (p) => p.id === parseInt(preguntaId)
+      );
+      return pregunta && isRespuestaValida(respuesta, pregunta.tipo);
+    }).length;
   };
 
   // Verificar si todas las preguntas visibles están respondidas
   const todasPreguntasRespondidas = () => {
-    const unanswered = getUnansweredQuestions();
-    return unanswered.length === 0;
+    const todasLasPreguntas = Object.values(groupedQuestions).flat();
+    const preguntasNoRespondidas = todasLasPreguntas.filter((pregunta) => {
+      // Solo considerar preguntas visibles
+      if (
+        pregunta.desbloqueos_recibidos.length > 0 &&
+        !unlockedQuestions.has(pregunta.id)
+      ) {
+        return false;
+      }
+      const respuesta = respuestas[pregunta.id];
+      return !isRespuestaValida(respuesta, pregunta.tipo);
+    });
+    return preguntasNoRespondidas.length === 0;
   };
+
+  // Función para validar todas las preguntas antes de guardar
+  const validarPreguntasAntesDeGuardar = useCallback(() => {
+    const todasLasPreguntas = Object.values(groupedQuestions).flat();
+    const noRespondidas = new Set();
+
+    todasLasPreguntas.forEach((pregunta) => {
+      // Si la pregunta no es visible, no la validamos
+      if (
+        pregunta.desbloqueos_recibidos.length > 0 &&
+        !unlockedQuestions.has(pregunta.id)
+      ) {
+        return;
+      }
+
+      const respuesta = respuestas[pregunta.id];
+      if (!isRespuestaValida(respuesta, pregunta.tipo)) {
+        noRespondidas.add(pregunta.id);
+      }
+    });
+
+    setPreguntasNoRespondidas(noRespondidas);
+    return noRespondidas.size === 0;
+  }, [groupedQuestions, unlockedQuestions, respuestas, isRespuestaValida]);
+
+  // Función para validar una pregunta individual
+  const validarPregunta = useCallback(
+    (preguntaId, respuesta, tipoPregunta) => {
+      const pregunta = cuestionario.preguntas.find((p) => p.id === preguntaId);
+      if (!isRespuestaValida(respuesta, tipoPregunta)) {
+        setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
+
+        // Mensaje específico según el tipo de pregunta
+        let mensajeError = `La pregunta "${pregunta.texto}" no puede quedar sin respuesta. `;
+        switch (tipoPregunta) {
+          case "abierta":
+            mensajeError += "Por favor, ingresa un texto para esta pregunta.";
+            break;
+          case "numero":
+            mensajeError += "Por favor, ingresa un número válido.";
+            break;
+          case "multiple":
+          case "dropdown":
+            mensajeError += "Por favor, selecciona una opción.";
+            break;
+          case "checkbox":
+            mensajeError += "Por favor, selecciona al menos una opción.";
+            break;
+          case "sis":
+          case "sis2":
+            mensajeError += "Por favor, selecciona al menos un valor.";
+            break;
+          case "ed":
+          case "ch":
+            mensajeError += "Por favor, selecciona al menos un valor.";
+            break;
+          case "binaria":
+            mensajeError += "Por favor, selecciona una opción (Sí/No).";
+            break;
+          default:
+            mensajeError += "Por favor, completa la respuesta.";
+        }
+
+        setNotificacion({
+          mensaje: mensajeError,
+          tipo: "error",
+        });
+      } else {
+        setPreguntasNoRespondidas((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(preguntaId);
+          return newSet;
+        });
+      }
+    },
+    [isRespuestaValida, cuestionario]
+  );
 
   // Finalizar cuestionario
   const handleFinalizarCuestionario = async () => {
-    // Primero, revisamos cuáles preguntas no están respondidas
-    const unanswered = getUnansweredQuestions();
-    if (unanswered.length > 0) {
-      // Armamos una lista con el texto de cada pregunta (o el ID, o lo que prefieras)
-      const listaPreguntas = unanswered.map((p) => `- ${p.texto}`).join("\n");
+    // Obtener el total de preguntas a responder
+    const todasLasPreguntas = Object.values(groupedQuestions).flat();
+    const preguntasNoVisibles = todasLasPreguntas.filter(
+      (p) => p.desbloqueos_recibidos.length > 0 && !unlockedQuestions.has(p.id)
+    );
+    const totalPreguntas =
+      todasLasPreguntas.length -
+      preguntasNoVisibles.length +
+      unlockedQuestions.size;
+
+    // Obtener las preguntas no respondidas
+    const preguntasNoRespondidas = todasLasPreguntas.filter((pregunta) => {
+      // Solo considerar preguntas visibles
+      if (
+        pregunta.desbloqueos_recibidos.length > 0 &&
+        !unlockedQuestions.has(pregunta.id)
+      ) {
+        return false;
+      }
+      const respuesta = respuestas[pregunta.id];
+      return !isRespuestaValida(respuesta, pregunta.tipo);
+    });
+
+    // Si hay preguntas no respondidas
+    if (preguntasNoRespondidas.length > 0) {
+      // Marcar las preguntas no respondidas
+      setPreguntasNoRespondidas(
+        new Set(preguntasNoRespondidas.map((p) => p.id))
+      );
+
+      // Crear mensaje detallado con el tipo de respuesta esperada
+      const mensajeFaltantes = preguntasNoRespondidas
+        .map((pregunta, index) => {
+          let tipoRespuesta = "";
+          switch (pregunta.tipo) {
+            case "abierta":
+              tipoRespuesta = " (requiere texto)";
+              break;
+            case "numero":
+              tipoRespuesta = " (requiere número)";
+              break;
+            case "multiple":
+            case "dropdown":
+              tipoRespuesta = " (requiere selección)";
+              break;
+            case "checkbox":
+              tipoRespuesta = " (requiere al menos una opción)";
+              break;
+            case "sis":
+            case "sis2":
+              tipoRespuesta = " (requiere al menos un valor)";
+              break;
+            case "ed":
+            case "ch":
+              tipoRespuesta = " (requiere al menos un valor)";
+              break;
+            case "binaria":
+              tipoRespuesta = " (requiere Sí/No)";
+              break;
+          }
+          return `${index + 1}. ${pregunta.texto}${tipoRespuesta}`;
+        })
+        .join("\n");
 
       setNotificacion({
-        mensaje: `Por favor, responde todas las preguntas visibles antes de finalizar. Te faltó contestar:\n${listaPreguntas}`,
+        mensaje: `No se puede finalizar el cuestionario. Faltan ${preguntasNoRespondidas.length} preguntas por responder:\n\n${mensajeFaltantes}`,
         tipo: "error",
       });
+
+      // Encontrar la sección de la primera pregunta no respondida
+      const primeraPreguntaFaltante = preguntasNoRespondidas[0];
+      if (primeraPreguntaFaltante) {
+        const seccionFaltante = Object.entries(groupedQuestions).find(
+          ([_, preguntas]) =>
+            preguntas.some((p) => p.id === primeraPreguntaFaltante.id)
+        )?.[0];
+
+        if (seccionFaltante) {
+          setExpandedSection(seccionFaltante);
+          // Hacer scroll hasta la pregunta después de que se expanda la sección
+          setTimeout(() => {
+            const preguntaElement = document.getElementById(
+              `pregunta-${primeraPreguntaFaltante.id}`
+            );
+            if (preguntaElement) {
+              preguntaElement.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
+            }
+          }, 300);
+        }
+      }
+
       return;
     }
 
     try {
       await api.post("/api/cuestionarios/validar-estado-cuestionario/", {
-        usuario,
+        usuario: usuario.id,
         cuestionario: cuestionario.id,
         estado: "finalizado",
         fecha_finalizado: new Date().toISOString(),
@@ -246,13 +610,7 @@ const Preguntas = ({
         mensaje: "Cuestionario finalizado con éxito!",
         tipo: "exito",
       });
-
-      // ✅ Usa navigate() en lugar de useNavigate()
-      navigate(`/candidatos/${usuario}`)
-      // window.location.href = `/candidatos/${usuario}`;
-      // window.location.reload();
-
-      // navigate(`/candidatos/${usuario}`);
+      navigate(`/candidatos/${usuario.id}`);
     } catch (error) {
       console.error("Error finalizando cuestionario:", error);
       setNotificacion({
@@ -263,16 +621,6 @@ const Preguntas = ({
   };
 
   // Manejar edición de preguntas
-  // const toggleEdicionPregunta = (preguntaId) => {
-  //   setPreguntasEditables((prev) => {
-  //     const nuevas = new Set(prev);
-  //     nuevas.has(preguntaId)
-  //       ? nuevas.delete(preguntaId)
-  //       : nuevas.add(preguntaId);
-  //     return nuevas;
-  //   });
-  // };
-
   const toggleEdicionPregunta = (preguntaId) => {
     setPreguntasEditables((prev) => {
       if (prev.includes(preguntaId)) {
@@ -281,6 +629,28 @@ const Preguntas = ({
         return [...prev, preguntaId];
       }
     });
+  };
+
+  // Modificar también la función onGuardarCambios
+  const handleGuardarCambios = async (id) => {
+    toggleEdicionPregunta(id);
+    try {
+      const response = await api.get(
+        "/api/cuestionarios/finalizar-cuestionario/",
+        {
+          params: {
+            usuario: usuario.id,
+            cuestionario: cuestionario.id,
+          },
+        }
+      );
+      const estado = response.data?.[0]?.estado;
+      if (estado === "finalizado") {
+        setCuestionarioFinalizado(true);
+      }
+    } catch (error) {
+      console.error("Error verificando finalización:", error);
+    }
   };
 
   if (loading) return <Typography>Cargando...</Typography>;
@@ -354,18 +724,8 @@ const Preguntas = ({
                   {Object.keys(otherQuestions).length}
                 </Typography>
                 <Typography variant="body1">
-                  Respondidas:{" "}
-                  {
-                    Object.keys(respuestas).filter((id) => {
-                      const r = respuestas[id];
-                      return (
-                        r !== null &&
-                        r !== "" &&
-                        (!Array.isArray(r) || r.length > 0)
-                      );
-                    }).length
-                  }{" "}
-                  / {Object.values(groupedQuestions).flat().length}
+                  Respondidas: {getAnsweredUnlockedQuestions()} /{" "}
+                  {getTotalUnlockedQuestions()}
                 </Typography>
               </Box>
               <Box
@@ -475,18 +835,8 @@ const Preguntas = ({
             }}
           >
             <Typography variant="body1">
-              Respondidas:{" "}
-              {
-                Object.keys(respuestas).filter((id) => {
-                  const r = respuestas[id];
-                  return (
-                    r !== null &&
-                    r !== "" &&
-                    (!Array.isArray(r) || r.length > 0)
-                  );
-                }).length
-              }{" "}
-              / {Object.values(groupedQuestions).flat().length}
+              Respondidas: {getAnsweredUnlockedQuestions()} /{" "}
+              {getTotalUnlockedQuestions()}
             </Typography>
           </Box>
         )}
@@ -547,6 +897,7 @@ const Preguntas = ({
                   {preguntas.map((pregunta) => (
                     <Box
                       key={pregunta.id}
+                      id={`pregunta-${pregunta.id}`}
                       sx={{
                         width: "100%",
                         my: 3,
@@ -559,6 +910,20 @@ const Preguntas = ({
                         sx={{
                           p: 3,
                           borderRadius: 2,
+                          border: preguntasNoRespondidas.has(pregunta.id)
+                            ? "2px solid #ff1744"
+                            : "2px solid transparent",
+                          backgroundColor: preguntasNoRespondidas.has(
+                            pregunta.id
+                          )
+                            ? "rgba(255, 23, 68, 0.05)"
+                            : "white",
+                          transition: "all 0.3s ease",
+                          "&:hover": {
+                            boxShadow: preguntasNoRespondidas.has(pregunta.id)
+                              ? "0 0 0 2px rgba(255, 23, 68, 0.2)"
+                              : "0 2px 8px rgba(0,0,0,0.1)",
+                          },
                         }}
                       >
                         <Box sx={{ width: "100%" }}>
@@ -571,35 +936,14 @@ const Preguntas = ({
                                 [pregunta.id]: resp,
                               }));
                               handleRespuestaChange(pregunta.id, resp);
+                              validarPregunta(pregunta.id, resp, pregunta.tipo);
                             }}
                             unlockedQuestions={unlockedQuestions}
                             cuestionarioFinalizado={cuestionarioFinalizado}
                             usuario={usuario}
                             cuestionario={cuestionario}
                             esEditable={esEditable}
-                            onGuardarCambios={async (id) => {
-                              toggleEdicionPregunta(id);
-                              try {
-                                const response = await api.get(
-                                  "/api/cuestionarios/finalizar-cuestionario/",
-                                  {
-                                    params: {
-                                      usuario,
-                                      cuestionario: cuestionario.id,
-                                    },
-                                  }
-                                );
-                                const estado = response.data?.[0]?.estado;
-                                if (estado === "finalizado") {
-                                  setCuestionarioFinalizado(true);
-                                }
-                              } catch (error) {
-                                console.error(
-                                  "Error verificando finalización:",
-                                  error
-                                );
-                              }
-                            }}
+                            onGuardarCambios={handleGuardarCambios}
                           />
                         </Box>
                       </Paper>
@@ -714,50 +1058,12 @@ const Preguntas = ({
                   {Object.keys(otherQuestions).length}
                 </Typography>
                 <Typography variant="body1">
-                  Respondidas:{" "}
-                  {
-                    Object.keys(respuestas).filter((id) => {
-                      const r = respuestas[id];
-                      return (
-                        r !== null &&
-                        r !== "" &&
-                        (!Array.isArray(r) || r.length > 0)
-                      );
-                    }).length
-                  }{" "}
-                  / {Object.values(groupedQuestions).flat().length}
+                  Respondidas: {getAnsweredUnlockedQuestions()} /{" "}
+                  {getTotalUnlockedQuestions()}
                 </Typography>
               </Box>
             </>
           )}
-
-        {/* Conteo de preguntas respondidas para SIS y especiales */}
-        {(sisQuestions.length || specialQuestions.length > 0) && (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              px: 2,
-              mb: 1,
-            }}
-          >
-            <Typography variant="body1">
-              Respondidas:{" "}
-              {
-                Object.keys(respuestas).filter((id) => {
-                  const r = respuestas[id];
-                  return (
-                    r !== null &&
-                    r !== "" &&
-                    (!Array.isArray(r) || r.length > 0)
-                  );
-                }).length
-              }{" "}
-              / {Object.values(groupedQuestions).flat().length}
-            </Typography>
-          </Box>
-        )}
 
         <Box sx={{ mt: 4, display: "flex", justifyContent: "center" }}>
           <BotonFinCuestionario

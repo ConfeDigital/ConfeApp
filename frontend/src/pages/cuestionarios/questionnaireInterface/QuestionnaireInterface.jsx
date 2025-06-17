@@ -287,9 +287,23 @@ const EditorCuestionario = () => {
       );
       return;
     }
-    const preguntasFormateadas = preguntas.map((p) =>
-      p.tipo === "binaria" ? { ...p, tipo: "multiple" } : p
-    );
+
+    // Procesar preguntas antes de enviar
+    const preguntasFormateadas = preguntas.map((p) => {
+      // Si es una pregunta binaria, asegurarse de que tenga las opciones correctas
+      if (p.tipo === "binaria") {
+        return {
+          ...p,
+          tipo: "multiple", // Cambiar a multiple para el backend
+          opciones: ["Sí", "No"], // Asegurar que tenga las opciones correctas
+          desbloqueo: p.desbloqueo?.map((d) => ({
+            ...d,
+            valor: d.valor === "0" ? "Sí" : d.valor === "1" ? "No" : d.valor,
+          })),
+        };
+      }
+      return p;
+    });
 
     const data = {
       cuestionario_id: parseInt(idCuestionario, 10),

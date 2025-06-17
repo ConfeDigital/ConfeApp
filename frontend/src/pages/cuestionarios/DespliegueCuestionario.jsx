@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -47,14 +47,78 @@ function DespliegueCuestionario({
     respuestasCuestionarioFinalizado,
     setRespuestasCuestionarioFinalizado,
   ] = useState([]);
-  const [globalQuestionIndex, setGlobalQuestionIndex] = useState(0); // Contador global de preguntas
+  const [globalQuestionIndex, setGlobalQuestionIndex] = useState(0);
   const [modoEdicionGlobal, setModoEdicionGlobal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-
   const [subitems, setSubitems] = useState([]);
   const [technicalAids, setTechnicalAids] = useState([]);
   const [chAids, setCHAids] = useState([]);
+  const [unlockedQuestions, setUnlockedQuestions] = useState(new Set());
+  const [totalUnlockedQuestions, setTotalUnlockedQuestions] = useState(0);
+  const [answeredUnlockedQuestions, setAnsweredUnlockedQuestions] = useState(0);
+
+  const isRespuestaValida = useCallback((respuesta, tipoPregunta) => {
+    if (respuesta === undefined || respuesta === null || respuesta === "") {
+      return false;
+    }
+    if (Array.isArray(respuesta) && respuesta.length === 0) {
+      return false;
+    }
+    if (typeof respuesta === "object" && Object.keys(respuesta).length === 0) {
+      return false;
+    }
+    switch (tipoPregunta) {
+      case "abierta":
+        // Para preguntas abiertas, el texto no puede estar vacío
+        return typeof respuesta === "string" && respuesta.trim().length > 0;
+
+      case "numero":
+        // Para preguntas numéricas, debe ser un número válido
+        return !isNaN(Number(respuesta)) && respuesta !== "";
+
+      case "multiple":
+      case "dropdown":
+        // Para opciones múltiples y dropdown, debe tener un valor seleccionado
+        return respuesta !== "" && respuesta !== null;
+
+      case "checkbox":
+        // Para checkbox, debe tener al menos una opción seleccionada
+        return Array.isArray(respuesta) && respuesta.length > 0;
+
+      case "sis":
+      case "sis2":
+        // Para preguntas SIS, debe tener al menos un valor seleccionado
+        return (
+          typeof respuesta === "object" && Object.keys(respuesta).length > 0
+        );
+
+      case "ed":
+      case "ch":
+        // Para preguntas especiales, debe tener al menos un valor seleccionado
+        return (
+          typeof respuesta === "object" && Object.keys(respuesta).length > 0
+        );
+
+      case "binaria":
+        // Para preguntas binarias, debe tener un valor seleccionado
+        return respuesta === true || respuesta === false;
+
+      default:
+        return true;
+    }
+  }, []);
+
+  const isQuestionVisible = useCallback(
+    (pregunta) => {
+      // Si la pregunta no tiene desbloqueos recibidos, siempre es visible
+      if (pregunta.desbloqueos_recibidos.length === 0) return true;
+      // Si tiene desbloqueos, solo es visible si está en unlockedQuestions
+      return unlockedQuestions.has(pregunta.id);
+    },
+    [unlockedQuestions]
+  );
+
   useEffect(() => {
     const fetchSISAids = async () => {
       try {
@@ -233,6 +297,8 @@ function DespliegueCuestionario({
           setPreguntaIndex(lastAnsweredQuestionIndex);
         }
       }
+
+      console.log("Respuestas actuales:", respuestasFiltradas);
     } catch (error) {
       console.error("Error fetching existing answers:", error);
     }
@@ -335,6 +401,7 @@ function DespliegueCuestionario({
 
       setCuestionarioFinalizado(true);
       if (onClose) onClose();
+      navigate(`/candidatos/${usuario.id}`);
     } catch (error) {
       console.error("Error al finalizar el cuestionario:", error);
     }
@@ -447,6 +514,30 @@ function DespliegueCuestionario({
       console.error("Error saving changes:", error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Función para actualizar el estado de desbloqueo de una pregunta
+  const updateQuestionUnlockStatus = (questionId, isUnlocked) => {
+    if (questionId === "counter") {
+      // Actualizar contadores
+      setTotalUnlockedQuestions(isUnlocked.total);
+      setAnsweredUnlockedQuestions(isUnlocked.answered);
+    } else {
+      // Actualizar preguntas desbloqueadas
+      setUnlockedQuestions((prev) => {
+        const newUnlocked = new Set(prev);
+        if (isUnlocked) {
+          newUnlocked.add(questionId);
+        } else {
+          newUnlocked.delete(questionId);
+        }
+        console.log("=== ACTUALIZACIÓN DE DESBLOQUEOS ===");
+        console.log("Pregunta ID:", questionId);
+        console.log("Desbloqueos anteriores:", Array.from(prev));
+        console.log("Nuevos desbloqueos:", Array.from(newUnlocked));
+        return newUnlocked;
+      });
     }
   };
 
@@ -717,16 +808,25 @@ function DespliegueCuestionario({
           >
             <Preguntas
               cuestionario={cuestionario}
+              usuario={usuario}
               preentrevista={preentrevista}
-              usuario={usuario.id}
+              preguntaIndex={preguntaIndex}
+              setPreguntaIndex={setPreguntaIndex}
+              questionsPerPage={1}
+              lastAnsweredQuestionIndex={lastAnsweredQuestionIndex}
               cuestionarioFinalizado={cuestionarioFinalizado}
               setCuestionarioFinalizado={setCuestionarioFinalizado}
               subitems={subitems}
-              esEditable={modoEdicionGlobal}
               technicalAids={technicalAids}
               chAids={chAids}
+              esEditable={modoEdicionGlobal}
+              onQuestionUnlock={updateQuestionUnlockStatus}
             />
           </Box>
+          <Typography variant="body2" color="textSecondary">
+            Preguntas respondidas: {answeredUnlockedQuestions} de{" "}
+            {totalUnlockedQuestions}
+          </Typography>
         </Box>
       </Box>
 
