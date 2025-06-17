@@ -36,6 +36,9 @@ from io import BytesIO
 import unicodedata
 import re
 from django.http import HttpResponse
+import os
+from django.conf import settings
+from reportlab.lib.units import cm
 
 
 def generate_ficha_tecnica(uid, profile, respuestas):
@@ -43,25 +46,40 @@ def generate_ficha_tecnica(uid, profile, respuestas):
     doc = SimpleDocTemplate(buffer, pagesize=letter, leftMargin=50, rightMargin=50, topMargin=40, bottomMargin=40)
     elements = []
     styles = getSampleStyleSheet()
+
+    # === Estilos reutilizables ===
     title_style = ParagraphStyle("TitleStyle", fontSize=14, textColor=colors.black, fontName="Helvetica-Bold", alignment=0, spaceAfter=12)
     normal_style = ParagraphStyle("NormalStyle", fontSize=10, textColor=colors.black, fontName="Helvetica")
-    # Page 1
+
+    def section_header(text):
+        return Paragraph(f"<b><font size=14 color='white'>{text}</font></b>", ParagraphStyle(
+            name="SectionTitle",
+            backColor=colors.Color(6 / 255, 45 / 255, 85 / 255),
+            alignment=1,
+            spaceBefore=6,
+            spaceAfter=12,
+            leading=16,
+            textColor=colors.white
+        ))
+
+    # === PÁGINA 1 ===
     elements.append(draw_logo_header())
     elements.append(Spacer(1, 10))
+
+    # Título y foto
     profile_pic = None
     if profile.photo and default_storage.exists(profile.photo.name):
         img_path = default_storage.path(profile.photo.name)
         profile_pic = Image(img_path, width=100, height=100, kind='proportional')
-    header_table_data = [
-        [
-            Table([
-                [Paragraph("Institución CONFE a Favor de la Persona con Discapacidad Intelectual I.A.P.", title_style)],
-                [Paragraph("CENTRO ESPECIALIZADO DE INCLUSIÓN LABORAL", title_style)],
-                [Paragraph("FICHA TÉCNICA", title_style)]
-            ], colWidths=[400]),
-            profile_pic if profile_pic else ""
-        ]
-    ]
+
+    header_table_data = [[
+        Table([
+            [Paragraph("Institución CONFE a Favor de la Persona con Discapacidad Intelectual I.A.P.", title_style)],
+            [Paragraph("CENTRO ESPECIALIZADO DE INCLUSIÓN LABORAL", title_style)],
+            [Paragraph("FICHA TÉCNICA", title_style)]
+        ], colWidths=[400]),
+        profile_pic if profile_pic else ""
+    ]]
     header_table = Table(header_table_data, colWidths=[400, 100])
     header_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),
@@ -71,10 +89,14 @@ def generate_ficha_tecnica(uid, profile, respuestas):
     ]))
     elements.append(header_table)
     elements.append(Spacer(1, 12))
+
+    elements.append(section_header("DATOS PERSONALES"))
+
     discapacidades = ", ".join([d.name for d in profile.disability.all()]) if profile.disability.exists() else "No especificada"
     full_name = f"{profile.user.first_name} {profile.user.last_name} {getattr(profile.user, 'second_last_name', '')}"
     gender_display = dict(profile.GENDER_CHOICES).get(profile.gender, "No especificado")
     stage_display = dict(profile.STAGE_CHOICES).get(profile.stage, "No especificado")
+
     info_data = [
         ["Nombre completo:", full_name, "Género:", gender_display],
         ["Discapacidad:", discapacidades, "Etapa:", stage_display],
@@ -85,12 +107,12 @@ def generate_ficha_tecnica(uid, profile, respuestas):
          "Medicamentos:", ", ".join([m.name for m in profile.medications.all()]) if profile.medications.exists() else "N/A"],
         ["Registro:", profile.registration_date.strftime('%Y-%m-%d') if profile.registration_date else "N/A",
          "Alergias:", profile.allergies or "N/A"],
-        ["Atención psicológica:", "Sí" if profile.receives_psychological_care else "No",
-         "Atención psiquiátrica:", "Sí" if profile.receives_psychiatric_care else "No"],
         ["Presenta convulsiones:", "Sí" if profile.has_seizures else "No",
          "Recibe pensión:", "Sí" if profile.receives_pension else "No"],
+        ["Tipo de pensión:", profile.pension_type if hasattr(profile, 'pension_type') and profile.pension_type else "N/A", "", ""],
         ["Cert. de discapacidad:", "Sí" if profile.has_disability_certificate else "No",
          "Juicio de interdicción:", "Sí" if profile.has_interdiction_judgment else "No"],
+        ["Atención psicológica/\npsiquiátrica:", f"{'Sí' if profile.receives_psychological_care else 'No'} / {'Sí' if profile.receives_psychiatric_care else 'No'}", "", ""],
         ["Dirección:", (
             f"{profile.domicile.address_road}, {profile.domicile.address_number}, "
             f"{profile.domicile.address_col}, {profile.domicile.address_municip}, "
@@ -112,7 +134,8 @@ def generate_ficha_tecnica(uid, profile, respuestas):
     ]))
     elements.append(info_table)
     elements.append(Spacer(1, 10))
-    elements.append(Paragraph("<b>Contacto(s): </b>", styles['Heading3']))
+
+    elements.append(section_header("CONTACTO(S)"))
     if profile.emergency_contacts.exists():
         for contact in profile.emergency_contacts.all():
             name = f"{contact.first_name} {contact.last_name} {contact.second_last_name or ''}"
@@ -124,17 +147,97 @@ def generate_ficha_tecnica(uid, profile, respuestas):
     else:
         elements.append(Paragraph("N/A", normal_style))
     elements.append(Spacer(1, 12))
+
     tables = fill_table_data(profile, TABLE_TEMPLATES)
-    elements.extend(draw_table(tables["Evaluación Diagnóstica"], "Evaluación Diagnóstica"))
+
+    elements.append(section_header("EVALUACIÓN DIAGNÓSTICA"))
+    diag_data = tables["Evaluación Diagnóstica"]
+    col1, col2 = [], []
+    for i, row in enumerate(diag_data):
+        if len(row) >= 2:
+            p = Paragraph(f"<b>{row[0]}</b>: {row[1]}", normal_style)
+            (col1 if i % 2 == 0 else col2).append(p)
+            (col1 if i % 2 == 0 else col2).append(Spacer(1, 4))
+    diag_columns = Table([[col1, col2]], colWidths=[250, 250])
+    diag_columns.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('TOPPADDING', (0, 0), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+    ]))
+    elements.append(diag_columns)
+
+    # === Página 2: NECESIDADES DE APOYO, PROYECTO DE VIDA, TALENTOS ===
     elements.append(PageBreak())
-    updated_table, celdas_coloreadas = get_habilidades_adaptativas_coloreadas(uid, tables["Habilidades Adaptativas - Tabla de resultados SIS"])
-    elements.extend(draw_table(updated_table, "Habilidades Adaptativas", celdas_coloreadas))
+    for section in ["NECESIDADES DE APOYO", "PROYECTO DE VIDA", "TALENTOS"]:
+        elements.append(section_header(section))
+        elements.append(Spacer(1, 6))
+        placeholder_table = Table([["(Aquí irán 5 respuestas seleccionadas del cuestionario correspondiente)"]], colWidths=[450])
+        placeholder_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Oblique'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.darkgray),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 20),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 20),
+        ]))
+        elements.append(placeholder_table)
+        elements.append(Spacer(1, 20))
+
+    # === Página 3: SECCIÓN SIS ===
     elements.append(PageBreak())
-    elements.extend(draw_table(tables["Protección y Defensa"], "Protección y Defensa"))
+    # Título y logo SIS
+    sis_title = Paragraph("<b><font size=16>ESCALA DE INTENSIDAD DE APOYOS (SIS)</font></b>", ParagraphStyle(
+    name="SISTitle",
+    alignment=0,
+    spaceAfter=10,
+    fontName="Helvetica-Bold",
+    fontSize=16,
+    ))
+
+    logo_ceil_path = os.path.join(settings.MEDIA_ROOT, "logos/sis.png")
+    logo_jap_path = os.path.join(settings.MEDIA_ROOT, "logos/sis2.png")
+
+    logo_ceil = Image(logo_ceil_path, width=50, height=50) if os.path.exists(logo_ceil_path) else Paragraph("", normal_style)
+    logo_jap = Image(logo_jap_path, width=50, height=50) if os.path.exists(logo_jap_path) else Paragraph("", normal_style)
+
+    sis_header_row = [[sis_title, logo_ceil, logo_jap]]
+    sis_header = Table(sis_header_row, colWidths=[260, 100, 100])
+    sis_header.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (0, 0), 'CENTER'),
+        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
+        ('ALIGN', (2, 0), (2, 0), 'CENTER'),
+    ]))
+    elements.append(sis_header)
     elements.append(Spacer(1, 24))
-    elements.extend(draw_table(tables["Necesidades Médicas y Conductuales"], "Necesidades Médicas y Conductuales"))
+
+    updated_table, celdas_coloreadas = get_habilidades_adaptativas_coloreadas(uid, tables["Habilidades Adaptativas - Tabla de resultados SIS"])
+    elements.extend(draw_table(updated_table, "", celdas_coloreadas))
     elements.append(PageBreak())
-    elements.extend(draw_table(tables["Proyecto de Vida"], "Proyecto de Vida"))
+
+    # Y las dos siguientes, forzarlas a tabla separada:
+    elements.append(PageBreak())
+
+    elements.append(section_header("PROTECCIÓN Y DEFENSA"))
+    prot_table = draw_table(tables["Protección y Defensa"], "PROTECCIÓN Y DEFENSA")
+    # Asegurar que se usen colWidths más amplios (no los de percentiles):
+    for t in prot_table:
+        if hasattr(t, 'colWidths'):
+            t._argW = [5 * cm for _ in t._argW]  # Ancho amplio uniforme
+    elements.extend(prot_table)
+    elements.append(Spacer(1, 24))
+
+    elements.append(section_header("NECESIDADES MÉDICAS Y CONDUCTUALES"))
+    med_table = draw_table(tables["Necesidades Médicas y Conductuales"], "NECESIDADES MÉDICAS Y CONDUCTUALES")
+    for t in med_table:
+        if hasattr(t, 'colWidths'):
+            t._argW = [5*cm for _ in t._argW]  # Ancho amplio uniforme
+    elements.extend(med_table)
+    elements.append(Spacer(1, 12))
+
     doc.build(elements)
     buffer.seek(0)
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')

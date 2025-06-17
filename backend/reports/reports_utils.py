@@ -14,6 +14,8 @@ import requests
 from copy import deepcopy
 
 from cuestionarios.utils import evaluar_rango, get_user_evaluation_summary
+from reportlab.lib.units import cm
+
 
 def draw_logo_header():
     logo_paths = [
@@ -174,7 +176,7 @@ def get_habilidades_adaptativas_coloreadas(uid, table):
         percentil_global = resumen_global.get("percentil")
         col_idx = col_index_map.get("índice de necesidades de apoyo")
         if col_idx is not None:
-            procesar_seccion("índice de necesidades de necesidades de apoyo", indice, percentil_global)
+            procesar_seccion("índice de necesidades de apoyo", indice, percentil_global)
 
         print(celdas_a_colorear)
         return table, celdas_a_colorear
@@ -339,7 +341,8 @@ def draw_table(data, title, celdas_coloreadas=None):
 
     # Crear y agregar tabla
     repeat_rows = 3 if title == "Habilidades Adaptativas" else 1
-    table = Table(formatted_data, repeatRows=repeat_rows)
+    col_widths = [1.2*cm] + [2.3*cm]*7 + [1.2*cm]  # ajustado según tu layout
+    table = Table(formatted_data, repeatRows=repeat_rows, colWidths=col_widths)
     table.setStyle(table_style)
     elements.append(table)
 
@@ -354,6 +357,10 @@ def draw_table(data, title, celdas_coloreadas=None):
         )
         elements.append(Paragraph(
             "Las celdas resaltadas en azul indican el valor correspondiente al puntaje estándar del usuario o su percentil.",
+            legend_style
+        ))
+        elements.append(Paragraph(
+            "American Association on Intellectual and Developmental Disabilities (AAIDD). (2020). Escala de Intensidad de Apoyos - Versión para Adultos (SIS-A). Traducción autorizada. AAIDD. https://www.aaidd.org/sis/sis-a",
             legend_style
         ))
 
