@@ -24,22 +24,26 @@ import PopupPrecargaCuestionario from "./PopupPrecargaCuestionario";
 import api from "../../../api"; // Asegúrate de que esta ruta sea correcta
 
 const TIPOS_COMPLETOS = [
-  "abierta",
   "multiple",
-  "checkbox",
+  "abierta",
   "numero",
-  "dropdown",
+  "checkbox",
+  "binaria",
   "fecha",
   "fecha_hora",
-  "numero_telefono",
-  "meta",
-  "imagen",
-  "canalizacion",
-  "canalizacion_centro",
+  "dropdown",
   "sis",
   "sis2",
+  "datos_personales",
+  "datos_domicilio",
+  "datos_medicos",
+  "contactos",
+  "tipo_discapacidad",
+  "canalizacion",
+  "canalizacion_centro",
+  "ed",
   "ch",
-  "binaria",
+  "imagen",
 ];
 
 const tiposPorCuestionario = {

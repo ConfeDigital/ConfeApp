@@ -36,22 +36,26 @@ const AgregarDespuesIcon = () => (
 
 // Nombre visible por tipo
 const nombreTipoPregunta = {
+  multiple: "Opción Múltiple",
   abierta: "Abierta",
-  multiple: "Opción múltiple",
-  checkbox: "Casillas (checkbox)",
   numero: "Número",
-  dropdown: "Desplegable",
+  checkbox: "Checkbox",
+  binaria: "Binaria",
   fecha: "Fecha",
   fecha_hora: "Fecha y Hora",
-  numero_telefono: "Número de teléfono",
-  meta: "Meta y pasos",
-  imagen: "Imagen",
+  dropdown: "Dropdown",
+  sis: "SIS DE 0-4",
+  sis2: "SIS DE 0-2",
+  datos_personales: "Datos Personales",
+  datos_domicilio: "Datos Domicilio",
+  datos_medicos: "Datos Médicos",
+  contactos: "Contactos",
+  tipo_discapacidad: "Discapacidad",
   canalizacion: "Canalización",
   canalizacion_centro: "Canalización Centro",
-  sis: "SIS (0-4)",
-  sis2: "SIS (0-2)",
+  ed: "Evaluación Diagnóstica",
   ch: "Cuadro de Habilidades",
-  binaria: "Binaria",
+  imagen: "Imagen",
 };
 
 const PreguntaCard = ({
