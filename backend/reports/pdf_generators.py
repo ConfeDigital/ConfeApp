@@ -39,6 +39,7 @@ from django.http import HttpResponse
 import os
 from django.conf import settings
 from reportlab.lib.units import cm
+from cuestionarios.utils import get_resumen_entrevista, get_resumen_proyecto_vida
 
 
 def generate_ficha_tecnica(uid, profile, respuestas):
@@ -169,21 +170,109 @@ def generate_ficha_tecnica(uid, profile, respuestas):
 
     # === Página 2: NECESIDADES DE APOYO, PROYECTO DE VIDA, TALENTOS ===
     elements.append(PageBreak())
+
+# Estilos
+    styles = getSampleStyleSheet()
+    parrafo_normal = ParagraphStyle(
+        name='NormalCustom',
+        parent=styles['Normal'],
+        fontSize=9,
+        leading=12,
+        spaceAfter=6
+    )
+    estilo_titulo_seccion = ParagraphStyle(
+        name='TituloSeccion',
+        parent=styles['Heading4'],
+        fontSize=10,
+        spaceBefore=10,
+        spaceAfter=6,
+        alignment=0  # izquierda
+    )
+    estilo_tabla = TableStyle([
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ])
+
     for section in ["NECESIDADES DE APOYO", "PROYECTO DE VIDA", "TALENTOS"]:
         elements.append(section_header(section))
         elements.append(Spacer(1, 6))
-        placeholder_table = Table([["(Aquí irán 5 respuestas seleccionadas del cuestionario correspondiente)"]], colWidths=[450])
-        placeholder_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Oblique'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
-            ('TEXTCOLOR', (0, 0), (-1, -1), colors.darkgray),
-            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('TOPPADDING', (0, 0), (-1, -1), 20),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 20),
-        ]))
-        elements.append(placeholder_table)
+
+        if section == "NECESIDADES DE APOYO":
+            resumen = get_resumen_entrevista(profile.user.id)
+            entrevista_table = [
+                [
+                    Paragraph("¿Cómo te ves en tu futuro? ¿Qué metas te gustaría cumplir?", parrafo_normal),
+                    Paragraph(resumen.get("futuro_usuario", ""), parrafo_normal)
+                ],
+                [
+                    Paragraph("¿A futuro cómo le gustaría ver a su hijo/hija?", parrafo_normal),
+                    Paragraph(resumen.get("futuro_hijo", ""), parrafo_normal)
+                ],
+                [
+                    Paragraph("Observaciones del entrevistador", parrafo_normal),
+                    Paragraph(resumen.get("observaciones_entrevistador", ""), parrafo_normal)
+                ]
+            ]
+            table = Table(entrevista_table, colWidths=[200, 250])
+            table.setStyle(estilo_tabla)
+            elements.append(table)
+
+        elif section == "PROYECTO DE VIDA":
+            datos = get_resumen_proyecto_vida(profile.user.id)
+
+            # Tabla 1 – Textos clave
+            tabla_textos = [
+                [Paragraph("Lo más importante para mí", parrafo_normal), Paragraph(datos.get("lo_mas_importante") or "", parrafo_normal)],
+                [Paragraph("Me gusta, me tranquiliza, me hace sentir bien, me divierte", parrafo_normal), Paragraph(datos.get("me_gusta") or "", parrafo_normal)],
+            ]
+            table = Table(tabla_textos, colWidths=[200, 250])
+            table.setStyle(estilo_tabla)
+            elements.append(table)
+
+            elements.append(Spacer(1, 10))
+
+            # Tabla 2 – Metas
+            if datos["metas"]:
+                elements.append(Paragraph("Metas", estilo_titulo_seccion))
+                metas_data = []
+                for meta in datos["metas"]:
+                    pasos_str = "<br/>".join(f"- {p}" for p in meta["pasos"])
+                    texto_meta = f"<b>Meta:</b> {meta['meta']}<br/><b>Encargado:</b> {meta['encargado']}<br/><b>Pasos:</b><br/>{pasos_str}"
+                    metas_data.append([Paragraph(texto_meta, parrafo_normal)])
+                table = Table(metas_data, colWidths=[450])
+                table.setStyle(estilo_tabla)
+                elements.append(table)
+
+            elements.append(Spacer(1, 10))
+
+            # Tabla 3 – Talentos agrupados
+            if datos["talentos"]:
+                elements.append(Paragraph("Talentos", estilo_titulo_seccion))
+                for nombre_seccion, talentos in datos["talentos"].items():
+                    texto = f"<b>{nombre_seccion}:</b> {', '.join(talentos)}"
+                    elements.append(Paragraph(texto, parrafo_normal))
+
+        else:
+            # Placeholder para otras secciones no implementadas aún
+            placeholder_table = Table(
+                [["(Aquí irán 5 respuestas seleccionadas del cuestionario correspondiente)"]],
+                colWidths=[450]
+            )
+            placeholder_table.setStyle(TableStyle([
+                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Oblique'),
+                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
+                ('TEXTCOLOR', (0, 0), (-1, -1), colors.darkgray),
+                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 20),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 20),
+            ]))
+            elements.append(placeholder_table)
+
         elements.append(Spacer(1, 20))
 
     # === Página 3: SECCIÓN SIS ===
@@ -216,9 +305,6 @@ def generate_ficha_tecnica(uid, profile, respuestas):
 
     updated_table, celdas_coloreadas = get_habilidades_adaptativas_coloreadas(uid, tables["Habilidades Adaptativas - Tabla de resultados SIS"])
     elements.extend(draw_table(updated_table, "", celdas_coloreadas))
-    elements.append(PageBreak())
-
-    # Y las dos siguientes, forzarlas a tabla separada:
     elements.append(PageBreak())
 
     elements.append(section_header("PROTECCIÓN Y DEFENSA"))

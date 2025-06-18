@@ -15,6 +15,7 @@ from openpyxl import load_workbook
 from openpyxl.drawing.image import Image as OpenpyxlImage
 from django.core.files.base import ContentFile
 import io
+from django.db.models import Q
 
 
 logger = logging.getLogger(__name__)
@@ -479,3 +480,115 @@ def get_user_evaluation_summary(usuario_id, query_params=None):
         "resumen_global": resumen_global,
         "detalles_por_seccion": resultados
     }
+
+def get_resumen_entrevista(usuario_id):
+    """
+    Extrae las tres preguntas clave del cuestionario ENTREVISTA para la ficha técnica - NECESIDAD DE APOYOS.
+
+    Args:
+        usuario_id (int): ID del usuario.
+
+    Returns:
+        dict: Diccionario con las respuestas a las preguntas clave.
+    """
+
+    preguntas_clave = {
+        "futuro_usuario": "¿Cómo te ves en tu futuro? ¿Qué metas te gustaría cumplir?",
+        "futuro_hijo": "¿A futuro cómo le gustaría ver a su hijo/hija?",
+        "observaciones_entrevistador": "Observaciones del entrevistador (Observaciones conductuales, de dinámica familiar, necesidades de apoyo, entre otras)"
+    }
+
+    # Acepta cualquier variante del nombre "ENTREVISTA"
+    cuestionarios_entrevista = Cuestionario.objects.filter(nombre__icontains="entrevista")
+
+    if not cuestionarios_entrevista.exists():
+        return {k: None for k in preguntas_clave.keys()}
+
+    entrevista_ids = cuestionarios_entrevista.values_list('id', flat=True)
+
+    respuestas = Respuesta.objects.filter(
+        usuario_id=usuario_id,
+        pregunta__texto__in=preguntas_clave.values(),
+        pregunta__cuestionario_id__in=entrevista_ids
+    ).select_related('pregunta')
+
+    resultado = {k: None for k in preguntas_clave.keys()}
+
+    for r in respuestas:
+        texto = r.pregunta.texto.strip()
+        for key, expected in preguntas_clave.items():
+            if texto == expected:
+                resultado[key] = r.respuesta.strip() if r.respuesta else None
+
+    return resultado
+
+
+def get_resumen_proyecto_vida(usuario_id):
+    """
+    Extrae respuestas clave del cuestionario Proyecto de Vida:
+    - Dos preguntas textuales.
+    - Todas las metas desanidadas (tipo "meta").
+    - Talentos agrupados por sección (tipo "abierta").
+    """
+    preguntas_texto = {
+        "lo_mas_importante": "Lo más importante para mi",
+        "me_gusta": "Me gusta, me tranquiliza, me hace sentir bien, me divierte"
+    }
+
+    resumen = {
+        "lo_mas_importante": None,
+        "me_gusta": None,
+        "metas": [],
+        "talentos": {}  # agrupados por nombre_seccion
+    }
+
+    # Encuentra cuestionarios que contienen "proyecto de vida"
+    cuestionarios_pv = Cuestionario.objects.filter(nombre__icontains="proyecto de vida")
+    if not cuestionarios_pv.exists():
+        return resumen
+
+    cuestionario_ids = cuestionarios_pv.values_list("id", flat=True)
+
+    respuestas = Respuesta.objects.filter(
+        usuario_id=usuario_id,
+        pregunta__cuestionario_id__in=cuestionario_ids
+    ).select_related("pregunta")
+
+    for r in respuestas:
+        pregunta = r.pregunta
+        texto_pregunta = pregunta.texto.strip()
+        tipo_pregunta = pregunta.tipo
+        seccion = pregunta.nombre_seccion or "Sin sección"
+
+        # Parte 1: Preguntas clave textuales
+        if texto_pregunta == preguntas_texto["lo_mas_importante"]:
+            resumen["lo_mas_importante"] = r.respuesta.strip() if r.respuesta else ""
+        elif texto_pregunta == preguntas_texto["me_gusta"]:
+            resumen["me_gusta"] = r.respuesta.strip() if r.respuesta else ""
+
+        # Parte 2: Preguntas tipo "meta" con JSON
+        elif tipo_pregunta == "meta":
+            try:
+                metas_json = json.loads(r.respuesta)
+                meta_texto = metas_json.get("meta", "").strip()
+                pasos = metas_json.get("pasos", [])
+                encargado = metas_json.get("encargado", "").strip()
+
+                pasos_list = [p.get("paso", "").strip() for p in pasos if isinstance(p, dict)]
+
+                resumen["metas"].append({
+                    "meta": meta_texto,
+                    "pasos": pasos_list,
+                    "encargado": encargado
+                })
+            except Exception:
+                continue
+
+        # Parte 3: Talentos = todas las preguntas tipo "abierta" excepto las clave
+        elif tipo_pregunta == "abierta" and texto_pregunta not in preguntas_texto.values():
+            if seccion not in resumen["talentos"]:
+                resumen["talentos"][seccion] = []
+            if r.respuesta and r.respuesta.strip():
+                resumen["talentos"][seccion].append(r.respuesta.strip())
+
+    return resumen

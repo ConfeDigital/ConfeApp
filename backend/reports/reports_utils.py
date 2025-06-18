@@ -17,6 +17,7 @@ from cuestionarios.utils import evaluar_rango, get_user_evaluation_summary
 from reportlab.lib.units import cm
 
 
+
 def draw_logo_header():
     logo_paths = [
         os.path.join(settings.MEDIA_ROOT, "logos/confe_Azul.png"),
