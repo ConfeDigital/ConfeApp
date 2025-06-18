@@ -44,6 +44,7 @@ const TIPOS_COMPLETOS = [
   "ed",
   "ch",
   "imagen",
+  "meta",
 ];
 
 const tiposPorCuestionario = {

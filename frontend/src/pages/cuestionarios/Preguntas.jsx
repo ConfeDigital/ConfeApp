@@ -183,7 +183,36 @@ const Preguntas = ({
 
       case "checkbox":
         // Para checkbox, debe tener al menos una opción seleccionada
-        return Array.isArray(respuesta) && respuesta.length > 0;
+        if (Array.isArray(respuesta)) {
+          return respuesta.length > 0;
+        }
+        // Si es un string (JSON), intentar parsearlo
+        if (typeof respuesta === "string") {
+          try {
+            const parsed = JSON.parse(respuesta);
+            return Array.isArray(parsed) && parsed.length > 0;
+          } catch {
+            return false;
+          }
+        }
+        // Si es un objeto, verificar que tenga al menos una propiedad
+        if (typeof respuesta === "object") {
+          return Object.keys(respuesta).length > 0;
+        }
+        return false;
+
+      case "fecha":
+      case "fecha_hora":
+        // Para fechas, debe ser una fecha válida
+        if (respuesta instanceof Date) {
+          return !isNaN(respuesta.getTime());
+        }
+        // Si es un string, intentar convertirlo a fecha
+        if (typeof respuesta === "string") {
+          const date = new Date(respuesta);
+          return !isNaN(date.getTime());
+        }
+        return false;
 
       case "sis":
       case "sis2":
@@ -342,12 +371,31 @@ const Preguntas = ({
             );
           });
 
-          // Agregar desbloqueos de la opción seleccionada
-          const opcionSeleccionada = pregunta?.opciones?.[respuesta];
-          if (opcionSeleccionada?.desbloqueos) {
-            opcionSeleccionada.desbloqueos.forEach((d) => {
-              nuevos.add(d.pregunta_desbloqueada);
-            });
+          // Agregar desbloqueos de las opciones seleccionadas
+          if (pregunta?.tipo === "checkbox") {
+            // Para checkbox, respuesta es un array de opciones seleccionadas
+            if (Array.isArray(respuesta)) {
+              respuesta.forEach((opcionSeleccionada) => {
+                const opcion = pregunta.opciones?.find(
+                  (op) => op.valor === opcionSeleccionada
+                );
+                if (opcion?.desbloqueos) {
+                  opcion.desbloqueos.forEach((d) => {
+                    nuevos.add(d.pregunta_desbloqueada);
+                  });
+                }
+              });
+            }
+          } else {
+            // Para otros tipos de preguntas
+            const opcionSeleccionada = pregunta?.opciones?.find(
+              (op) => op.valor === respuesta
+            );
+            if (opcionSeleccionada?.desbloqueos) {
+              opcionSeleccionada.desbloqueos.forEach((d) => {
+                nuevos.add(d.pregunta_desbloqueada);
+              });
+            }
           }
 
           return nuevos;
