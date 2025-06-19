@@ -38,7 +38,7 @@ from .serializers import (
     OpcionSerializer, UsuarioRespuestaSerializer, DesbloqueoPreguntaSerializer, 
     CuestionarioDesbloqueosSerializer, BaseCuestionariosSerializer,
     RespuestaDesbloqueadaSerializer, RespuestaUnlockedPathSerializer,
-    RespuestaSISSerializer, ResumenSISSerializer, 
+    RespuestaSISSerializer, ResumenSISSerializer, ReporteCuestionariosSerializer,
 )
 
 from .utils import (
@@ -1040,6 +1040,7 @@ def ver_imagen_pregunta(request, pregunta_id):
     except Pregunta.DoesNotExist:
         print(f"❌ Pregunta con ID {pregunta_id} no encontrada.")
         raise Http404("Pregunta no encontrada.")
+
 class PrecargaCuestionarioView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -1100,3 +1101,58 @@ class GuardarCuestionarioView(APIView):
         except Exception as e:
             print("❌ Error al guardar:", e)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ReporteCuestionariosView(APIView):
+    """
+    Vista para generar reportes de cuestionarios con información detallada:
+    - cuestionario_nombre
+    - base_cuestionario
+    - texto_pregunta
+    - tipo_pregunta
+    - respuesta
+    
+    No requiere parámetros obligatorios, pero se pueden filtrar por:
+    - usuario_id: Filtrar por usuario específico
+    - cuestionario_id: Filtrar por cuestionario específico
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        # Obtener parámetros opcionales
+        usuario_id = request.query_params.get('usuario_id')
+        cuestionario_id = request.query_params.get('cuestionario_id')
+
+        # Obtener todas las respuestas
+        respuestas = Respuesta.objects.select_related(
+            'usuario', 
+            'cuestionario', 
+            'cuestionario__base_cuestionario',
+            'pregunta'
+        ).all()
+
+        # Filtrar por usuario_id si está presente
+        if usuario_id:
+            try:
+                usuario = get_object_or_404(CustomUser, id=usuario_id)
+                respuestas = respuestas.filter(usuario=usuario)
+            except ValueError:
+                return Response(
+                    {"detail": "El usuario_id debe ser un número entero válido."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Filtrar por cuestionario_id si está presente
+        if cuestionario_id:
+            try:
+                cuestionario = get_object_or_404(Cuestionario, id=cuestionario_id)
+                respuestas = respuestas.filter(cuestionario=cuestionario)
+            except ValueError:
+                return Response(
+                    {"detail": "El cuestionario_id debe ser un número entero válido."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Serializar las respuestas
+        serializer = ReporteCuestionariosSerializer(respuestas, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)
