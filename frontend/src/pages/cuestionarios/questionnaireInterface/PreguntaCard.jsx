@@ -56,6 +56,7 @@ const nombreTipoPregunta = {
   ed: "Evaluación Diagnóstica",
   ch: "Cuadro de Habilidades",
   imagen: "Imagen",
+  meta: "Meta",
 };
 
 const PreguntaCard = ({

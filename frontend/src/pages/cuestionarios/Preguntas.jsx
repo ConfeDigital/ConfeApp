@@ -89,41 +89,6 @@ const Preguntas = ({
     window.scrollTo(0, 0);
   }, [expandedSection]);
 
-  // Cargar respuestas existentes
-  useEffect(() => {
-    const fetchRespuestas = async () => {
-      try {
-        const response = await api.get("/api/cuestionarios/respuestas/", {
-          params: { usuario, cuestionario: cuestionario.id },
-        });
-
-        const respuestasMap = {};
-        response.data.forEach((respuesta) => {
-          try {
-            respuestasMap[respuesta.pregunta] =
-              typeof respuesta.respuesta === "string" &&
-              respuesta.respuesta.startsWith("{")
-                ? JSON.parse(respuesta.respuesta)
-                : respuesta.respuesta;
-          } catch (error) {
-            console.error("Error parsing respuesta:", error);
-            respuestasMap[respuesta.pregunta] = respuesta.respuesta;
-          }
-        });
-
-        setRespuestas(respuestasMap);
-        setUnlockedQuestions(calculateUnlockedQuestions(respuestasMap));
-      } catch (error) {
-        console.error("Error fetching respuestas:", error);
-        setError("Error al cargar las respuestas");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRespuestas();
-  }, [usuario, cuestionario]);
-
   // Calcular preguntas desbloqueadas
   const calculateUnlockedQuestions = useCallback(
     (respuestas) => {
@@ -132,17 +97,87 @@ const Preguntas = ({
         const pregunta = cuestionario.preguntas.find(
           (p) => p.id === parseInt(preguntaId, 10)
         );
+
         if (pregunta?.opciones) {
-          const opcionSeleccionada = pregunta.opciones[parseInt(respuesta, 10)];
-          opcionSeleccionada?.desbloqueos?.forEach((desbloqueo) => {
-            unlocked.add(desbloqueo.pregunta_desbloqueada);
-          });
+          if (pregunta.tipo === "checkbox") {
+            // Para checkbox, la respuesta es un array de IDs de opciones
+            let opcionesSeleccionadas = [];
+            if (typeof respuesta === "string") {
+              try {
+                opcionesSeleccionadas = JSON.parse(respuesta);
+              } catch (error) {
+                console.error("Error parsing checkbox response:", error);
+              }
+            } else if (Array.isArray(respuesta)) {
+              opcionesSeleccionadas = respuesta;
+            }
+
+            // Buscar cada opción por ID y procesar sus desbloqueos
+            opcionesSeleccionadas.forEach((opcionId) => {
+              const opcion = pregunta.opciones.find((op) => op.id === opcionId);
+              if (opcion?.desbloqueos) {
+                opcion.desbloqueos.forEach((desbloqueo) => {
+                  unlocked.add(desbloqueo.pregunta_desbloqueada);
+                });
+              }
+            });
+          } else {
+            // Para otros tipos de preguntas, usar la lógica original
+            const opcionSeleccionada = pregunta.opciones.find(
+              (op) => op.valor === parseInt(respuesta, 10)
+            );
+            opcionSeleccionada?.desbloqueos?.forEach((desbloqueo) => {
+              unlocked.add(desbloqueo.pregunta_desbloqueada);
+            });
+          }
         }
       });
       return unlocked;
     },
     [cuestionario]
   );
+
+  // Efecto para recargar respuestas cuando cambien
+  useEffect(() => {
+    if (usuario && cuestionario) {
+      fetchRespuestas();
+    }
+  }, [usuario, cuestionario]);
+
+  // Efecto para actualizar preguntas desbloqueadas cuando cambien las respuestas
+  useEffect(() => {
+    setUnlockedQuestions(calculateUnlockedQuestions(respuestas));
+  }, [respuestas, calculateUnlockedQuestions]);
+
+  // Cargar respuestas existentes
+  const fetchRespuestas = async () => {
+    try {
+      const response = await api.get("/api/cuestionarios/respuestas/", {
+        params: { usuario, cuestionario: cuestionario.id },
+      });
+
+      const respuestasMap = {};
+      response.data.forEach((respuesta) => {
+        try {
+          respuestasMap[respuesta.pregunta] =
+            typeof respuesta.respuesta === "string" &&
+            respuesta.respuesta.startsWith("{")
+              ? JSON.parse(respuesta.respuesta)
+              : respuesta.respuesta;
+        } catch (error) {
+          console.error("Error parsing respuesta:", error);
+          respuestasMap[respuesta.pregunta] = respuesta.respuesta;
+        }
+      });
+
+      setRespuestas(respuestasMap);
+    } catch (error) {
+      console.error("Error fetching respuestas:", error);
+      setError("Error al cargar las respuestas");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Función para determinar si una pregunta debe mostrarse
   const isQuestionVisible = useCallback(
@@ -309,11 +344,19 @@ const Preguntas = ({
   // Handler para cambios en respuestas
   const handleRespuestaChange = useCallback(
     debounce(async (preguntaId, respuesta) => {
+      console.log("=== INICIO HANDLE RESPUESTA CHANGE ===");
+      console.log("Pregunta ID:", preguntaId);
+      console.log("Respuesta recibida:", respuesta);
+      console.log("Tipo de respuesta:", typeof respuesta);
+
       try {
         // Validar la respuesta antes de guardar
         const preguntaActual = cuestionario.preguntas.find(
           (p) => p.id === preguntaId
         );
+
+        console.log("Pregunta encontrada:", preguntaActual?.texto);
+        console.log("Tipo de pregunta:", preguntaActual?.tipo);
 
         // Validación específica para preguntas abiertas
         if (
@@ -344,12 +387,22 @@ const Preguntas = ({
           return newSet;
         });
 
+        console.log("Enviando respuesta al backend...");
+        console.log("Datos a enviar:", {
+          usuario: usuario.id,
+          cuestionario: cuestionario.id,
+          pregunta: preguntaId,
+          respuesta: JSON.stringify(respuesta),
+        });
+
         await api.post("/api/cuestionarios/respuestas/", {
           usuario: usuario.id,
           cuestionario: cuestionario.id,
           pregunta: preguntaId,
           respuesta: JSON.stringify(respuesta),
         });
+
+        console.log("Respuesta enviada exitosamente al backend");
 
         // Actualizar respuestas locales
         setRespuestas((prev) => ({
@@ -358,48 +411,91 @@ const Preguntas = ({
         }));
 
         // Actualizar preguntas desbloqueadas
+        console.log("=== PROCESANDO DESBLOQUEOS EN FRONTEND ===");
         setUnlockedQuestions((prev) => {
           const nuevos = new Set(prev);
           const pregunta = cuestionario.preguntas.find(
             (p) => p.id === preguntaId
           );
 
+          console.log("Pregunta para desbloqueos:", pregunta?.texto);
+          console.log("Opciones de la pregunta:", pregunta?.opciones);
+
           // Eliminar posibles desbloqueos antiguos
           pregunta?.opciones?.forEach((op) => {
-            op.desbloqueos?.forEach((d) =>
-              nuevos.delete(d.pregunta_desbloqueada)
-            );
+            op.desbloqueos?.forEach((d) => {
+              console.log(
+                "Eliminando desbloqueo antiguo:",
+                d.pregunta_desbloqueada
+              );
+              nuevos.delete(d.pregunta_desbloqueada);
+            });
           });
 
           // Agregar desbloqueos de las opciones seleccionadas
           if (pregunta?.tipo === "checkbox") {
+            console.log("Procesando desbloqueos para CHECKBOX");
+            console.log("Respuesta checkbox:", respuesta);
+
+            // Mostrar todas las opciones de la pregunta
+            console.log("Todas las opciones de la pregunta:");
+            pregunta.opciones?.forEach((op, index) => {
+              console.log(
+                `  - Índice: ${index}, Valor: ${op.valor}, Texto: ${op.texto}`
+              );
+            });
+
             // Para checkbox, respuesta es un array de opciones seleccionadas
             if (Array.isArray(respuesta)) {
+              console.log("Respuesta es un array, procesando...");
               respuesta.forEach((opcionSeleccionada) => {
-                const opcion = pregunta.opciones?.find(
-                  (op) => op.valor === opcionSeleccionada
+                console.log(
+                  "Procesando opción seleccionada:",
+                  opcionSeleccionada
                 );
+                // Buscar por ID de la opción en lugar de por valor
+                const opcion = pregunta.opciones?.find(
+                  (op) => op.id === opcionSeleccionada
+                );
+                console.log("Opción encontrada:", opcion?.texto);
+                console.log("Desbloqueos de esta opción:", opcion?.desbloqueos);
                 if (opcion?.desbloqueos) {
                   opcion.desbloqueos.forEach((d) => {
+                    console.log(
+                      "Agregando desbloqueo:",
+                      d.pregunta_desbloqueada
+                    );
                     nuevos.add(d.pregunta_desbloqueada);
                   });
                 }
               });
+            } else {
+              console.log("Respuesta no es un array:", respuesta);
             }
           } else {
+            console.log("Procesando desbloqueos para otro tipo de pregunta");
             // Para otros tipos de preguntas
             const opcionSeleccionada = pregunta?.opciones?.find(
               (op) => op.valor === respuesta
             );
+            console.log("Opción seleccionada:", opcionSeleccionada?.texto);
+            console.log(
+              "Desbloqueos de esta opción:",
+              opcionSeleccionada?.desbloqueos
+            );
             if (opcionSeleccionada?.desbloqueos) {
               opcionSeleccionada.desbloqueos.forEach((d) => {
+                console.log("Agregando desbloqueo:", d.pregunta_desbloqueada);
                 nuevos.add(d.pregunta_desbloqueada);
               });
             }
           }
 
+          console.log("Nuevas preguntas desbloqueadas:", Array.from(nuevos));
           return nuevos;
         });
+
+        console.log("=== FIN HANDLE RESPUESTA CHANGE ===");
       } catch (error) {
         console.error("Error updating respuesta:", error);
         setNotificacion({
