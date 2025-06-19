@@ -525,25 +525,34 @@ def get_resumen_entrevista(usuario_id):
 
 def get_resumen_proyecto_vida(usuario_id):
     """
-    Extrae respuestas clave del cuestionario Proyecto de Vida:
-    - Dos preguntas textuales.
-    - Todas las metas desanidadas (tipo "meta").
-    - Talentos agrupados por sección (tipo "abierta").
+    Extrae del cuestionario 'Proyecto de Vida':
+    - Dos preguntas textuales clave.
+    - Metas desanidadas con pasos y encargados.
+    - Talentos por texto exacto de pregunta.
     """
     preguntas_texto = {
         "lo_mas_importante": "Lo más importante para mi",
         "me_gusta": "Me gusta, me tranquiliza, me hace sentir bien, me divierte"
     }
 
+    preguntas_talento = [
+        "Talentos - Relaciones",
+        "Talentos - Gustos",
+        "Talentos - Historia",
+        "Talentos - Salud",
+        "Talentos - Seguridad",
+        "Talentos - Emociones",
+        "Talentos - Elecciones"
+    ]
+
     resumen = {
         "lo_mas_importante": None,
         "me_gusta": None,
         "metas": [],
-        "talentos": {}  # agrupados por nombre_seccion
+        "talentos": {}  # agrupados por texto de pregunta
     }
 
-    # Encuentra cuestionarios que contienen "proyecto de vida"
-    cuestionarios_pv = Cuestionario.objects.filter(nombre__icontains="proyecto de vida")
+    cuestionarios_pv = Cuestionario.objects.filter(nombre__icontains="PV")
     if not cuestionarios_pv.exists():
         return resumen
 
@@ -558,37 +567,41 @@ def get_resumen_proyecto_vida(usuario_id):
         pregunta = r.pregunta
         texto_pregunta = pregunta.texto.strip()
         tipo_pregunta = pregunta.tipo
-        seccion = pregunta.nombre_seccion or "Sin sección"
+        raw_respuesta = r.respuesta
 
-        # Parte 1: Preguntas clave textuales
+        # Parte 1: preguntas textuales clave
         if texto_pregunta == preguntas_texto["lo_mas_importante"]:
-            resumen["lo_mas_importante"] = r.respuesta.strip() if r.respuesta else ""
+            resumen["lo_mas_importante"] = raw_respuesta or ""
         elif texto_pregunta == preguntas_texto["me_gusta"]:
-            resumen["me_gusta"] = r.respuesta.strip() if r.respuesta else ""
+            resumen["me_gusta"] = raw_respuesta or ""
 
-        # Parte 2: Preguntas tipo "meta" con JSON
-        elif tipo_pregunta == "meta":
+        # Parte 2: preguntas tipo "meta"
+        elif tipo_pregunta == "meta" and raw_respuesta:
             try:
-                metas_json = json.loads(r.respuesta)
-                meta_texto = metas_json.get("meta", "").strip()
-                pasos = metas_json.get("pasos", [])
-                encargado = metas_json.get("encargado", "").strip()
+                data = json.loads(raw_respuesta)
+                meta_texto = data.get("meta", "").strip()
+                pasos = data.get("pasos", [])
 
-                pasos_list = [p.get("paso", "").strip() for p in pasos if isinstance(p, dict)]
+                pasos_list = []
+                for paso in pasos:
+                    descripcion = paso.get("descripcion", "").strip()
+                    encargado = paso.get("encargado", "").strip()
+                    if descripcion or encargado:
+                        pasos_list.append({"descripcion": descripcion, "encargado": encargado})
 
-                resumen["metas"].append({
-                    "meta": meta_texto,
-                    "pasos": pasos_list,
-                    "encargado": encargado
-                })
+                if meta_texto and pasos_list:
+                    resumen["metas"].append({
+                        "meta": meta_texto,
+                        "pasos": pasos_list
+                    })
             except Exception:
                 continue
 
-        # Parte 3: Talentos = todas las preguntas tipo "abierta" excepto las clave
-        elif tipo_pregunta == "abierta" and texto_pregunta not in preguntas_texto.values():
-            if seccion not in resumen["talentos"]:
-                resumen["talentos"][seccion] = []
-            if r.respuesta and r.respuesta.strip():
-                resumen["talentos"][seccion].append(r.respuesta.strip())
+        # Parte 3: talentos por texto exacto de pregunta
+        elif texto_pregunta in preguntas_talento:
+            if texto_pregunta not in resumen["talentos"]:
+                resumen["talentos"][texto_pregunta] = []
+            if raw_respuesta and raw_respuesta.strip():
+                resumen["talentos"][texto_pregunta].append(raw_respuesta.strip())
 
     return resumen

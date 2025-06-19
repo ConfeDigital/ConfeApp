@@ -171,7 +171,6 @@ def generate_ficha_tecnica(uid, profile, respuestas):
     # === Página 2: NECESIDADES DE APOYO, PROYECTO DE VIDA, TALENTOS ===
     elements.append(PageBreak())
 
-# Estilos
     styles = getSampleStyleSheet()
     parrafo_normal = ParagraphStyle(
         name='NormalCustom',
@@ -196,51 +195,47 @@ def generate_ficha_tecnica(uid, profile, respuestas):
         ('RIGHTPADDING', (0, 0), (-1, -1), 6),
     ])
 
+    # Se obtiene solo una vez el resumen completo de proyecto de vida
+    datos_proyecto_vida = get_resumen_proyecto_vida(profile.user.id)
+
     for section in ["NECESIDADES DE APOYO", "PROYECTO DE VIDA", "TALENTOS"]:
         elements.append(section_header(section))
         elements.append(Spacer(1, 6))
 
         if section == "NECESIDADES DE APOYO":
             resumen = get_resumen_entrevista(profile.user.id)
-            entrevista_table = [
-                [
-                    Paragraph("¿Cómo te ves en tu futuro? ¿Qué metas te gustaría cumplir?", parrafo_normal),
-                    Paragraph(resumen.get("futuro_usuario", ""), parrafo_normal)
-                ],
-                [
-                    Paragraph("¿A futuro cómo le gustaría ver a su hijo/hija?", parrafo_normal),
-                    Paragraph(resumen.get("futuro_hijo", ""), parrafo_normal)
-                ],
-                [
-                    Paragraph("Observaciones del entrevistador", parrafo_normal),
-                    Paragraph(resumen.get("observaciones_entrevistador", ""), parrafo_normal)
-                ]
+            entrevista_data = [
+                ["¿Cómo te ves en tu futuro? ¿Qué metas te gustaría cumplir?", resumen.get("futuro_usuario") or ""],
+                ["¿A futuro cómo le gustaría ver a su hijo/hija?", resumen.get("futuro_hijo") or ""],
+                ["Observaciones del entrevistador", resumen.get("observaciones_entrevistador") or ""],
             ]
-            table = Table(entrevista_table, colWidths=[200, 250])
+            data = [[Paragraph(preg, parrafo_normal), Paragraph(resp, parrafo_normal)] for preg, resp in entrevista_data]
+            table = Table(data, colWidths=[200, 250])
             table.setStyle(estilo_tabla)
             elements.append(table)
 
         elif section == "PROYECTO DE VIDA":
-            datos = get_resumen_proyecto_vida(profile.user.id)
-
-            # Tabla 1 – Textos clave
-            tabla_textos = [
-                [Paragraph("Lo más importante para mí", parrafo_normal), Paragraph(datos.get("lo_mas_importante") or "", parrafo_normal)],
-                [Paragraph("Me gusta, me tranquiliza, me hace sentir bien, me divierte", parrafo_normal), Paragraph(datos.get("me_gusta") or "", parrafo_normal)],
+            # Textos clave
+            textos_data = [
+                ["Lo más importante para mí", datos_proyecto_vida.get("lo_mas_importante") or ""],
+                ["Me gusta, me tranquiliza, me hace sentir bien, me divierte", datos_proyecto_vida.get("me_gusta") or ""],
             ]
-            table = Table(tabla_textos, colWidths=[200, 250])
+            data = [[Paragraph(preg, parrafo_normal), Paragraph(resp, parrafo_normal)] for preg, resp in textos_data]
+            table = Table(data, colWidths=[200, 250])
             table.setStyle(estilo_tabla)
             elements.append(table)
 
             elements.append(Spacer(1, 10))
 
-            # Tabla 2 – Metas
-            if datos["metas"]:
+            # Metas con pasos y encargados
+            if datos_proyecto_vida["metas"]:
                 elements.append(Paragraph("Metas", estilo_titulo_seccion))
                 metas_data = []
-                for meta in datos["metas"]:
-                    pasos_str = "<br/>".join(f"- {p}" for p in meta["pasos"])
-                    texto_meta = f"<b>Meta:</b> {meta['meta']}<br/><b>Encargado:</b> {meta['encargado']}<br/><b>Pasos:</b><br/>{pasos_str}"
+                for meta in datos_proyecto_vida["metas"]:
+                    pasos_render = "<br/>".join(
+                        f"- {p['descripcion']} <i>({p['encargado']})</i>" for p in meta["pasos"]
+                    )
+                    texto_meta = f"<b>Meta:</b> {meta['meta']}<br/><b>Pasos:</b><br/>{pasos_render}"
                     metas_data.append([Paragraph(texto_meta, parrafo_normal)])
                 table = Table(metas_data, colWidths=[450])
                 table.setStyle(estilo_tabla)
@@ -248,15 +243,26 @@ def generate_ficha_tecnica(uid, profile, respuestas):
 
             elements.append(Spacer(1, 10))
 
-            # Tabla 3 – Talentos agrupados
-            if datos["talentos"]:
-                elements.append(Paragraph("Talentos", estilo_titulo_seccion))
-                for nombre_seccion, talentos in datos["talentos"].items():
-                    texto = f"<b>{nombre_seccion}:</b> {', '.join(talentos)}"
-                    elements.append(Paragraph(texto, parrafo_normal))
+        elif section == "TALENTOS":
+            if datos_proyecto_vida["talentos"]:
+                talentos_data = []
+                for pregunta, respuestas in datos_proyecto_vida["talentos"].items():
+                    if respuestas:  # Verifica que haya contenido en la lista
+                        pregunta_parrafo = Paragraph(f"<b>{pregunta}</b>", parrafo_normal)
+                        respuesta_parrafo = Paragraph(", ".join(respuestas), parrafo_normal)
+                        talentos_data.append([pregunta_parrafo, respuesta_parrafo])
+
+                if talentos_data:
+                    table = Table(talentos_data, colWidths=[200, 250])
+                    table.setStyle(estilo_tabla)
+                    elements.append(table)
+                else:
+                    elements.append(Paragraph("No se registraron talentos con contenido en esta sección.", parrafo_normal))
+            else:
+                elements.append(Paragraph("No se registraron talentos para este usuario.", parrafo_normal))
 
         else:
-            # Placeholder para otras secciones no implementadas aún
+            # Placeholder genérico
             placeholder_table = Table(
                 [["(Aquí irán 5 respuestas seleccionadas del cuestionario correspondiente)"]],
                 colWidths=[450]
