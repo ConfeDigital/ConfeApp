@@ -6,7 +6,7 @@ from .settings import BASE_DIR
 logger = logging.getLogger(__name__)
 
 # --- Configuración del Host y CSRF ---
-ALLOWED_HOSTS = [os.environ['WEBSITE_HOSTNAME'], 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = [os.environ['WEBSITE_HOSTNAME'], 'localhost', '127.0.0.1', '169.254.130.2']
 CSRF_TRUSTED_ORIGINS = ['https://'+os.environ['WEBSITE_HOSTNAME']]
 DEBUG = False
 SECRET_KEY = os.environ['MY_SECRET_KEY']
@@ -71,6 +71,17 @@ SQL_SERVER_DATABASE = CONNECTION_PARAMS.get('Initial Catalog', '').strip()
 SQL_SERVER_USER = CONNECTION_PARAMS.get('User ID', '').strip()
 SQL_SERVER_PASSWORD = CONNECTION_PARAMS.get('Password', '').strip()
 
+# --- ADD THESE DEBUGGING LOGS HERE (IMPORTANT: DO NOT LOG FULL PASSWORD) ---
+logger.info(f"DEBUG DB Config (Raw Connection String Part): {CONNECTION_STRING_RAW.split('Password=')[0]}Password=*****")
+logger.info(f"DEBUG DB Config - Host: {SQL_SERVER_HOST}")
+logger.info(f"DEBUG DB Config - Port: {SQL_SERVER_PORT}")
+logger.info(f"DEBUG DB Config - Database: {SQL_SERVER_DATABASE}")
+logger.info(f"DEBUG DB Config - User: {SQL_SERVER_USER}")
+logger.info(f"DEBUG DB Config - Password (first 3 chars): {SQL_SERVER_PASSWORD[:3]}*****")
+logger.info(f"DEBUG DB Config - TrustServerCertificate: {CONNECTION_PARAMS.get('TrustServerCertificate', 'False').lower()}")
+logger.info(f"DEBUG DB Config - Encrypt: {CONNECTION_PARAMS.get('Encrypt', 'True').lower()}")
+# --- END DEBUGGING LOGS ---
+
 # Configuración DATABASES
 DATABASES = {
     "default": {
@@ -88,7 +99,6 @@ DATABASES = {
         },
         "AUTOCOMMIT": True,
         "ATOMIC_REQUESTS": True,
-        # Ya no necesitamos "CLIENT_CLASS" para SQL Authentication
     }
 }
 
