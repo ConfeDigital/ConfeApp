@@ -5,6 +5,9 @@ if [ -d "venv" ]; then
     source venv/bin/activate
 fi
 
+export DJANGO_SETTINGS_MODULE='backend.deployment'
+python manage.py migrate --noinput
+
 # Collect static files
 python manage.py collectstatic --noinput
 
