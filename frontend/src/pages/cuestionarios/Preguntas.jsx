@@ -159,11 +159,35 @@ const Preguntas = ({
       const respuestasMap = {};
       response.data.forEach((respuesta) => {
         try {
-          respuestasMap[respuesta.pregunta] =
+          let respuestaParseada;
+
+          // Intentar parsear la respuesta JSON
+          if (
             typeof respuesta.respuesta === "string" &&
             respuesta.respuesta.startsWith("{")
-              ? JSON.parse(respuesta.respuesta)
-              : respuesta.respuesta;
+          ) {
+            respuestaParseada = JSON.parse(respuesta.respuesta);
+          } else {
+            respuestaParseada = respuesta.respuesta;
+          }
+
+          // Si es una respuesta procesada (nuevo formato), extraer el valor_original
+          if (
+            respuestaParseada &&
+            typeof respuestaParseada === "object" &&
+            respuestaParseada.valor_original !== undefined
+          ) {
+            console.log("Respuesta procesada encontrada:", respuestaParseada);
+            console.log(
+              "Extrayendo valor_original:",
+              respuestaParseada.valor_original
+            );
+            respuestasMap[respuesta.pregunta] =
+              respuestaParseada.valor_original;
+          } else {
+            // Respuesta en formato antiguo, usar tal como está
+            respuestasMap[respuesta.pregunta] = respuestaParseada;
+          }
         } catch (error) {
           console.error("Error parsing respuesta:", error);
           respuestasMap[respuesta.pregunta] = respuesta.respuesta;
@@ -195,6 +219,15 @@ const Preguntas = ({
     // Validación base para respuestas nulas o indefinidas
     if (respuesta === undefined || respuesta === null) {
       return false;
+    }
+
+    // Si es una respuesta procesada (nuevo formato), validar el valor_original
+    if (
+      respuesta &&
+      typeof respuesta === "object" &&
+      respuesta.valor_original !== undefined
+    ) {
+      return isRespuestaValida(respuesta.valor_original, tipoPregunta);
     }
 
     // Validaciones específicas por tipo de pregunta
@@ -341,6 +374,108 @@ const Preguntas = ({
     isRespuestaValida,
   ]);
 
+  // Función para procesar respuestas y agregar información adicional
+  const procesarRespuesta = (respuesta, pregunta) => {
+    console.log("=== PROCESANDO RESPUESTA ===");
+    console.log("Respuesta original:", respuesta);
+    console.log("Tipo de pregunta:", pregunta.tipo);
+    console.log("Opciones disponibles:", pregunta.opciones);
+
+    // Para preguntas que no son checkbox, dropdown o multiple, devolver la respuesta tal como está
+    if (!["checkbox", "dropdown", "multiple"].includes(pregunta.tipo)) {
+      console.log(
+        "No es checkbox/dropdown/multiple, devolviendo respuesta original"
+      );
+      return respuesta;
+    }
+
+    let respuestaProcesada = {
+      valor_original: respuesta,
+      texto: null,
+      opciones_info: [],
+    };
+
+    try {
+      if (pregunta.tipo === "checkbox") {
+        // Para checkbox, respuesta es un array de IDs de opciones seleccionadas
+        const opcionesSeleccionadas = Array.isArray(respuesta) ? respuesta : [];
+
+        respuestaProcesada.opciones_info = opcionesSeleccionadas.map(
+          (opcionId) => {
+            const opcion = pregunta.opciones.find((op) => op.id === opcionId);
+            const indice = pregunta.opciones.findIndex(
+              (op) => op.id === opcionId
+            );
+
+            return {
+              id: opcionId,
+              texto: opcion ? opcion.texto : "Opción no encontrada",
+              valor: opcion ? opcion.valor : null,
+              indice: indice >= 0 ? indice : null,
+            };
+          }
+        );
+
+        respuestaProcesada.texto = respuestaProcesada.opciones_info
+          .map((op) => op.texto)
+          .join(", ");
+      } else if (pregunta.tipo === "dropdown" || pregunta.tipo === "multiple") {
+        // Para dropdown y multiple, respuesta es un índice numérico
+        const indice = parseInt(respuesta);
+
+        if (
+          !isNaN(indice) &&
+          indice >= 0 &&
+          indice < pregunta.opciones.length
+        ) {
+          const opcion = pregunta.opciones[indice];
+
+          respuestaProcesada.opciones_info = [
+            {
+              id: opcion.id,
+              texto: opcion.texto,
+              valor: opcion.valor,
+              indice: indice,
+            },
+          ];
+
+          respuestaProcesada.texto = opcion.texto;
+        } else {
+          // Si el índice no es válido, intentar buscar por valor
+          const opcionPorValor = pregunta.opciones.find(
+            (op) => op.valor === parseInt(respuesta)
+          );
+          if (opcionPorValor) {
+            const indiceEncontrado = pregunta.opciones.findIndex(
+              (op) => op.id === opcionPorValor.id
+            );
+            respuestaProcesada.opciones_info = [
+              {
+                id: opcionPorValor.id,
+                texto: opcionPorValor.texto,
+                valor: opcionPorValor.valor,
+                indice: indiceEncontrado,
+              },
+            ];
+            respuestaProcesada.texto = opcionPorValor.texto;
+          } else {
+            respuestaProcesada.texto = `Valor no encontrado: ${respuesta}`;
+          }
+        }
+      }
+
+      console.log("Respuesta procesada:", respuestaProcesada);
+      return respuestaProcesada;
+    } catch (error) {
+      console.error("Error procesando respuesta:", error);
+      return {
+        valor_original: respuesta,
+        texto: `Error procesando respuesta: ${error.message}`,
+        opciones_info: [],
+      };
+    }
+  };
+
   // Handler para cambios en respuestas
   const handleRespuestaChange = useCallback(
     debounce(async (preguntaId, respuesta) => {
@@ -387,24 +522,27 @@ const Preguntas = ({
           return newSet;
         });
 
-        console.log("Enviando respuesta al backend...");
+        // Procesar la respuesta para incluir información adicional
+        const respuestaProcesada = procesarRespuesta(respuesta, preguntaActual);
+
+        console.log("Enviando respuesta procesada al backend...");
         console.log("Datos a enviar:", {
           usuario: usuario.id,
           cuestionario: cuestionario.id,
           pregunta: preguntaId,
-          respuesta: JSON.stringify(respuesta),
+          respuesta: JSON.stringify(respuestaProcesada),
         });
 
         await api.post("/api/cuestionarios/respuestas/", {
           usuario: usuario.id,
           cuestionario: cuestionario.id,
           pregunta: preguntaId,
-          respuesta: JSON.stringify(respuesta),
+          respuesta: JSON.stringify(respuestaProcesada),
         });
 
         console.log("Respuesta enviada exitosamente al backend");
 
-        // Actualizar respuestas locales
+        // Actualizar respuestas locales (mantener la respuesta original para el frontend)
         setRespuestas((prev) => ({
           ...prev,
           [preguntaId]: respuesta,
