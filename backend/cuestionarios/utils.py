@@ -10,6 +10,7 @@ from django.http import JsonResponse, HttpResponse
 import re
 import os
 from django.conf import settings
+from django.shortcuts import get_object_or_404
 
 from openpyxl import load_workbook
 from openpyxl.drawing.image import Image as OpenpyxlImage
@@ -481,127 +482,136 @@ def get_user_evaluation_summary(usuario_id, query_params=None):
         "detalles_por_seccion": resultados
     }
 
-def get_resumen_entrevista(usuario_id):
+def get_texto_respuesta_transformada(respuesta_obj):
     """
-    Extrae las tres preguntas clave del cuestionario ENTREVISTA para la ficha técnica - NECESIDAD DE APOYOS.
-
-    Args:
-        usuario_id (int): ID del usuario.
-
-    Returns:
-        dict: Diccionario con las respuestas a las preguntas clave.
+    Retorna el texto legible de una respuesta, extrayendo el campo 'texto' si la respuesta es un JSON.
     """
+    raw = respuesta_obj.respuesta
+    tipo = respuesta_obj.pregunta.tipo
 
-    preguntas_clave = {
+    if not raw:
+        return ""
+
+    try:
+        data = json.loads(raw)
+        if isinstance(data, dict) and "texto" in data:
+            return data["texto"]
+        elif isinstance(data, list):  # checkbox u otro tipo con múltiples opciones
+            opciones = respuesta_obj.pregunta.opciones
+            textos = [o["texto"] for o in opciones if o["id"] in data]
+            return ", ".join(textos)
+    except Exception:
+        pass  # Si no es JSON o falla, sigue abajo
+
+    # Si no es JSON o no tiene campo 'texto', devuelve tal cual
+    return str(raw).strip()
+
+
+def get_resumen_cuestionarios_completo(usuario_id):
+    """
+    Devuelve:
+    - respuestas_crudas: lista de todas las respuestas para inspección general
+    - entrevista: preguntas clave
+    - proyecto_vida: textos, metas desanidadas y talentos agrupados
+    - evaluacion_diagnostica: respuestas clave para habilidades básicas
+    """
+    resumen_general = {
+        "respuestas_crudas": [],
+        "entrevista": {
+            "futuro_usuario": None,
+            "futuro_hijo": None,
+            "observaciones_entrevistador": None
+        },
+        "proyecto_vida": {
+            "lo_mas_importante": None,
+            "me_gusta": None,
+            "metas": [],
+            "talentos": {}
+        },
+        "evaluacion_diagnostica": {}
+    }
+
+    preguntas_entrevista = {
         "futuro_usuario": "¿Cómo te ves en tu futuro? ¿Qué metas te gustaría cumplir?",
         "futuro_hijo": "¿A futuro cómo le gustaría ver a su hijo/hija?",
         "observaciones_entrevistador": "Observaciones del entrevistador (Observaciones conductuales, de dinámica familiar, necesidades de apoyo, entre otras)"
     }
 
-    # Acepta cualquier variante del nombre "ENTREVISTA"
-    cuestionarios_entrevista = Cuestionario.objects.filter(nombre__icontains="entrevista")
-
-    if not cuestionarios_entrevista.exists():
-        return {k: None for k in preguntas_clave.keys()}
-
-    entrevista_ids = cuestionarios_entrevista.values_list('id', flat=True)
-
-    respuestas = Respuesta.objects.filter(
-        usuario_id=usuario_id,
-        pregunta__texto__in=preguntas_clave.values(),
-        pregunta__cuestionario_id__in=entrevista_ids
-    ).select_related('pregunta')
-
-    resultado = {k: None for k in preguntas_clave.keys()}
-
-    for r in respuestas:
-        texto = r.pregunta.texto.strip()
-        for key, expected in preguntas_clave.items():
-            if texto == expected:
-                resultado[key] = r.respuesta.strip() if r.respuesta else None
-
-    return resultado
-
-
-def get_resumen_proyecto_vida(usuario_id):
-    """
-    Extrae del cuestionario 'Proyecto de Vida':
-    - Dos preguntas textuales clave.
-    - Metas desanidadas con pasos y encargados.
-    - Talentos por texto exacto de pregunta.
-    """
-    preguntas_texto = {
+    preguntas_texto_pv = {
         "lo_mas_importante": "Lo más importante para mi",
         "me_gusta": "Me gusta, me tranquiliza, me hace sentir bien, me divierte"
     }
 
     preguntas_talento = [
-        "Talentos - Relaciones",
-        "Talentos - Gustos",
-        "Talentos - Historia",
-        "Talentos - Salud",
-        "Talentos - Seguridad",
-        "Talentos - Emociones",
-        "Talentos - Elecciones"
+        "Talentos - Relaciones", "Talentos - Gustos", "Talentos - Historia",
+        "Talentos - Salud", "Talentos - Seguridad", "Talentos - Emociones", "Talentos - Elecciones"
     ]
 
-    resumen = {
-        "lo_mas_importante": None,
-        "me_gusta": None,
-        "metas": [],
-        "talentos": {}  # agrupados por texto de pregunta
+    diagnostica_mapping = {
+        "Lectura": "Describe el nivel de lectura del/la candidato/a",
+        "Escritura": "Describe el nivel de escritura del/la candidato/a",
+        "Números": "Describe el conocimiento de números del/la candidato/a",
+        "Suma": "Describe el nivel de suma del/la candidato/a",
+        "Resta": "Describe el nivel de resta del/la candidato/a",
+        "Manejo de Dinero": "Describe el nivel de manejo de dinero del/la candidato/a",
+        "Cruzar la Calle": "Describe el nivel de cruzar la calle del/la candidato/a",
+        "Transporte": "Describe el nivel de uso de transporte del/la candidato/a",
+        "Comunicación": "Describe como se comunica el/la candidato/a"
     }
 
-    cuestionarios_pv = Cuestionario.objects.filter(nombre__icontains="PV")
-    if not cuestionarios_pv.exists():
-        return resumen
-
-    cuestionario_ids = cuestionarios_pv.values_list("id", flat=True)
-
-    respuestas = Respuesta.objects.filter(
-        usuario_id=usuario_id,
-        pregunta__cuestionario_id__in=cuestionario_ids
-    ).select_related("pregunta")
+    respuestas = Respuesta.objects.select_related(
+        "pregunta", "cuestionario", "cuestionario__base_cuestionario"
+    ).filter(usuario_id=usuario_id)
 
     for r in respuestas:
         pregunta = r.pregunta
         texto_pregunta = pregunta.texto.strip()
         tipo_pregunta = pregunta.tipo
-        raw_respuesta = r.respuesta
+        texto_respuesta = get_texto_respuesta_transformada(r)
 
-        # Parte 1: preguntas textuales clave
-        if texto_pregunta == preguntas_texto["lo_mas_importante"]:
-            resumen["lo_mas_importante"] = raw_respuesta or ""
-        elif texto_pregunta == preguntas_texto["me_gusta"]:
-            resumen["me_gusta"] = raw_respuesta or ""
+        # Acumulador general
+        resumen_general["respuestas_crudas"].append({
+            "cuestionario_nombre": r.cuestionario.nombre,
+            "base_cuestionario": r.cuestionario.base_cuestionario.nombre if r.cuestionario.base_cuestionario else None,
+            "texto_pregunta": texto_pregunta,
+            "tipo_pregunta": tipo_pregunta,
+            "respuesta": texto_respuesta
+        })
 
-        # Parte 2: preguntas tipo "meta"
-        elif tipo_pregunta == "meta" and raw_respuesta:
-            try:
-                data = json.loads(raw_respuesta)
-                meta_texto = data.get("meta", "").strip()
-                pasos = data.get("pasos", [])
+        # ENTREVISTA
+        if "entrevista" in r.cuestionario.nombre.lower():
+            for key, expected in preguntas_entrevista.items():
+                if texto_pregunta == expected:
+                    resumen_general["entrevista"][key] = texto_respuesta
 
-                pasos_list = []
-                for paso in pasos:
-                    descripcion = paso.get("descripcion", "").strip()
-                    encargado = paso.get("encargado", "").strip()
-                    if descripcion or encargado:
-                        pasos_list.append({"descripcion": descripcion, "encargado": encargado})
+        # PROYECTO DE VIDA
+        elif "pv" in r.cuestionario.nombre.lower():
+            if texto_pregunta == preguntas_texto_pv.get("lo_mas_importante"):
+                resumen_general["proyecto_vida"]["lo_mas_importante"] = texto_respuesta
+            elif texto_pregunta == preguntas_texto_pv.get("me_gusta"):
+                resumen_general["proyecto_vida"]["me_gusta"] = texto_respuesta
+            elif tipo_pregunta == "meta":
+                try:
+                    meta_obj = json.loads(texto_respuesta)
+                    if meta_obj.get("meta") and meta_obj.get("pasos"):
+                        pasos = meta_obj["pasos"]
+                        resumen_general["proyecto_vida"]["metas"].append({
+                            "meta": meta_obj["meta"],
+                            "pasos": pasos
+                        })
+                except Exception:
+                    pass
+            elif texto_pregunta in preguntas_talento:
+                if texto_pregunta not in resumen_general["proyecto_vida"]["talentos"]:
+                    resumen_general["proyecto_vida"]["talentos"][texto_pregunta] = []
+                resumen_general["proyecto_vida"]["talentos"][texto_pregunta].append(texto_respuesta)
 
-                if meta_texto and pasos_list:
-                    resumen["metas"].append({
-                        "meta": meta_texto,
-                        "pasos": pasos_list
-                    })
-            except Exception:
-                continue
+        # EVALUACIÓN DIAGNÓSTICA
+        elif "evaluación diagnóstica" in r.cuestionario.nombre.lower():
+            for key, label in diagnostica_mapping.items():
+                if texto_pregunta == label:
+                    resumen_general["evaluacion_diagnostica"][key] = texto_respuesta
+                    print(texto_respuesta)
+    
 
-        # Parte 3: talentos por texto exacto de pregunta
-        elif texto_pregunta in preguntas_talento:
-            if texto_pregunta not in resumen["talentos"]:
-                resumen["talentos"][texto_pregunta] = []
-            if raw_respuesta and raw_respuesta.strip():
-                resumen["talentos"][texto_pregunta].append(raw_respuesta.strip())
-
-    return resumen
+    return resumen_general

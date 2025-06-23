@@ -39,7 +39,7 @@ from django.http import HttpResponse
 import os
 from django.conf import settings
 from reportlab.lib.units import cm
-from cuestionarios.utils import get_resumen_entrevista, get_resumen_proyecto_vida
+from cuestionarios.utils import get_resumen_cuestionarios_completo
 
 
 def generate_ficha_tecnica(uid, profile, respuestas):
@@ -62,7 +62,13 @@ def generate_ficha_tecnica(uid, profile, respuestas):
             leading=16,
             textColor=colors.white
         ))
-
+    estilo_tabla = TableStyle([
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTSIZE', (0, 0), (-1, -1), 9),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+    ])
     # === PÁGINA 1 ===
     elements.append(draw_logo_header())
     elements.append(Spacer(1, 10))
@@ -151,14 +157,17 @@ def generate_ficha_tecnica(uid, profile, respuestas):
 
     tables = fill_table_data(profile, TABLE_TEMPLATES)
 
+    resumen_completo = get_resumen_cuestionarios_completo(profile.user.id)
+    datos_proyecto_vida = resumen_completo.get("proyecto_vida", {})
+    datos_entrevista = resumen_completo.get("entrevista", {})
+    datos_diagnostica = resumen_completo.get("evaluacion_diagnostica", {})
+
     elements.append(section_header("EVALUACIÓN DIAGNÓSTICA"))
-    diag_data = tables["Evaluación Diagnóstica"]
     col1, col2 = [], []
-    for i, row in enumerate(diag_data):
-        if len(row) >= 2:
-            p = Paragraph(f"<b>{row[0]}</b>: {row[1]}", normal_style)
-            (col1 if i % 2 == 0 else col2).append(p)
-            (col1 if i % 2 == 0 else col2).append(Spacer(1, 4))
+    for i, (pregunta, respuesta) in enumerate(datos_diagnostica.items()):
+        p = Paragraph(f"<b>{pregunta}</b>: {respuesta}", normal_style)
+        (col1 if i % 2 == 0 else col2).append(p)
+        (col1 if i % 2 == 0 else col2).append(Spacer(1, 4))
     diag_columns = Table([[col1, col2]], colWidths=[250, 250])
     diag_columns.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -167,117 +176,65 @@ def generate_ficha_tecnica(uid, profile, respuestas):
         ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
     ]))
     elements.append(diag_columns)
-
-    # === Página 2: NECESIDADES DE APOYO, PROYECTO DE VIDA, TALENTOS ===
     elements.append(PageBreak())
-
-    styles = getSampleStyleSheet()
-    parrafo_normal = ParagraphStyle(
-        name='NormalCustom',
-        parent=styles['Normal'],
-        fontSize=9,
-        leading=12,
-        spaceAfter=6
-    )
-    estilo_titulo_seccion = ParagraphStyle(
-        name='TituloSeccion',
-        parent=styles['Heading4'],
-        fontSize=10,
-        spaceBefore=10,
-        spaceAfter=6,
-        alignment=0  # izquierda
-    )
-    estilo_tabla = TableStyle([
-        ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-    ])
-
-    # Se obtiene solo una vez el resumen completo de proyecto de vida
-    datos_proyecto_vida = get_resumen_proyecto_vida(profile.user.id)
 
     for section in ["NECESIDADES DE APOYO", "PROYECTO DE VIDA", "TALENTOS"]:
         elements.append(section_header(section))
         elements.append(Spacer(1, 6))
 
         if section == "NECESIDADES DE APOYO":
-            resumen = get_resumen_entrevista(profile.user.id)
             entrevista_data = [
-                ["¿Cómo te ves en tu futuro? ¿Qué metas te gustaría cumplir?", resumen.get("futuro_usuario") or ""],
-                ["¿A futuro cómo le gustaría ver a su hijo/hija?", resumen.get("futuro_hijo") or ""],
-                ["Observaciones del entrevistador", resumen.get("observaciones_entrevistador") or ""],
+                ["¿Cómo te ves en tu futuro? ¿Qué metas te gustaría cumplir?", datos_entrevista.get("futuro_usuario") or ""],
+                ["¿A futuro cómo le gustaría ver a su hijo/hija?", datos_entrevista.get("futuro_hijo") or ""],
+                ["Observaciones del entrevistador", datos_entrevista.get("observaciones_entrevistador") or ""],
             ]
-            data = [[Paragraph(preg, parrafo_normal), Paragraph(resp, parrafo_normal)] for preg, resp in entrevista_data]
+            data = [[Paragraph(preg, normal_style), Paragraph(resp, normal_style)] for preg, resp in entrevista_data]
             table = Table(data, colWidths=[200, 250])
             table.setStyle(estilo_tabla)
             elements.append(table)
 
         elif section == "PROYECTO DE VIDA":
-            # Textos clave
             textos_data = [
                 ["Lo más importante para mí", datos_proyecto_vida.get("lo_mas_importante") or ""],
                 ["Me gusta, me tranquiliza, me hace sentir bien, me divierte", datos_proyecto_vida.get("me_gusta") or ""],
             ]
-            data = [[Paragraph(preg, parrafo_normal), Paragraph(resp, parrafo_normal)] for preg, resp in textos_data]
+            data = [[Paragraph(preg, normal_style), Paragraph(resp, normal_style)] for preg, resp in textos_data]
             table = Table(data, colWidths=[200, 250])
             table.setStyle(estilo_tabla)
             elements.append(table)
-
             elements.append(Spacer(1, 10))
 
-            # Metas con pasos y encargados
             if datos_proyecto_vida["metas"]:
-                elements.append(Paragraph("Metas", estilo_titulo_seccion))
+                elements.append(Paragraph("Metas", title_style))
                 metas_data = []
                 for meta in datos_proyecto_vida["metas"]:
                     pasos_render = "<br/>".join(
                         f"- {p['descripcion']} <i>({p['encargado']})</i>" for p in meta["pasos"]
                     )
                     texto_meta = f"<b>Meta:</b> {meta['meta']}<br/><b>Pasos:</b><br/>{pasos_render}"
-                    metas_data.append([Paragraph(texto_meta, parrafo_normal)])
+                    metas_data.append([Paragraph(texto_meta, normal_style)])
                 table = Table(metas_data, colWidths=[450])
                 table.setStyle(estilo_tabla)
                 elements.append(table)
-
             elements.append(Spacer(1, 10))
 
         elif section == "TALENTOS":
-            if datos_proyecto_vida["talentos"]:
+            talentos = datos_proyecto_vida.get("talentos", {})
+            if talentos:
                 talentos_data = []
-                for pregunta, respuestas in datos_proyecto_vida["talentos"].items():
-                    if respuestas:  # Verifica que haya contenido en la lista
-                        pregunta_parrafo = Paragraph(f"<b>{pregunta}</b>", parrafo_normal)
-                        respuesta_parrafo = Paragraph(", ".join(respuestas), parrafo_normal)
+                for pregunta, respuestas in talentos.items():
+                    if respuestas:
+                        pregunta_parrafo = Paragraph(f"<b>{pregunta}</b>", normal_style)
+                        respuesta_parrafo = Paragraph(", ".join(respuestas), normal_style)
                         talentos_data.append([pregunta_parrafo, respuesta_parrafo])
-
                 if talentos_data:
                     table = Table(talentos_data, colWidths=[200, 250])
                     table.setStyle(estilo_tabla)
                     elements.append(table)
                 else:
-                    elements.append(Paragraph("No se registraron talentos con contenido en esta sección.", parrafo_normal))
+                    elements.append(Paragraph("No se registraron talentos con contenido en esta sección.", normal_style))
             else:
-                elements.append(Paragraph("No se registraron talentos para este usuario.", parrafo_normal))
-
-        else:
-            # Placeholder genérico
-            placeholder_table = Table(
-                [["(Aquí irán 5 respuestas seleccionadas del cuestionario correspondiente)"]],
-                colWidths=[450]
-            )
-            placeholder_table.setStyle(TableStyle([
-                ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Oblique'),
-                ('FONTSIZE', (0, 0), (-1, -1), 10),
-                ('BACKGROUND', (0, 0), (-1, -1), colors.lightgrey),
-                ('TEXTCOLOR', (0, 0), (-1, -1), colors.darkgray),
-                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('TOPPADDING', (0, 0), (-1, -1), 20),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 20),
-            ]))
-            elements.append(placeholder_table)
+                elements.append(Paragraph("No se registraron talentos para este usuario.", normal_style))
 
         elements.append(Spacer(1, 20))
 
@@ -318,7 +275,7 @@ def generate_ficha_tecnica(uid, profile, respuestas):
     # Asegurar que se usen colWidths más amplios (no los de percentiles):
     for t in prot_table:
         if hasattr(t, 'colWidths'):
-            t._argW = [5 * cm for _ in t._argW]  # Ancho amplio uniforme
+            t._argW = [10 * cm for _ in t._argW]  # Ancho amplio uniforme
     elements.extend(prot_table)
     elements.append(Spacer(1, 24))
 
@@ -326,7 +283,7 @@ def generate_ficha_tecnica(uid, profile, respuestas):
     med_table = draw_table(tables["Necesidades Médicas y Conductuales"], "NECESIDADES MÉDICAS Y CONDUCTUALES")
     for t in med_table:
         if hasattr(t, 'colWidths'):
-            t._argW = [5*cm for _ in t._argW]  # Ancho amplio uniforme
+            t._argW = [10*cm for _ in t._argW]  # Ancho amplio uniforme
     elements.extend(med_table)
     elements.append(Spacer(1, 12))
 
