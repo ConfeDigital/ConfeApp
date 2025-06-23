@@ -160,23 +160,20 @@ def generate_ficha_tecnica(uid, profile, respuestas):
     resumen_completo = get_resumen_cuestionarios_completo(profile.user.id)
     datos_proyecto_vida = resumen_completo.get("proyecto_vida", {})
     datos_entrevista = resumen_completo.get("entrevista", {})
-    datos_diagnostica = resumen_completo.get("evaluacion_diagnostica", {})
+    # datos_diagnostica = resumen_completo.get("evaluacion_diagnostica", {})  # Comentado para usar la tabla de fill_table_data
+
+    # print(f"datos_diagnostica: {datos_diagnostica}")  # Comentado
 
     elements.append(section_header("EVALUACIÓN DIAGNÓSTICA"))
-    col1, col2 = [], []
-    for i, (pregunta, respuesta) in enumerate(datos_diagnostica.items()):
-        p = Paragraph(f"<b>{pregunta}</b>: {respuesta}", normal_style)
-        (col1 if i % 2 == 0 else col2).append(p)
-        (col1 if i % 2 == 0 else col2).append(Spacer(1, 4))
-    diag_columns = Table([[col1, col2]], colWidths=[250, 250])
-    diag_columns.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('TOPPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-    ]))
-    elements.append(diag_columns)
-    elements.append(PageBreak())
+    
+    # Usar la tabla generada por fill_table_data en lugar de datos_diagnostica
+    if "Evaluación Diagnóstica" in tables:
+        eval_table = draw_table(tables["Evaluación Diagnóstica"], "EVALUACIÓN DIAGNÓSTICA")
+        elements.extend(eval_table)
+    else:
+        elements.append(Paragraph("No hay datos de evaluación diagnóstica disponibles.", normal_style))
+    
+    elements.append(Spacer(1, 24))
 
     for section in ["NECESIDADES DE APOYO", "PROYECTO DE VIDA", "TALENTOS"]:
         elements.append(section_header(section))
@@ -272,18 +269,11 @@ def generate_ficha_tecnica(uid, profile, respuestas):
 
     elements.append(section_header("PROTECCIÓN Y DEFENSA"))
     prot_table = draw_table(tables["Protección y Defensa"], "PROTECCIÓN Y DEFENSA")
-    # Asegurar que se usen colWidths más amplios (no los de percentiles):
-    for t in prot_table:
-        if hasattr(t, 'colWidths'):
-            t._argW = [10 * cm for _ in t._argW]  # Ancho amplio uniforme
     elements.extend(prot_table)
     elements.append(Spacer(1, 24))
 
     elements.append(section_header("NECESIDADES MÉDICAS Y CONDUCTUALES"))
     med_table = draw_table(tables["Necesidades Médicas y Conductuales"], "NECESIDADES MÉDICAS Y CONDUCTUALES")
-    for t in med_table:
-        if hasattr(t, 'colWidths'):
-            t._argW = [10*cm for _ in t._argW]  # Ancho amplio uniforme
     elements.extend(med_table)
     elements.append(Spacer(1, 12))
 

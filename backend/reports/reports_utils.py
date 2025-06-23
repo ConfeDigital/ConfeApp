@@ -194,6 +194,12 @@ def draw_table(data, title, celdas_coloreadas=None):
     styles = getSampleStyleSheet()
     elements = []
 
+    # Calcular ancho disponible de la página (letter size - márgenes)
+    # Letter size: 612 x 792 points, márgenes: 50 puntos cada lado
+    page_width = 612  # points
+    margins = 50 * 2  # left + right margins
+    available_width = page_width - margins
+    
     # Insertar estructura especial para Habilidades Adaptativas
     if title == "Habilidades Adaptativas":
         # Título largo como fila dentro de la tabla
@@ -340,9 +346,19 @@ def draw_table(data, title, celdas_coloreadas=None):
             table_style.add('TEXTCOLOR', (col_idx, row_idx), (col_idx, row_idx), text_color)
             table_style.add('FONTNAME', (col_idx, row_idx), (col_idx, row_idx), font_name)
 
-    # Crear y agregar tabla
+    # Crear y agregar tabla con anchos dinámicos
     repeat_rows = 3 if title == "Habilidades Adaptativas" else 1
-    col_widths = [1.2*cm] + [2.3*cm]*7 + [1.2*cm]  # ajustado según tu layout
+    
+    # Calcular anchos de columna dinámicamente
+    num_cols = len(formatted_data[0]) if formatted_data else 1
+    
+    if title == "Habilidades Adaptativas":
+        # Para la tabla de Habilidades Adaptativas, mantener proporciones específicas
+        col_widths = [available_width * 0.15] + [available_width * 0.12] * 7 + [available_width * 0.15]
+    else:
+        # Para otras tablas, distribuir el ancho uniformemente
+        col_widths = [available_width / num_cols] * num_cols
+    
     table = Table(formatted_data, repeatRows=repeat_rows, colWidths=col_widths)
     table.setStyle(table_style)
     elements.append(table)

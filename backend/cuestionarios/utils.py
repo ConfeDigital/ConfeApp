@@ -611,7 +611,7 @@ def get_resumen_cuestionarios_completo(usuario_id):
             for key, label in diagnostica_mapping.items():
                 if texto_pregunta == label:
                     resumen_general["evaluacion_diagnostica"][key] = texto_respuesta
-                    print(texto_respuesta)
+                    print(f"texto_respuesta: {texto_respuesta}")
     
 
     return resumen_general

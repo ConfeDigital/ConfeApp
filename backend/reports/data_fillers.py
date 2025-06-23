@@ -179,8 +179,61 @@ def build_tabla_salud_necesidades_conductuales(profile):
 def fill_table_data(profile, TABLE_TEMPLATES):
     from copy import deepcopy
     tables = deepcopy(TABLE_TEMPLATES)
-    respuestas = Respuesta.objects.filter(usuario=profile.user)
-    respuestas_dict = {r.pregunta.texto.strip(): r.respuesta for r in respuestas}
+    
+    # Obtener datos desde la API en lugar de la base de datos
+    try:
+        # Hacer GET request al endpoint de reportes
+        response = requests.get(
+            f'http://127.0.0.1:8000/api/cuestionarios/kiki/reportes/',
+            params={'usuario_id': profile.user.id}
+        )
+        response.raise_for_status()
+        api_data = response.json()
+        
+        print("🔍 DATOS OBTENIDOS DESDE LA API:")
+        print("=" * 50)
+        for item in api_data:
+            print(f"Cuestionario: {item.get('cuestionario_nombre', 'N/A')}")
+            print(f"Pregunta: {item.get('texto_pregunta', 'N/A')}")
+            print(f"Respuesta: {item.get('respuesta', 'N/A')}")
+            print("-" * 30)
+        print("=" * 50)
+        
+        # Crear diccionario de respuestas desde la API
+        respuestas_dict = {}
+        for item in api_data:
+            if item.get('cuestionario_nombre', '').lower() == 'evaluación diagnóstica':
+                respuesta_raw = item.get('respuesta', '')
+                # Manejar diferentes formatos de respuesta
+                if isinstance(respuesta_raw, dict):
+                    # Si es un diccionario, extraer el valor original (número)
+                    respuesta_text = respuesta_raw.get('texto', str(respuesta_raw))
+                    valor_original = respuesta_raw.get('valor_original', '')
+                    print(f"🔍 Procesando respuesta: {item.get('texto_pregunta', '')}")
+                    print(f"   Respuesta raw: {respuesta_raw}")
+                    print(f"   Texto extraído: {respuesta_text}")
+                    print(f"   Valor original: {valor_original}")
+                    # Usar el valor original (número) en lugar del texto
+                    respuestas_dict[item.get('texto_pregunta', '').strip()] = respuesta_text
+                elif isinstance(respuesta_raw, str):
+                    # Si es string, intentar parsear como JSON
+                    try:
+                        import json
+                        parsed = json.loads(respuesta_raw)
+                        respuesta_text = parsed.get('texto', respuesta_raw)
+                    except:
+                        respuesta_text = respuesta_raw
+                else:
+                    respuesta_text = str(respuesta_raw)
+                
+                respuestas_dict[item.get('texto_pregunta', '').strip()] = respuesta_text
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo datos desde API: {e}")
+        # Fallback a consulta directa de base de datos
+        respuestas = Respuesta.objects.filter(usuario=profile.user)
+        respuestas_dict = {r.pregunta.texto.strip(): r.respuesta for r in respuestas}
+    
     preguntas_map = {}
     preguntas = Pregunta.objects.filter(cuestionario__nombre__iexact="Evaluación Diagnóstica").prefetch_related("opciones")
     for pregunta in preguntas:
@@ -237,24 +290,50 @@ def fill_table_data(profile, TABLE_TEMPLATES):
             if not question_text:
                 continue
 
-            raw_respuesta = respuestas_dict.get(question_text, "").strip()
+            raw_respuesta = respuestas_dict.get(question_text, "")
+            # Asegurar que raw_respuesta sea string antes de hacer strip
+            if isinstance(raw_respuesta, str):
+                raw_respuesta = raw_respuesta.strip()
+            else:
+                raw_respuesta = str(raw_respuesta)
+            
             opciones_dict = preguntas_map.get(question_text, {})
 
+            # Debug: Mostrar el mapping de opciones
+            print(f"🔍 Procesando fila: {row_label}")
+            print(f"   Pregunta buscada: {question_text}")
+            print(f"   Respuesta raw: {raw_respuesta}")
+            print(f"   Opciones disponibles: {opciones_dict}")
+            
             if not opciones_dict:
                 respuesta_text = raw_respuesta or "No especificado"
+                print(f"   No hay opciones, usando respuesta directa: {respuesta_text}")
             elif question_text == "Describir el nivel de sumar y restar":
                 try:
                     import json
                     id_list = json.loads(raw_respuesta) if raw_respuesta else []
                     selected_texts = [opciones_dict.get(str(i), f"ID {i}") for i in id_list]
                     respuesta_text = ", ".join(selected_texts) if selected_texts else "No especificado"
+                    print(f"   Pregunta especial (suma/resta), respuesta: {respuesta_text}")
                 except Exception:
                     respuesta_text = "No especificado"
+                    print(f"   Error procesando suma/resta: {respuesta_text}")
             else:
                 # Preguntas de opción única
                 respuesta_text = opciones_dict.get(raw_respuesta, raw_respuesta or "No especificado")
+                print(f"   Usando mapping de opciones, respuesta final: {respuesta_text}")
+
+            print(f"   Asignando a tabla[{i}][1] = {respuesta_text}")
+            print("-" * 30)
 
             tables["Evaluación Diagnóstica"][i][1] = respuesta_text
+
+    # Debug: Mostrar la tabla final completa
+    print("📋 TABLA EVALUACIÓN DIAGNÓSTICA FINAL:")
+    print("=" * 50)
+    for i, row in enumerate(tables["Evaluación Diagnóstica"]):
+        print(f"Row {i}: {row}")
+    print("=" * 50)
 
     pv_table = build_proyecto_vida_table(profile)
     tables["Proyecto de Vida"] = pv_table if pv_table else [["📘 Proyecto de Vida", "No hay respuestas registradas."]]
