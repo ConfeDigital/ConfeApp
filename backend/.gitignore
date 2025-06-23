@@ -9,3 +9,4 @@ media/
 static/
 dump.rdb
 exports/
+*.sqlite3
