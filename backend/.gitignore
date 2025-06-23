@@ -10,3 +10,4 @@ static/
 dump.rdb
 exports/
 *.sqlite3
+dbLUKEN.sqlite3
