@@ -56,23 +56,18 @@ from .utils import (
 def normalizar_nombre_cuestionario(nombre):
     """
     Normaliza el nombre del cuestionario:
-    - Convierte a mayúsculas
-    - Quita acentos y caracteres especiales
+    - Mantiene mayúsculas/minúsculas originales
+    - Mantiene acentos
+    - Quita símbolos extraños (mantener solo letras, números, espacios y acentos)
     - Normaliza espacios múltiples a uno solo
     - Quita espacios al inicio y final
     """
     if not nombre:
         return nombre
     
-    # Convertir a mayúsculas
-    normalizado = nombre.upper()
-    
-    # Quitar acentos usando unicodedata
-    normalizado = unicodedata.normalize('NFD', normalizado)
-    normalizado = ''.join(c for c in normalizado if not unicodedata.combining(c))
-    
-    # Quitar símbolos extraños (mantener solo letras, números y espacios)
-    normalizado = re.sub(r'[^A-Z0-9\s]', '', normalizado)
+    # Quitar símbolos extraños (mantener solo letras, números, espacios y caracteres acentuados)
+    # Usar una expresión regular que permita letras con acentos
+    normalizado = re.sub(r'[^a-zA-ZÀ-ÿ0-9\s]', '', nombre)
     
     # Normalizar espacios múltiples a uno solo y quitar espacios al inicio/final
     normalizado = re.sub(r'\s+', ' ', normalizado).strip()
