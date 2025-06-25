@@ -216,6 +216,19 @@ const BaseCuestionarios = () => {
       return;
     }
 
+    // Verificar si existe otro cuestionario con el mismo nombre (excluyendo el actual)
+    const cuestionarioExistente = baseCuestionarios.find(
+      (cuestionario) =>
+        cuestionario.id !== editCuestionario.id &&
+        cuestionario.nombre.toLowerCase() ===
+          editCuestionario.nombre.toLowerCase()
+    );
+
+    if (cuestionarioExistente) {
+      setError("Ya existe otro cuestionario con ese nombre.");
+      return;
+    }
+
     const datosActualizados = {
       ...editCuestionario,
       estado_desbloqueo: editCuestionario.etapa,

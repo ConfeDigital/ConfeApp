@@ -18,6 +18,8 @@ from api.models import CustomUser
 from datetime import datetime
 import json
 from django.http import FileResponse, FileResponse, Http404
+import unicodedata
+import re
 
 import logging
 from django.views.decorators.http import require_http_methods
@@ -49,6 +51,33 @@ from .utils import (
     get_user_evaluation_summary,
     validar_columnas_excel
 )
+
+
+def normalizar_nombre_cuestionario(nombre):
+    """
+    Normaliza el nombre del cuestionario:
+    - Convierte a mayúsculas
+    - Quita acentos y caracteres especiales
+    - Normaliza espacios múltiples a uno solo
+    - Quita espacios al inicio y final
+    """
+    if not nombre:
+        return nombre
+    
+    # Convertir a mayúsculas
+    normalizado = nombre.upper()
+    
+    # Quitar acentos usando unicodedata
+    normalizado = unicodedata.normalize('NFD', normalizado)
+    normalizado = ''.join(c for c in normalizado if not unicodedata.combining(c))
+    
+    # Quitar símbolos extraños (mantener solo letras, números y espacios)
+    normalizado = re.sub(r'[^A-Z0-9\s]', '', normalizado)
+    
+    # Normalizar espacios múltiples a uno solo y quitar espacios al inicio/final
+    normalizado = re.sub(r'\s+', ' ', normalizado).strip()
+    
+    return normalizado
 
 
 class CuestionarioSeleccion(APIView):
@@ -614,13 +643,24 @@ class CrearCuestionario(APIView):
         if not nombre or not etapa:
             return Response({"error": "Se requiere el nombre y la etapa del cuestionario"}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Normalizar el nombre del cuestionario
+        nombre_normalizado = normalizar_nombre_cuestionario(nombre)
+        
+        # Verificar si ya existe un cuestionario con el nombre normalizado
+        cuestionario_existente = BaseCuestionarios.objects.filter(
+            nombre__iexact=nombre_normalizado
+        ).first()
+        
+        if cuestionario_existente:
+            return Response({"error": "Ya existe un cuestionario con ese nombre"}, status=status.HTTP_400_BAD_REQUEST)
+
         base_cuestionario, created = BaseCuestionarios.objects.get_or_create(
-            nombre=nombre,
+            nombre=nombre_normalizado,
             defaults={'estado_desbloqueo': etapa, 'responsable': responsable, 'inicio': inicio}
         )
 
         cuestionario, created = Cuestionario.objects.get_or_create(
-            nombre=nombre,
+            nombre=nombre_normalizado,
             base_cuestionario=base_cuestionario,
             defaults={
                 'version': 1,
@@ -688,6 +728,25 @@ class EditarCuestionarioView(UpdateAPIView):
     def put(self, request, *args, **kwargs):
         """Maneja la actualización de una base de cuestionarios."""
         instance = self.get_object()  # Obtiene la base de cuestionarios a editar
+        
+        # Si se está actualizando el nombre, normalizarlo
+        if 'nombre' in request.data:
+            nombre_normalizado = normalizar_nombre_cuestionario(request.data['nombre'])
+            
+            # Verificar si ya existe otro cuestionario con el nombre normalizado (excluyendo el actual)
+            cuestionario_existente = BaseCuestionarios.objects.filter(
+                nombre__iexact=nombre_normalizado
+            ).exclude(id=instance.id).first()
+            
+            if cuestionario_existente:
+                return Response(
+                    {"error": "Ya existe otro cuestionario con ese nombre"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Actualizar el nombre normalizado en los datos
+            request.data['nombre'] = nombre_normalizado
+        
         serializer = self.get_serializer(instance, data=request.data, partial=True)  # Permite actualización parcial
         # print(f"\n\n\n Esto se mando: {request.data} \n\n\n")
         serializer.is_valid(raise_exception=True)  # Valida los datos
