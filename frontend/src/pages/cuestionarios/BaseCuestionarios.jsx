@@ -193,6 +193,7 @@ const BaseCuestionarios = () => {
           console.error("La respuesta de la API no es un array:", res.data);
         }
         setOpen(false);
+        setError(""); // Limpiar errores al cerrar exitosamente
         setNewCuestionario({
           nombre: "",
           etapa: "",
@@ -242,18 +243,25 @@ const BaseCuestionarios = () => {
         datosActualizados
       )
       .then((res) => {
-        // Update the state with the edited questionnaire
+        // Usar los datos que regresa el backend (que incluyen el nombre normalizado)
+        const cuestionarioActualizado = res.data;
+
+        // Update the state with the data from the backend response
         const updatedCuestionarios = baseCuestionarios.map((cuestionario) =>
           cuestionario.id === editCuestionario.id
             ? {
-                ...editCuestionario,
-                estado_desbloqueo: editCuestionario.etapa,
+                ...cuestionario,
+                nombre: cuestionarioActualizado.nombre, // Usar el nombre normalizado del backend
+                estado_desbloqueo: cuestionarioActualizado.estado_desbloqueo,
+                responsable: cuestionarioActualizado.responsable,
+                inicio: cuestionarioActualizado.inicio,
               }
             : cuestionario
         );
 
         setBaseCuestionarios(updatedCuestionarios);
         setOpenEdit(false);
+        setError(""); // Limpiar errores al cerrar exitosamente
       })
       .catch((err) => {
         console.error("Error editando cuestionario:", err);
