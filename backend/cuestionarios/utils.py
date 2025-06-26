@@ -520,7 +520,8 @@ def get_resumen_cuestionarios_completo(usuario_id):
         "entrevista": {
             "futuro_usuario": None,
             "futuro_hijo": None,
-            "observaciones_entrevistador": None
+            "observaciones_entrevistador": None,
+            "talentos_familia": None
         },
         "proyecto_vida": {
             "lo_mas_importante": None,
@@ -532,9 +533,10 @@ def get_resumen_cuestionarios_completo(usuario_id):
     }
 
     preguntas_entrevista = {
-        "futuro_usuario": "¿Cómo te ves en tu futuro? ¿Qué metas te gustaría cumplir?",
-        "futuro_hijo": "¿A futuro cómo le gustaría ver a su hijo/hija?",
-        "observaciones_entrevistador": "Observaciones del entrevistador (Observaciones conductuales, de dinámica familiar, necesidades de apoyo, entre otras)"
+        "futuro_usuario": "Necesidades de apoyo según la familia",
+        "futuro_hijo": "Necesidades de apoyo según el candidato",
+        "observaciones_entrevistador": "Necesidades de apoyo según el entrevistador",
+        "talentos_familia": "Comentarios de la familia sobre los talentos del candidato"
     }
 
     preguntas_texto_pv = {

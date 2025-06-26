@@ -181,9 +181,9 @@ def generate_ficha_tecnica(uid, profile, respuestas):
 
         if section == "NECESIDADES DE APOYO":
             entrevista_data = [
-                ["¿Cómo te ves en tu futuro? ¿Qué metas te gustaría cumplir?", datos_entrevista.get("futuro_usuario") or ""],
-                ["¿A futuro cómo le gustaría ver a su hijo/hija?", datos_entrevista.get("futuro_hijo") or ""],
-                ["Observaciones del entrevistador", datos_entrevista.get("observaciones_entrevistador") or ""],
+                ["Necesidades de apoyo según la familia", datos_entrevista.get("futuro_usuario") or ""],
+                ["Necesidades de apoyo según el candidato", datos_entrevista.get("futuro_hijo") or ""],
+                ["Necesidades de apoyo según el entrevistador", datos_entrevista.get("observaciones_entrevistador") or ""],
             ]
             data = [[Paragraph(preg, normal_style), Paragraph(resp, normal_style)] for preg, resp in entrevista_data]
             table = Table(data, colWidths=[200, 250])
@@ -216,7 +216,13 @@ def generate_ficha_tecnica(uid, profile, respuestas):
             elements.append(Spacer(1, 10))
 
         elif section == "TALENTOS":
-            talentos = datos_proyecto_vida.get("talentos", {})
+            talentos = datos_proyecto_vida.get("talentos", {}).copy()
+            
+            # Agregar al final una entrada adicional desde entrevista
+            observacion_extra = datos_entrevista.get("talentos_familia")
+            if observacion_extra:
+                talentos["Talentos según la Familia"] = [observacion_extra]
+
             if talentos:
                 talentos_data = []
                 for pregunta, respuestas in talentos.items():
@@ -232,8 +238,7 @@ def generate_ficha_tecnica(uid, profile, respuestas):
                     elements.append(Paragraph("No se registraron talentos con contenido en esta sección.", normal_style))
             else:
                 elements.append(Paragraph("No se registraron talentos para este usuario.", normal_style))
-
-        elements.append(Spacer(1, 20))
+                elements.append(Spacer(1, 20))
 
     # === Página 3: SECCIÓN SIS ===
     elements.append(PageBreak())
