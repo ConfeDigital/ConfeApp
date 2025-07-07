@@ -1,6 +1,18 @@
+// Import the core pdfMake library
+import pdfMake from "pdfmake/build/pdfmake";
+// Import the virtual file system (fonts)
 import * as pdfFonts from "pdfmake/build/vfs_fonts";
+
+// Import PdfMakeWrapper and its components
 import { PdfMakeWrapper, Txt, Table } from "pdfmake-wrapper";
 
+// IMPORTANT: Assign the fonts to the pdfMake object
+// This ensures the core pdfMake library has access to the fonts
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
+
+// Now, set the fonts for PdfMakeWrapper.
+// This step tells pdfmake-wrapper to use the fonts that are now available
+// in the pdfMake object.
 PdfMakeWrapper.setFonts(pdfFonts);
 
 export const generarReporteApoyos = async (apoyos, candidate) => {
