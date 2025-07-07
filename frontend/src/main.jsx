@@ -6,13 +6,18 @@ import App from './App.jsx';
 import { PublicClientApplication, EventType } from "@azure/msal-browser";
 import { msalConfig } from "./auth-config.js";
 
+import pdfMake from "pdfmake/build/pdfmake";
+import * as pdfFonts from "pdfmake/build/vfs_fonts";
+
+pdfMake.vfs = pdfFonts.pdfMake.vfs;
+
 const msalInstance = new PublicClientApplication(msalConfig);
 
 // Initialize MSAL before rendering
 const initializeMsal = async () => {
   try {
     await msalInstance.initialize();
-    
+
     // Set active account if available
     if (!msalInstance.getActiveAccount() && msalInstance.getAllAccounts().length > 0) {
       msalInstance.setActiveAccount(msalInstance.getAllAccounts()[0]);
