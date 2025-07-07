@@ -1,18 +1,24 @@
 // Import the core pdfMake library
 import pdfMake from "pdfmake/build/pdfmake";
-// Import the virtual file system (fonts)
+
+// Explicitly make pdfMake available on the window object
+// This is crucial because pdfmake/build/vfs_fonts.js expects a global pdfMake object.
+window.pdfMake = window.pdfMake || {};
+window.pdfMake.vfs = pdfMake.vfs; // Copy existing vfs if any, though usually empty at this point
+Object.assign(window.pdfMake, pdfMake); // Copy all properties from the module import to the global object
+
+// Now, import the virtual file system (fonts).
+// This import will now correctly attach itself to window.pdfMake.vfs.
 import * as pdfFonts from "pdfmake/build/vfs_fonts";
 
 // Import PdfMakeWrapper and its components
 import { PdfMakeWrapper, Txt, Table } from "pdfmake-wrapper";
 
-// IMPORTANT: Assign the fonts to the pdfMake object
-// This ensures the core pdfMake library has access to the fonts
-pdfMake.vfs = pdfFonts.pdfMake.vfs;
-
-// Now, set the fonts for PdfMakeWrapper.
-// This step tells pdfmake-wrapper to use the fonts that are now available
-// in the pdfMake object.
+// PdfMakeWrapper.setFonts() will now correctly use the fonts
+// that were attached to window.pdfMake.vfs by pdfFonts.
+// Note: The previous line `pdfMake.vfs = pdfFonts.pdfMake.vfs;` is now redundant
+// because `pdfFonts` automatically populates `window.pdfMake.vfs` upon its import
+// if `window.pdfMake` exists.
 PdfMakeWrapper.setFonts(pdfFonts);
 
 export const generarReporteApoyos = async (apoyos, candidate) => {
