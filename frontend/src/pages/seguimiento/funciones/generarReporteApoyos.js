@@ -1,5 +1,5 @@
-import { PdfMakeWrapper, Txt, Table } from "pdfmake-wrapper";
 import * as pdfFonts from "pdfmake/build/vfs_fonts";
+import { PdfMakeWrapper, Txt, Table } from "pdfmake-wrapper";
 
 PdfMakeWrapper.setFonts(pdfFonts);
 
