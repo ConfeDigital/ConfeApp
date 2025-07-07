@@ -38,21 +38,19 @@ const Preguntas = ({
   technicalAids,
   chAids,
   esEditable,
-  onQuestionUnlock,
 }) => {
   // Estados principales
   const [respuestas, setRespuestas] = useState({});
   const [unlockedQuestions, setUnlockedQuestions] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  // const [preguntasEditables, setPreguntasEditables] = useState(new Set());
   const [preguntasEditables, setPreguntasEditables] = useState([]);
   const [groupedQuestions, setGroupedQuestions] = useState({});
   const [expandedSection, setExpandedSection] = useState(null);
-  const [preguntasNoRespondidas, setPreguntasNoRespondidas] = useState(
-    new Set()
-  );
   const accordionRefs = useRef({});
   const topRef = useRef(null);
+  // const [subitems, setSubitems] = useState([]);
 
   const navigate = useNavigate();
   // Notificaciones
@@ -89,6 +87,41 @@ const Preguntas = ({
     window.scrollTo(0, 0);
   }, [expandedSection]);
 
+  // Cargar respuestas existentes
+  useEffect(() => {
+    const fetchRespuestas = async () => {
+      try {
+        const response = await api.get("/api/cuestionarios/respuestas/", {
+          params: { usuario, cuestionario: cuestionario.id },
+        });
+
+        const respuestasMap = {};
+        response.data.forEach((respuesta) => {
+          try {
+            respuestasMap[respuesta.pregunta] =
+              typeof respuesta.respuesta === "string" &&
+              respuesta.respuesta.startsWith("{")
+                ? JSON.parse(respuesta.respuesta)
+                : respuesta.respuesta;
+          } catch (error) {
+            console.error("Error parsing respuesta:", error);
+            respuestasMap[respuesta.pregunta] = respuesta.respuesta;
+          }
+        });
+
+        setRespuestas(respuestasMap);
+        setUnlockedQuestions(calculateUnlockedQuestions(respuestasMap));
+      } catch (error) {
+        console.error("Error fetching respuestas:", error);
+        setError("Error al cargar las respuestas");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchRespuestas();
+  }, [usuario, cuestionario]);
+
   // Calcular preguntas desbloqueadas
   const calculateUnlockedQuestions = useCallback(
     (respuestas) => {
@@ -97,39 +130,11 @@ const Preguntas = ({
         const pregunta = cuestionario.preguntas.find(
           (p) => p.id === parseInt(preguntaId, 10)
         );
-
         if (pregunta?.opciones) {
-          if (pregunta.tipo === "checkbox") {
-            // Para checkbox, la respuesta es un array de IDs de opciones
-            let opcionesSeleccionadas = [];
-            if (typeof respuesta === "string") {
-              try {
-                opcionesSeleccionadas = JSON.parse(respuesta);
-              } catch (error) {
-                console.error("Error parsing checkbox response:", error);
-              }
-            } else if (Array.isArray(respuesta)) {
-              opcionesSeleccionadas = respuesta;
-            }
-
-            // Buscar cada opción por ID y procesar sus desbloqueos
-            opcionesSeleccionadas.forEach((opcionId) => {
-              const opcion = pregunta.opciones.find((op) => op.id === opcionId);
-              if (opcion?.desbloqueos) {
-                opcion.desbloqueos.forEach((desbloqueo) => {
-                  unlocked.add(desbloqueo.pregunta_desbloqueada);
-                });
-              }
-            });
-          } else {
-            // Para otros tipos de preguntas, usar la lógica original
-            const opcionSeleccionada = pregunta.opciones.find(
-              (op) => op.valor === parseInt(respuesta, 10)
-            );
-            opcionSeleccionada?.desbloqueos?.forEach((desbloqueo) => {
-              unlocked.add(desbloqueo.pregunta_desbloqueada);
-            });
-          }
+          const opcionSeleccionada = pregunta.opciones[parseInt(respuesta, 10)];
+          opcionSeleccionada?.desbloqueos?.forEach((desbloqueo) => {
+            unlocked.add(desbloqueo.pregunta_desbloqueada);
+          });
         }
       });
       return unlocked;
@@ -137,503 +142,36 @@ const Preguntas = ({
     [cuestionario]
   );
 
-  // Efecto para recargar respuestas cuando cambien
-  useEffect(() => {
-    if (usuario && cuestionario) {
-      fetchRespuestas();
-    }
-  }, [usuario, cuestionario]);
-
-  // Efecto para actualizar preguntas desbloqueadas cuando cambien las respuestas
-  useEffect(() => {
-    setUnlockedQuestions(calculateUnlockedQuestions(respuestas));
-  }, [respuestas, calculateUnlockedQuestions]);
-
-  // Cargar respuestas existentes
-  const fetchRespuestas = async () => {
-    try {
-      const response = await api.get("/api/cuestionarios/respuestas/", {
-        params: { usuario, cuestionario: cuestionario.id },
-      });
-
-      const respuestasMap = {};
-      response.data.forEach((respuesta) => {
-        try {
-          let respuestaParseada;
-
-          // Intentar parsear la respuesta JSON
-          if (
-            typeof respuesta.respuesta === "string" &&
-            respuesta.respuesta.startsWith("{")
-          ) {
-            respuestaParseada = JSON.parse(respuesta.respuesta);
-          } else {
-            respuestaParseada = respuesta.respuesta;
-          }
-
-          // Si es una respuesta procesada (nuevo formato), extraer el valor_original
-          if (
-            respuestaParseada &&
-            typeof respuestaParseada === "object" &&
-            respuestaParseada.valor_original !== undefined
-          ) {
-            console.log("Respuesta procesada encontrada:", respuestaParseada);
-            console.log(
-              "Extrayendo valor_original:",
-              respuestaParseada.valor_original
-            );
-            respuestasMap[respuesta.pregunta] =
-              respuestaParseada.valor_original;
-          } else {
-            // Respuesta en formato antiguo, usar tal como está
-            respuestasMap[respuesta.pregunta] = respuestaParseada;
-          }
-        } catch (error) {
-          console.error("Error parsing respuesta:", error);
-          respuestasMap[respuesta.pregunta] = respuesta.respuesta;
-        }
-      });
-
-      setRespuestas(respuestasMap);
-    } catch (error) {
-      console.error("Error fetching respuestas:", error);
-      setError("Error al cargar las respuestas");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Función para determinar si una pregunta debe mostrarse
-  const isQuestionVisible = useCallback(
-    (pregunta) => {
-      // Si la pregunta no tiene desbloqueos recibidos, siempre es visible
-      if (pregunta.desbloqueos_recibidos.length === 0) return true;
-      // Si tiene desbloqueos, solo es visible si está en unlockedQuestions
-      return unlockedQuestions.has(pregunta.id);
-    },
-    [unlockedQuestions]
-  );
-
-  // Función para validar si una respuesta es válida
-  const isRespuestaValida = useCallback((respuesta, tipoPregunta) => {
-    // Validación base para respuestas nulas o indefinidas
-    if (respuesta === undefined || respuesta === null) {
-      return false;
-    }
-
-    // Si es una respuesta procesada (nuevo formato), validar el valor_original
-    if (
-      respuesta &&
-      typeof respuesta === "object" &&
-      respuesta.valor_original !== undefined
-    ) {
-      return isRespuestaValida(respuesta.valor_original, tipoPregunta);
-    }
-
-    // Validaciones específicas por tipo de pregunta
-    switch (tipoPregunta) {
-      case "abierta":
-        // Para preguntas abiertas, el texto no puede estar vacío y debe tener al menos un carácter
-        return typeof respuesta === "string" && respuesta.trim().length > 0;
-
-      case "numero":
-        // Para preguntas numéricas, debe ser un número válido y no estar vacío
-        return (
-          !isNaN(Number(respuesta)) && respuesta !== "" && respuesta !== null
-        );
-
-      case "multiple":
-      case "dropdown":
-        // Para opciones múltiples y dropdown, debe tener un valor seleccionado
-        return (
-          respuesta !== "" && respuesta !== null && respuesta !== undefined
-        );
-
-      case "checkbox":
-        // Para checkbox, debe tener al menos una opción seleccionada
-        if (Array.isArray(respuesta)) {
-          return respuesta.length > 0;
-        }
-        // Si es un string (JSON), intentar parsearlo
-        if (typeof respuesta === "string") {
-          try {
-            const parsed = JSON.parse(respuesta);
-            return Array.isArray(parsed) && parsed.length > 0;
-          } catch {
-            return false;
-          }
-        }
-        // Si es un objeto, verificar que tenga al menos una propiedad
-        if (typeof respuesta === "object") {
-          return Object.keys(respuesta).length > 0;
-        }
-        return false;
-
-      case "fecha":
-      case "fecha_hora":
-        // Para fechas, debe ser una fecha válida
-        if (respuesta instanceof Date) {
-          return !isNaN(respuesta.getTime());
-        }
-        // Si es un string, intentar convertirlo a fecha
-        if (typeof respuesta === "string") {
-          const date = new Date(respuesta);
-          return !isNaN(date.getTime());
-        }
-        return false;
-
-      case "sis":
-      case "sis2":
-        // Para preguntas SIS, debe tener al menos un valor seleccionado
-        return (
-          typeof respuesta === "object" &&
-          respuesta !== null &&
-          Object.keys(respuesta).length > 0
-        );
-
-      case "ed":
-      case "ch":
-        // Para preguntas especiales, debe tener al menos un valor seleccionado
-        return (
-          typeof respuesta === "object" &&
-          respuesta !== null &&
-          Object.keys(respuesta).length > 0
-        );
-
-      case "binaria":
-        // Para preguntas binarias, debe tener un valor seleccionado
-        return respuesta === true || respuesta === false;
-
-      default:
-        // Para otros tipos, validación genérica
-        if (typeof respuesta === "string") {
-          return respuesta.trim().length > 0;
-        }
-        if (Array.isArray(respuesta)) {
-          return respuesta.length > 0;
-        }
-        if (typeof respuesta === "object") {
-          return respuesta !== null && Object.keys(respuesta).length > 0;
-        }
-        return false;
-    }
-  }, []);
-
-  // Efecto para actualizar el contador cuando cambian las respuestas o las preguntas desbloqueadas
-  useEffect(() => {
-    // Obtener todas las preguntas
-    const todasLasPreguntas = Object.values(groupedQuestions).flat();
-
-    // Obtener preguntas no visibles (las que tienen desbloqueos pero no están desbloqueadas)
-    const preguntasNoVisibles = todasLasPreguntas.filter(
-      (p) => p.desbloqueos_recibidos.length > 0 && !unlockedQuestions.has(p.id)
-    );
-
-    // Calcular el total de preguntas a considerar
-    const totalPreguntas =
-      todasLasPreguntas.length -
-      preguntasNoVisibles.length +
-      unlockedQuestions.size;
-
-    // Contar todas las respuestas válidas
-    const respondidas = Object.entries(respuestas).filter(
-      ([preguntaId, respuesta]) => {
-        const pregunta = todasLasPreguntas.find(
-          (p) => p.id === parseInt(preguntaId)
-        );
-        return pregunta && isRespuestaValida(respuesta, pregunta.tipo);
-      }
-    ).length;
-
-    // Logs detallados
-    console.log("=== ESTADO DE PREGUNTAS ===");
-    console.log("Total de preguntas:", todasLasPreguntas.length);
-    console.log("Preguntas no visibles:", preguntasNoVisibles.length);
-    console.log("Preguntas desbloqueadas:", unlockedQuestions.size);
-    console.log("Total a considerar:", totalPreguntas);
-    console.log("Total de respuestas válidas:", respondidas);
-    console.log(
-      "IDs de preguntas desbloqueadas:",
-      Array.from(unlockedQuestions)
-    );
-    console.log("Respuestas actuales:", respuestas);
-    console.log("========================");
-
-    // Notificar al componente padre sobre el cambio en el contador
-    if (onQuestionUnlock) {
-      onQuestionUnlock("counter", {
-        total: totalPreguntas,
-        answered: respondidas,
-      });
-    }
-  }, [
-    unlockedQuestions,
-    respuestas,
-    groupedQuestions,
-    onQuestionUnlock,
-    isRespuestaValida,
-  ]);
-
-  // Función para procesar respuestas y agregar información adicional
-  const procesarRespuesta = (respuesta, pregunta) => {
-    console.log("=== PROCESANDO RESPUESTA ===");
-    console.log("Respuesta original:", respuesta);
-    console.log("Tipo de pregunta:", pregunta.tipo);
-    console.log("Opciones disponibles:", pregunta.opciones);
-
-    // Para preguntas que no son checkbox, dropdown o multiple, devolver la respuesta tal como está
-    if (!["checkbox", "dropdown", "multiple"].includes(pregunta.tipo)) {
-      console.log(
-        "No es checkbox/dropdown/multiple, devolviendo respuesta original"
-      );
-      return respuesta;
-    }
-
-    let respuestaProcesada = {
-      valor_original: respuesta,
-      texto: null,
-      opciones_info: [],
-    };
-
-    try {
-      if (pregunta.tipo === "checkbox") {
-        // Para checkbox, respuesta es un array de IDs de opciones seleccionadas
-        const opcionesSeleccionadas = Array.isArray(respuesta) ? respuesta : [];
-
-        respuestaProcesada.opciones_info = opcionesSeleccionadas.map(
-          (opcionId) => {
-            const opcion = pregunta.opciones.find((op) => op.id === opcionId);
-            const indice = pregunta.opciones.findIndex(
-              (op) => op.id === opcionId
-            );
-
-            return {
-              id: opcionId,
-              texto: opcion ? opcion.texto : "Opción no encontrada",
-              valor: opcion ? opcion.valor : null,
-              indice: indice >= 0 ? indice : null,
-            };
-          }
-        );
-
-        respuestaProcesada.texto = respuestaProcesada.opciones_info
-          .map((op) => op.texto)
-          .join(", ");
-      } else if (pregunta.tipo === "dropdown" || pregunta.tipo === "multiple") {
-        // Para dropdown y multiple, respuesta es un índice numérico
-        const indice = parseInt(respuesta);
-
-        if (
-          !isNaN(indice) &&
-          indice >= 0 &&
-          indice < pregunta.opciones.length
-        ) {
-          const opcion = pregunta.opciones[indice];
-
-          respuestaProcesada.opciones_info = [
-            {
-              id: opcion.id,
-              texto: opcion.texto,
-              valor: opcion.valor,
-              indice: indice,
-            },
-          ];
-
-          respuestaProcesada.texto = opcion.texto;
-        } else {
-          // Si el índice no es válido, intentar buscar por valor
-          const opcionPorValor = pregunta.opciones.find(
-            (op) => op.valor === parseInt(respuesta)
-          );
-          if (opcionPorValor) {
-            const indiceEncontrado = pregunta.opciones.findIndex(
-              (op) => op.id === opcionPorValor.id
-            );
-            respuestaProcesada.opciones_info = [
-              {
-                id: opcionPorValor.id,
-                texto: opcionPorValor.texto,
-                valor: opcionPorValor.valor,
-                indice: indiceEncontrado,
-              },
-            ];
-            respuestaProcesada.texto = opcionPorValor.texto;
-          } else {
-            respuestaProcesada.texto = `Valor no encontrado: ${respuesta}`;
-          }
-        }
-      }
-
-      console.log("Respuesta procesada:", respuestaProcesada);
-      return respuestaProcesada;
-    } catch (error) {
-      console.error("Error procesando respuesta:", error);
-      return {
-        valor_original: respuesta,
-        texto: `Error procesando respuesta: ${error.message}`,
-        opciones_info: [],
-      };
-    }
-  };
-
   // Handler para cambios en respuestas
   const handleRespuestaChange = useCallback(
     debounce(async (preguntaId, respuesta) => {
-      console.log("=== INICIO HANDLE RESPUESTA CHANGE ===");
-      console.log("Pregunta ID:", preguntaId);
-      console.log("Respuesta recibida:", respuesta);
-      console.log("Tipo de respuesta:", typeof respuesta);
-
       try {
-        // Validar la respuesta antes de guardar
-        const preguntaActual = cuestionario.preguntas.find(
-          (p) => p.id === preguntaId
-        );
-
-        console.log("Pregunta encontrada:", preguntaActual?.texto);
-        console.log("Tipo de pregunta:", preguntaActual?.tipo);
-
-        // Validación específica para preguntas abiertas
-        if (
-          preguntaActual.tipo === "abierta" &&
-          (!respuesta || respuesta.trim() === "")
-        ) {
-          setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
-          setNotificacion({
-            mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, ingresa un texto.`,
-            tipo: "error",
-          });
-          return;
-        }
-
-        if (!isRespuestaValida(respuesta, preguntaActual.tipo)) {
-          setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
-          setNotificacion({
-            mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, completa la respuesta antes de continuar.`,
-            tipo: "error",
-          });
-          return;
-        }
-
-        // Si la respuesta es válida, remover de preguntas no respondidas
-        setPreguntasNoRespondidas((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(preguntaId);
-          return newSet;
-        });
-
-        // Procesar la respuesta para incluir información adicional
-        const respuestaProcesada = procesarRespuesta(respuesta, preguntaActual);
-
-        console.log("Enviando respuesta procesada al backend...");
-        console.log("Datos a enviar:", {
-          usuario: usuario.id,
-          cuestionario: cuestionario.id,
-          pregunta: preguntaId,
-          respuesta: JSON.stringify(respuestaProcesada),
-        });
-
         await api.post("/api/cuestionarios/respuestas/", {
-          usuario: usuario.id,
+          usuario,
           cuestionario: cuestionario.id,
           pregunta: preguntaId,
-          respuesta: JSON.stringify(respuestaProcesada),
+          respuesta: JSON.stringify(respuesta),
         });
-
-        console.log("Respuesta enviada exitosamente al backend");
-
-        // Actualizar respuestas locales (mantener la respuesta original para el frontend)
-        setRespuestas((prev) => ({
-          ...prev,
-          [preguntaId]: respuesta,
-        }));
 
         // Actualizar preguntas desbloqueadas
-        console.log("=== PROCESANDO DESBLOQUEOS EN FRONTEND ===");
         setUnlockedQuestions((prev) => {
           const nuevos = new Set(prev);
           const pregunta = cuestionario.preguntas.find(
             (p) => p.id === preguntaId
           );
-
-          console.log("Pregunta para desbloqueos:", pregunta?.texto);
-          console.log("Opciones de la pregunta:", pregunta?.opciones);
-
           // Eliminar posibles desbloqueos antiguos
           pregunta?.opciones?.forEach((op) => {
-            op.desbloqueos?.forEach((d) => {
-              console.log(
-                "Eliminando desbloqueo antiguo:",
-                d.pregunta_desbloqueada
-              );
-              nuevos.delete(d.pregunta_desbloqueada);
-            });
+            op.desbloqueos?.forEach((d) =>
+              nuevos.delete(d.pregunta_desbloqueada)
+            );
           });
-
-          // Agregar desbloqueos de las opciones seleccionadas
-          if (pregunta?.tipo === "checkbox") {
-            console.log("Procesando desbloqueos para CHECKBOX");
-            console.log("Respuesta checkbox:", respuesta);
-
-            // Mostrar todas las opciones de la pregunta
-            console.log("Todas las opciones de la pregunta:");
-            pregunta.opciones?.forEach((op, index) => {
-              console.log(
-                `  - Índice: ${index}, Valor: ${op.valor}, Texto: ${op.texto}`
-              );
-            });
-
-            // Para checkbox, respuesta es un array de opciones seleccionadas
-            if (Array.isArray(respuesta)) {
-              console.log("Respuesta es un array, procesando...");
-              respuesta.forEach((opcionSeleccionada) => {
-                console.log(
-                  "Procesando opción seleccionada:",
-                  opcionSeleccionada
-                );
-                // Buscar por ID de la opción en lugar de por valor
-                const opcion = pregunta.opciones?.find(
-                  (op) => op.id === opcionSeleccionada
-                );
-                console.log("Opción encontrada:", opcion?.texto);
-                console.log("Desbloqueos de esta opción:", opcion?.desbloqueos);
-                if (opcion?.desbloqueos) {
-                  opcion.desbloqueos.forEach((d) => {
-                    console.log(
-                      "Agregando desbloqueo:",
-                      d.pregunta_desbloqueada
-                    );
-                    nuevos.add(d.pregunta_desbloqueada);
-                  });
-                }
-              });
-            } else {
-              console.log("Respuesta no es un array:", respuesta);
-            }
-          } else {
-            console.log("Procesando desbloqueos para otro tipo de pregunta");
-            // Para otros tipos de preguntas
-            const opcionSeleccionada = pregunta?.opciones?.find(
-              (op) => op.valor === respuesta
-            );
-            console.log("Opción seleccionada:", opcionSeleccionada?.texto);
-            console.log(
-              "Desbloqueos de esta opción:",
-              opcionSeleccionada?.desbloqueos
-            );
-            if (opcionSeleccionada?.desbloqueos) {
-              opcionSeleccionada.desbloqueos.forEach((d) => {
-                console.log("Agregando desbloqueo:", d.pregunta_desbloqueada);
-                nuevos.add(d.pregunta_desbloqueada);
-              });
-            }
-          }
-
-          console.log("Nuevas preguntas desbloqueadas:", Array.from(nuevos));
+          // Agregar desbloqueos de la opción seleccionada
+          const opcionSeleccionada = pregunta?.opciones?.[respuesta];
+          opcionSeleccionada?.desbloqueos?.forEach((d) =>
+            nuevos.add(d.pregunta_desbloqueada)
+          );
           return nuevos;
         });
-
-        console.log("=== FIN HANDLE RESPUESTA CHANGE ===");
       } catch (error) {
         console.error("Error updating respuesta:", error);
         setNotificacion({
@@ -642,247 +180,63 @@ const Preguntas = ({
         });
       }
     }, 600),
-    [usuario, cuestionario, isRespuestaValida]
+    [usuario, cuestionario]
   );
 
   // Función para obtener preguntas visibles que no tienen respuesta
   const getUnansweredQuestions = () => {
-    const todasLasPreguntas = Object.values(groupedQuestions).flat();
-    return todasLasPreguntas.filter((pregunta) => {
-      // Si la pregunta no es visible, no la contamos
-      if (
-        pregunta.desbloqueos_recibidos.length > 0 &&
-        !unlockedQuestions.has(pregunta.id)
-      ) {
-        return false;
-      }
+    // 1. Obtener todas las preguntas VISIBLES según tus reglas de desbloqueo
+    const preguntasVisibles = Object.values(groupedQuestions)
+      .flat()
+      .filter((pregunta) => {
+        // Si la pregunta no recibe ningún "desbloqueo" (no depende de otra), es visible por defecto
+        if (pregunta.desbloqueos_recibidos.length === 0) return true;
+        // De lo contrario, es visible solo si está en la lista de 'unlockedQuestions'
+        return pregunta.desbloqueos_recibidos.some((desbloqueo) =>
+          unlockedQuestions.has(desbloqueo.pregunta_desbloqueada)
+        );
+      });
 
-      // Validar la respuesta según el tipo de pregunta
+    // 2. Filtrar las que no tienen respuesta "válida" (tomando en cuenta checkboxes vacíos, strings vacíos, etc.)
+    const unanswered = preguntasVisibles.filter((pregunta) => {
       const respuesta = respuestas[pregunta.id];
-      return !isRespuestaValida(respuesta, pregunta.tipo);
+      if (respuesta === undefined || respuesta === null || respuesta === "") {
+        return true;
+      }
+      // Si es un arreglo (ej. checkbox), verificar si está vacío
+      if (Array.isArray(respuesta) && respuesta.length === 0) {
+        return true;
+      }
+      return false;
     });
-  };
 
-  // Función para obtener el total de preguntas visibles
-  const getTotalUnlockedQuestions = () => {
-    const todasLasPreguntas = Object.values(groupedQuestions).flat();
-    const preguntasNoVisibles = todasLasPreguntas.filter(
-      (p) => p.desbloqueos_recibidos.length > 0 && !unlockedQuestions.has(p.id)
-    );
-    return (
-      todasLasPreguntas.length -
-      preguntasNoVisibles.length +
-      unlockedQuestions.size
-    );
-  };
-
-  // Función para obtener el total de respuestas válidas
-  const getAnsweredUnlockedQuestions = () => {
-    const todasLasPreguntas = Object.values(groupedQuestions).flat();
-    return Object.entries(respuestas).filter(([preguntaId, respuesta]) => {
-      const pregunta = todasLasPreguntas.find(
-        (p) => p.id === parseInt(preguntaId)
-      );
-      return pregunta && isRespuestaValida(respuesta, pregunta.tipo);
-    }).length;
+    return unanswered;
   };
 
   // Verificar si todas las preguntas visibles están respondidas
   const todasPreguntasRespondidas = () => {
-    const todasLasPreguntas = Object.values(groupedQuestions).flat();
-    const preguntasNoRespondidas = todasLasPreguntas.filter((pregunta) => {
-      // Solo considerar preguntas visibles
-      if (
-        pregunta.desbloqueos_recibidos.length > 0 &&
-        !unlockedQuestions.has(pregunta.id)
-      ) {
-        return false;
-      }
-      const respuesta = respuestas[pregunta.id];
-      return !isRespuestaValida(respuesta, pregunta.tipo);
-    });
-    return preguntasNoRespondidas.length === 0;
+    const unanswered = getUnansweredQuestions();
+    return unanswered.length === 0;
   };
-
-  // Función para validar todas las preguntas antes de guardar
-  const validarPreguntasAntesDeGuardar = useCallback(() => {
-    const todasLasPreguntas = Object.values(groupedQuestions).flat();
-    const noRespondidas = new Set();
-
-    todasLasPreguntas.forEach((pregunta) => {
-      // Si la pregunta no es visible, no la validamos
-      if (
-        pregunta.desbloqueos_recibidos.length > 0 &&
-        !unlockedQuestions.has(pregunta.id)
-      ) {
-        return;
-      }
-
-      const respuesta = respuestas[pregunta.id];
-      if (!isRespuestaValida(respuesta, pregunta.tipo)) {
-        noRespondidas.add(pregunta.id);
-      }
-    });
-
-    setPreguntasNoRespondidas(noRespondidas);
-    return noRespondidas.size === 0;
-  }, [groupedQuestions, unlockedQuestions, respuestas, isRespuestaValida]);
-
-  // Función para validar una pregunta individual
-  const validarPregunta = useCallback(
-    (preguntaId, respuesta, tipoPregunta) => {
-      const pregunta = cuestionario.preguntas.find((p) => p.id === preguntaId);
-      if (!isRespuestaValida(respuesta, tipoPregunta)) {
-        setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
-
-        // Mensaje específico según el tipo de pregunta
-        let mensajeError = `La pregunta "${pregunta.texto}" no puede quedar sin respuesta. `;
-        switch (tipoPregunta) {
-          case "abierta":
-            mensajeError += "Por favor, ingresa un texto para esta pregunta.";
-            break;
-          case "numero":
-            mensajeError += "Por favor, ingresa un número válido.";
-            break;
-          case "multiple":
-          case "dropdown":
-            mensajeError += "Por favor, selecciona una opción.";
-            break;
-          case "checkbox":
-            mensajeError += "Por favor, selecciona al menos una opción.";
-            break;
-          case "sis":
-          case "sis2":
-            mensajeError += "Por favor, selecciona al menos un valor.";
-            break;
-          case "ed":
-          case "ch":
-            mensajeError += "Por favor, selecciona al menos un valor.";
-            break;
-          case "binaria":
-            mensajeError += "Por favor, selecciona una opción (Sí/No).";
-            break;
-          default:
-            mensajeError += "Por favor, completa la respuesta.";
-        }
-
-        setNotificacion({
-          mensaje: mensajeError,
-          tipo: "error",
-        });
-      } else {
-        setPreguntasNoRespondidas((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(preguntaId);
-          return newSet;
-        });
-      }
-    },
-    [isRespuestaValida, cuestionario]
-  );
 
   // Finalizar cuestionario
   const handleFinalizarCuestionario = async () => {
-    // Obtener el total de preguntas a responder
-    const todasLasPreguntas = Object.values(groupedQuestions).flat();
-    const preguntasNoVisibles = todasLasPreguntas.filter(
-      (p) => p.desbloqueos_recibidos.length > 0 && !unlockedQuestions.has(p.id)
-    );
-    const totalPreguntas =
-      todasLasPreguntas.length -
-      preguntasNoVisibles.length +
-      unlockedQuestions.size;
-
-    // Obtener las preguntas no respondidas
-    const preguntasNoRespondidas = todasLasPreguntas.filter((pregunta) => {
-      // Solo considerar preguntas visibles
-      if (
-        pregunta.desbloqueos_recibidos.length > 0 &&
-        !unlockedQuestions.has(pregunta.id)
-      ) {
-        return false;
-      }
-      const respuesta = respuestas[pregunta.id];
-      return !isRespuestaValida(respuesta, pregunta.tipo);
-    });
-
-    // Si hay preguntas no respondidas
-    if (preguntasNoRespondidas.length > 0) {
-      // Marcar las preguntas no respondidas
-      setPreguntasNoRespondidas(
-        new Set(preguntasNoRespondidas.map((p) => p.id))
-      );
-
-      // Crear mensaje detallado con el tipo de respuesta esperada
-      const mensajeFaltantes = preguntasNoRespondidas
-        .map((pregunta, index) => {
-          let tipoRespuesta = "";
-          switch (pregunta.tipo) {
-            case "abierta":
-              tipoRespuesta = " (requiere texto)";
-              break;
-            case "numero":
-              tipoRespuesta = " (requiere número)";
-              break;
-            case "multiple":
-            case "dropdown":
-              tipoRespuesta = " (requiere selección)";
-              break;
-            case "checkbox":
-              tipoRespuesta = " (requiere al menos una opción)";
-              break;
-            case "sis":
-            case "sis2":
-              tipoRespuesta = " (requiere al menos un valor)";
-              break;
-            case "ed":
-            case "ch":
-              tipoRespuesta = " (requiere al menos un valor)";
-              break;
-            case "binaria":
-              tipoRespuesta = " (requiere Sí/No)";
-              break;
-          }
-          return `${index + 1}. ${pregunta.texto}${tipoRespuesta}`;
-        })
-        .join("\n");
+    // Primero, revisamos cuáles preguntas no están respondidas
+    const unanswered = getUnansweredQuestions();
+    if (unanswered.length > 0) {
+      // Armamos una lista con el texto de cada pregunta (o el ID, o lo que prefieras)
+      const listaPreguntas = unanswered.map((p) => `- ${p.texto}`).join("\n");
 
       setNotificacion({
-        mensaje: `No se puede finalizar el cuestionario. Faltan ${preguntasNoRespondidas.length} preguntas por responder:\n\n${mensajeFaltantes}`,
+        mensaje: `Por favor, responde todas las preguntas visibles antes de finalizar. Te faltó contestar:\n${listaPreguntas}`,
         tipo: "error",
       });
-
-      // Encontrar la sección de la primera pregunta no respondida
-      const primeraPreguntaFaltante = preguntasNoRespondidas[0];
-      if (primeraPreguntaFaltante) {
-        const seccionFaltante = Object.entries(groupedQuestions).find(
-          ([_, preguntas]) =>
-            preguntas.some((p) => p.id === primeraPreguntaFaltante.id)
-        )?.[0];
-
-        if (seccionFaltante) {
-          setExpandedSection(seccionFaltante);
-          // Hacer scroll hasta la pregunta después de que se expanda la sección
-          setTimeout(() => {
-            const preguntaElement = document.getElementById(
-              `pregunta-${primeraPreguntaFaltante.id}`
-            );
-            if (preguntaElement) {
-              preguntaElement.scrollIntoView({
-                behavior: "smooth",
-                block: "center",
-              });
-            }
-          }, 300);
-        }
-      }
-
       return;
     }
 
     try {
       await api.post("/api/cuestionarios/validar-estado-cuestionario/", {
-        usuario: usuario.id,
+        usuario,
         cuestionario: cuestionario.id,
         estado: "finalizado",
         fecha_finalizado: new Date().toISOString(),
@@ -892,7 +246,13 @@ const Preguntas = ({
         mensaje: "Cuestionario finalizado con éxito!",
         tipo: "exito",
       });
-      navigate(`/candidatos/${usuario.id}`);
+
+      // ✅ Usa navigate() en lugar de useNavigate()
+      navigate(`/candidatos/${usuario}`)
+      // window.location.href = `/candidatos/${usuario}`;
+      // window.location.reload();
+
+      // navigate(`/candidatos/${usuario}`);
     } catch (error) {
       console.error("Error finalizando cuestionario:", error);
       setNotificacion({
@@ -903,6 +263,16 @@ const Preguntas = ({
   };
 
   // Manejar edición de preguntas
+  // const toggleEdicionPregunta = (preguntaId) => {
+  //   setPreguntasEditables((prev) => {
+  //     const nuevas = new Set(prev);
+  //     nuevas.has(preguntaId)
+  //       ? nuevas.delete(preguntaId)
+  //       : nuevas.add(preguntaId);
+  //     return nuevas;
+  //   });
+  // };
+
   const toggleEdicionPregunta = (preguntaId) => {
     setPreguntasEditables((prev) => {
       if (prev.includes(preguntaId)) {
@@ -911,28 +281,6 @@ const Preguntas = ({
         return [...prev, preguntaId];
       }
     });
-  };
-
-  // Modificar también la función onGuardarCambios
-  const handleGuardarCambios = async (id) => {
-    toggleEdicionPregunta(id);
-    try {
-      const response = await api.get(
-        "/api/cuestionarios/finalizar-cuestionario/",
-        {
-          params: {
-            usuario: usuario.id,
-            cuestionario: cuestionario.id,
-          },
-        }
-      );
-      const estado = response.data?.[0]?.estado;
-      if (estado === "finalizado") {
-        setCuestionarioFinalizado(true);
-      }
-    } catch (error) {
-      console.error("Error verificando finalización:", error);
-    }
   };
 
   if (loading) return <Typography>Cargando...</Typography>;
@@ -1006,8 +354,18 @@ const Preguntas = ({
                   {Object.keys(otherQuestions).length}
                 </Typography>
                 <Typography variant="body1">
-                  Respondidas: {getAnsweredUnlockedQuestions()} /{" "}
-                  {getTotalUnlockedQuestions()}
+                  Respondidas:{" "}
+                  {
+                    Object.keys(respuestas).filter((id) => {
+                      const r = respuestas[id];
+                      return (
+                        r !== null &&
+                        r !== "" &&
+                        (!Array.isArray(r) || r.length > 0)
+                      );
+                    }).length
+                  }{" "}
+                  / {Object.values(groupedQuestions).flat().length}
                 </Typography>
               </Box>
               <Box
@@ -1117,8 +475,18 @@ const Preguntas = ({
             }}
           >
             <Typography variant="body1">
-              Respondidas: {getAnsweredUnlockedQuestions()} /{" "}
-              {getTotalUnlockedQuestions()}
+              Respondidas:{" "}
+              {
+                Object.keys(respuestas).filter((id) => {
+                  const r = respuestas[id];
+                  return (
+                    r !== null &&
+                    r !== "" &&
+                    (!Array.isArray(r) || r.length > 0)
+                  );
+                }).length
+              }{" "}
+              / {Object.values(groupedQuestions).flat().length}
             </Typography>
           </Box>
         )}
@@ -1179,7 +547,6 @@ const Preguntas = ({
                   {preguntas.map((pregunta) => (
                     <Box
                       key={pregunta.id}
-                      id={`pregunta-${pregunta.id}`}
                       sx={{
                         width: "100%",
                         my: 3,
@@ -1192,20 +559,6 @@ const Preguntas = ({
                         sx={{
                           p: 3,
                           borderRadius: 2,
-                          border: preguntasNoRespondidas.has(pregunta.id)
-                            ? "2px solid #ff1744"
-                            : "2px solid transparent",
-                          backgroundColor: preguntasNoRespondidas.has(
-                            pregunta.id
-                          )
-                            ? "rgba(255, 23, 68, 0.05)"
-                            : "white",
-                          transition: "all 0.3s ease",
-                          "&:hover": {
-                            boxShadow: preguntasNoRespondidas.has(pregunta.id)
-                              ? "0 0 0 2px rgba(255, 23, 68, 0.2)"
-                              : "0 2px 8px rgba(0,0,0,0.1)",
-                          },
                         }}
                       >
                         <Box sx={{ width: "100%" }}>
@@ -1218,14 +571,35 @@ const Preguntas = ({
                                 [pregunta.id]: resp,
                               }));
                               handleRespuestaChange(pregunta.id, resp);
-                              validarPregunta(pregunta.id, resp, pregunta.tipo);
                             }}
                             unlockedQuestions={unlockedQuestions}
                             cuestionarioFinalizado={cuestionarioFinalizado}
                             usuario={usuario}
                             cuestionario={cuestionario}
                             esEditable={esEditable}
-                            onGuardarCambios={handleGuardarCambios}
+                            onGuardarCambios={async (id) => {
+                              toggleEdicionPregunta(id);
+                              try {
+                                const response = await api.get(
+                                  "/api/cuestionarios/finalizar-cuestionario/",
+                                  {
+                                    params: {
+                                      usuario,
+                                      cuestionario: cuestionario.id,
+                                    },
+                                  }
+                                );
+                                const estado = response.data?.[0]?.estado;
+                                if (estado === "finalizado") {
+                                  setCuestionarioFinalizado(true);
+                                }
+                              } catch (error) {
+                                console.error(
+                                  "Error verificando finalización:",
+                                  error
+                                );
+                              }
+                            }}
                           />
                         </Box>
                       </Paper>
@@ -1340,12 +714,50 @@ const Preguntas = ({
                   {Object.keys(otherQuestions).length}
                 </Typography>
                 <Typography variant="body1">
-                  Respondidas: {getAnsweredUnlockedQuestions()} /{" "}
-                  {getTotalUnlockedQuestions()}
+                  Respondidas:{" "}
+                  {
+                    Object.keys(respuestas).filter((id) => {
+                      const r = respuestas[id];
+                      return (
+                        r !== null &&
+                        r !== "" &&
+                        (!Array.isArray(r) || r.length > 0)
+                      );
+                    }).length
+                  }{" "}
+                  / {Object.values(groupedQuestions).flat().length}
                 </Typography>
               </Box>
             </>
           )}
+
+        {/* Conteo de preguntas respondidas para SIS y especiales */}
+        {(sisQuestions.length || specialQuestions.length > 0) && (
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "flex-end",
+              alignItems: "center",
+              px: 2,
+              mb: 1,
+            }}
+          >
+            <Typography variant="body1">
+              Respondidas:{" "}
+              {
+                Object.keys(respuestas).filter((id) => {
+                  const r = respuestas[id];
+                  return (
+                    r !== null &&
+                    r !== "" &&
+                    (!Array.isArray(r) || r.length > 0)
+                  );
+                }).length
+              }{" "}
+              / {Object.values(groupedQuestions).flat().length}
+            </Typography>
+          </Box>
+        )}
 
         <Box sx={{ mt: 4, display: "flex", justifyContent: "center" }}>
           <BotonFinCuestionario

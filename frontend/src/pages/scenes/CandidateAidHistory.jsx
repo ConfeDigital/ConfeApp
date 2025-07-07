@@ -15,7 +15,6 @@ import CuadroHabilidadesAidHistory from "../seguimiento/tipos/CuadroHabilidadesA
 import EvaluacionDiagnosticaAidHistory from "../seguimiento/tipos/EvaluacionDiagnosticaAidHistory";
 import Header from "../../components/Header";
 import axios from "../../api"
-import { generarReporteApoyos } from "../seguimiento/funciones/generarReporteApoyos";
 
 const PlanApoyosSeguimiento = () => {
   const { uid } = useParams();
@@ -43,26 +42,6 @@ const PlanApoyosSeguimiento = () => {
     setTabValue(newValue);
   };
 
-  const descargarReportePDF = async () => {
-    try {
-      const [sisRes, chRes, edRes] = await Promise.all([
-        axios.get(`/api/candidatos/seguimiento/sis-aid/${uid}/`),
-        axios.get(`/api/candidatos/seguimiento/ch-aid/${uid}/`),
-        axios.get(`/api/candidatos/seguimiento/ed-aid/${uid}/`),
-      ]);
-  
-      const apoyosTotales = [
-        ...sisRes.data.map((a) => ({ ...a, fuente: "Apoyos del SIS" })),
-        ...chRes.data.map((a) => ({ ...a, fuente: "Cuadro de Habilidades" })),
-        ...edRes.data.map((a) => ({ ...a, fuente: "Evaluación Diagnóstica" })),
-      ];
-  
-      await generarReporteApoyos(apoyosTotales, candidate);
-    } catch (error) {
-      console.error("❌ Error al generar el PDF:", error);
-    }
-  };
-
   return (
     <Box sx={{ p: 2 }}>
       <Header
@@ -74,25 +53,14 @@ const PlanApoyosSeguimiento = () => {
             : ""
         }
         actionButton={
-          <Box display="flex" gap={2}>
-            <Button
-              variant="outlined"
-              color="primary"
-              onClick={() => navigate(`/candidatos/${uid}`)}
-            >
-              Volver al Perfil
-            </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={descargarReportePDF}
-            >
-              Descargar Plan Personalizado Completo
-            </Button>
-          </Box>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => navigate(`/candidatos/${uid}`)}
+          >
+            Volver al Perfil
+          </Button>
         }
-        
-
       />
       {isMobile ? (
         <Box mb={2} display="flex" flexDirection="column" gap={1}>

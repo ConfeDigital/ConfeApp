@@ -62,7 +62,4 @@ urlpatterns = [
     path('precarga-cuestionario/', views.PrecargaCuestionarioView.as_view(), name='precarga_cuestionario'),
 
     path('guardar-cuestionario/', views.GuardarCuestionarioView.as_view(), name='guardar_cuestionario'),
-    
-    # Ruta para reportes de cuestionarios
-    path('kiki/reportes/', views.ReporteCuestionariosView.as_view(), name='reporte_cuestionarios'),
 ]

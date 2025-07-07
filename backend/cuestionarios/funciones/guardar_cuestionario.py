@@ -47,15 +47,14 @@ def guardar_cuestionario_desde_json(preguntas, cuestionario_id):
     for idx, pregunta in enumerate(preguntas):
         desbloqueos = pregunta.get("desbloqueo", [])
         for desbloq in desbloqueos:
-            origen_idx = desbloq.get("origenIndex", 0)
-            opcion_idx = desbloq.get("opcionIndex", 0)
-            valor = desbloq.get("valor", "")
+            origen_idx = desbloq["pregunta_id"]
+            opcion = desbloq["opcion"]
             pregunta_origen_texto = preguntas[origen_idx]["texto"]
             pregunta_desbloqueada = preguntas_dict[pregunta["texto"]]
 
             try:
                 pregunta_origen = preguntas_dict[pregunta_origen_texto]
-                opcion_desbloqueadora = opciones_dict[(pregunta_origen_texto, valor)]
+                opcion_desbloqueadora = opciones_dict[(pregunta_origen_texto, opcion)]
 
                 DesbloqueoPregunta.objects.create(
                     cuestionario=cuestionario,
@@ -64,7 +63,7 @@ def guardar_cuestionario_desde_json(preguntas, cuestionario_id):
                     pregunta_desbloqueada=pregunta_desbloqueada
                 )
             except KeyError:
-                print(f"⚠️ No se encontró la opción desbloqueadora: {pregunta_origen_texto} / {valor}")
+                print(f"⚠️ No se encontró la opción desbloqueadora: {pregunta_origen_texto} / {opcion}")
                 continue
 
     return {

@@ -193,7 +193,6 @@ const BaseCuestionarios = () => {
           console.error("La respuesta de la API no es un array:", res.data);
         }
         setOpen(false);
-        setError(""); // Limpiar errores al cerrar exitosamente
         setNewCuestionario({
           nombre: "",
           etapa: "",
@@ -217,19 +216,6 @@ const BaseCuestionarios = () => {
       return;
     }
 
-    // Verificar si existe otro cuestionario con el mismo nombre (excluyendo el actual)
-    const cuestionarioExistente = baseCuestionarios.find(
-      (cuestionario) =>
-        cuestionario.id !== editCuestionario.id &&
-        cuestionario.nombre.toLowerCase() ===
-          editCuestionario.nombre.toLowerCase()
-    );
-
-    if (cuestionarioExistente) {
-      setError("Ya existe otro cuestionario con ese nombre.");
-      return;
-    }
-
     const datosActualizados = {
       ...editCuestionario,
       estado_desbloqueo: editCuestionario.etapa,
@@ -243,25 +229,18 @@ const BaseCuestionarios = () => {
         datosActualizados
       )
       .then((res) => {
-        // Usar los datos que regresa el backend (que incluyen el nombre normalizado)
-        const cuestionarioActualizado = res.data;
-
-        // Update the state with the data from the backend response
+        // Update the state with the edited questionnaire
         const updatedCuestionarios = baseCuestionarios.map((cuestionario) =>
           cuestionario.id === editCuestionario.id
             ? {
-                ...cuestionario,
-                nombre: cuestionarioActualizado.nombre, // Usar el nombre normalizado del backend
-                estado_desbloqueo: cuestionarioActualizado.estado_desbloqueo,
-                responsable: cuestionarioActualizado.responsable,
-                inicio: cuestionarioActualizado.inicio,
+                ...editCuestionario,
+                estado_desbloqueo: editCuestionario.etapa,
               }
             : cuestionario
         );
 
         setBaseCuestionarios(updatedCuestionarios);
         setOpenEdit(false);
-        setError(""); // Limpiar errores al cerrar exitosamente
       })
       .catch((err) => {
         console.error("Error editando cuestionario:", err);

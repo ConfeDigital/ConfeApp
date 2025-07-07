@@ -36,10 +36,6 @@ from io import BytesIO
 import unicodedata
 import re
 from django.http import HttpResponse
-import os
-from django.conf import settings
-from reportlab.lib.units import cm
-from cuestionarios.utils import get_resumen_cuestionarios_completo
 
 
 def generate_ficha_tecnica(uid, profile, respuestas):
@@ -47,46 +43,25 @@ def generate_ficha_tecnica(uid, profile, respuestas):
     doc = SimpleDocTemplate(buffer, pagesize=letter, leftMargin=50, rightMargin=50, topMargin=40, bottomMargin=40)
     elements = []
     styles = getSampleStyleSheet()
-
-    # === Estilos reutilizables ===
     title_style = ParagraphStyle("TitleStyle", fontSize=14, textColor=colors.black, fontName="Helvetica-Bold", alignment=0, spaceAfter=12)
     normal_style = ParagraphStyle("NormalStyle", fontSize=10, textColor=colors.black, fontName="Helvetica")
-
-    def section_header(text):
-        return Paragraph(f"<b><font size=14 color='white'>{text}</font></b>", ParagraphStyle(
-            name="SectionTitle",
-            backColor=colors.Color(6 / 255, 45 / 255, 85 / 255),
-            alignment=1,
-            spaceBefore=6,
-            spaceAfter=12,
-            leading=16,
-            textColor=colors.white
-        ))
-    estilo_tabla = TableStyle([
-        ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
-        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('FONTSIZE', (0, 0), (-1, -1), 9),
-        ('LEFTPADDING', (0, 0), (-1, -1), 6),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
-    ])
-    # === PÁGINA 1 ===
+    # Page 1
     elements.append(draw_logo_header())
     elements.append(Spacer(1, 10))
-
-    # Título y foto
     profile_pic = None
     if profile.photo and default_storage.exists(profile.photo.name):
         img_path = default_storage.path(profile.photo.name)
         profile_pic = Image(img_path, width=100, height=100, kind='proportional')
-
-    header_table_data = [[
-        Table([
-            [Paragraph("Institución CONFE a Favor de la Persona con Discapacidad Intelectual I.A.P.", title_style)],
-            [Paragraph("CENTRO ESPECIALIZADO DE INCLUSIÓN LABORAL", title_style)],
-            [Paragraph("FICHA TÉCNICA", title_style)]
-        ], colWidths=[400]),
-        profile_pic if profile_pic else ""
-    ]]
+    header_table_data = [
+        [
+            Table([
+                [Paragraph("Institución CONFE a Favor de la Persona con Discapacidad Intelectual I.A.P.", title_style)],
+                [Paragraph("CENTRO ESPECIALIZADO DE INCLUSIÓN LABORAL", title_style)],
+                [Paragraph("FICHA TÉCNICA", title_style)]
+            ], colWidths=[400]),
+            profile_pic if profile_pic else ""
+        ]
+    ]
     header_table = Table(header_table_data, colWidths=[400, 100])
     header_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (0, -1), 'LEFT'),
@@ -96,14 +71,10 @@ def generate_ficha_tecnica(uid, profile, respuestas):
     ]))
     elements.append(header_table)
     elements.append(Spacer(1, 12))
-
-    elements.append(section_header("DATOS PERSONALES"))
-
     discapacidades = ", ".join([d.name for d in profile.disability.all()]) if profile.disability.exists() else "No especificada"
     full_name = f"{profile.user.first_name} {profile.user.last_name} {getattr(profile.user, 'second_last_name', '')}"
     gender_display = dict(profile.GENDER_CHOICES).get(profile.gender, "No especificado")
     stage_display = dict(profile.STAGE_CHOICES).get(profile.stage, "No especificado")
-
     info_data = [
         ["Nombre completo:", full_name, "Género:", gender_display],
         ["Discapacidad:", discapacidades, "Etapa:", stage_display],
@@ -114,12 +85,12 @@ def generate_ficha_tecnica(uid, profile, respuestas):
          "Medicamentos:", ", ".join([m.name for m in profile.medications.all()]) if profile.medications.exists() else "N/A"],
         ["Registro:", profile.registration_date.strftime('%Y-%m-%d') if profile.registration_date else "N/A",
          "Alergias:", profile.allergies or "N/A"],
+        ["Atención psicológica:", "Sí" if profile.receives_psychological_care else "No",
+         "Atención psiquiátrica:", "Sí" if profile.receives_psychiatric_care else "No"],
         ["Presenta convulsiones:", "Sí" if profile.has_seizures else "No",
          "Recibe pensión:", "Sí" if profile.receives_pension else "No"],
-        ["Tipo de pensión:", profile.pension_type if hasattr(profile, 'pension_type') and profile.pension_type else "N/A", "", ""],
         ["Cert. de discapacidad:", "Sí" if profile.has_disability_certificate else "No",
          "Juicio de interdicción:", "Sí" if profile.has_interdiction_judgment else "No"],
-        ["Atención psicológica/\npsiquiátrica:", f"{'Sí' if profile.receives_psychological_care else 'No'} / {'Sí' if profile.receives_psychiatric_care else 'No'}", "", ""],
         ["Dirección:", (
             f"{profile.domicile.address_road}, {profile.domicile.address_number}, "
             f"{profile.domicile.address_col}, {profile.domicile.address_municip}, "
@@ -141,8 +112,7 @@ def generate_ficha_tecnica(uid, profile, respuestas):
     ]))
     elements.append(info_table)
     elements.append(Spacer(1, 10))
-
-    elements.append(section_header("CONTACTO(S)"))
+    elements.append(Paragraph("<b>Contacto(s): </b>", styles['Heading3']))
     if profile.emergency_contacts.exists():
         for contact in profile.emergency_contacts.all():
             name = f"{contact.first_name} {contact.last_name} {contact.second_last_name or ''}"
@@ -154,134 +124,17 @@ def generate_ficha_tecnica(uid, profile, respuestas):
     else:
         elements.append(Paragraph("N/A", normal_style))
     elements.append(Spacer(1, 12))
-
     tables = fill_table_data(profile, TABLE_TEMPLATES)
-
-    resumen_completo = get_resumen_cuestionarios_completo(profile.user.id)
-    datos_proyecto_vida = resumen_completo.get("proyecto_vida", {})
-    datos_entrevista = resumen_completo.get("entrevista", {})
-    # datos_diagnostica = resumen_completo.get("evaluacion_diagnostica", {})  # Comentado para usar la tabla de fill_table_data
-
-    # print(f"datos_diagnostica: {datos_diagnostica}")  # Comentado
-
-    elements.append(section_header("EVALUACIÓN DIAGNÓSTICA"))
-    
-    # Usar la tabla generada por fill_table_data en lugar de datos_diagnostica
-    if "Evaluación Diagnóstica" in tables:
-        eval_table = draw_table(tables["Evaluación Diagnóstica"], "EVALUACIÓN DIAGNÓSTICA")
-        elements.extend(eval_table)
-    else:
-        elements.append(Paragraph("No hay datos de evaluación diagnóstica disponibles.", normal_style))
-    
-    elements.append(Spacer(1, 24))
-
-    for section in ["NECESIDADES DE APOYO", "PROYECTO DE VIDA", "TALENTOS"]:
-        elements.append(section_header(section))
-        elements.append(Spacer(1, 6))
-
-        if section == "NECESIDADES DE APOYO":
-            entrevista_data = [
-                ["Necesidades de apoyo según la familia", datos_entrevista.get("futuro_usuario") or ""],
-                ["Necesidades de apoyo según el candidato", datos_entrevista.get("futuro_hijo") or ""],
-                ["Necesidades de apoyo según el entrevistador", datos_entrevista.get("observaciones_entrevistador") or ""],
-            ]
-            data = [[Paragraph(preg, normal_style), Paragraph(resp, normal_style)] for preg, resp in entrevista_data]
-            table = Table(data, colWidths=[200, 250])
-            table.setStyle(estilo_tabla)
-            elements.append(table)
-
-        elif section == "PROYECTO DE VIDA":
-            textos_data = [
-                ["Lo más importante para mí", datos_proyecto_vida.get("lo_mas_importante") or ""],
-                ["Me gusta, me tranquiliza, me hace sentir bien, me divierte", datos_proyecto_vida.get("me_gusta") or ""],
-            ]
-            data = [[Paragraph(preg, normal_style), Paragraph(resp, normal_style)] for preg, resp in textos_data]
-            table = Table(data, colWidths=[200, 250])
-            table.setStyle(estilo_tabla)
-            elements.append(table)
-            elements.append(Spacer(1, 10))
-
-            if datos_proyecto_vida["metas"]:
-                elements.append(Paragraph("Metas", title_style))
-                metas_data = []
-                for meta in datos_proyecto_vida["metas"]:
-                    pasos_render = "<br/>".join(
-                        f"- {p['descripcion']} <i>({p['encargado']})</i>" for p in meta["pasos"]
-                    )
-                    texto_meta = f"<b>Meta:</b> {meta['meta']}<br/><b>Pasos:</b><br/>{pasos_render}"
-                    metas_data.append([Paragraph(texto_meta, normal_style)])
-                table = Table(metas_data, colWidths=[450])
-                table.setStyle(estilo_tabla)
-                elements.append(table)
-            elements.append(Spacer(1, 10))
-
-        elif section == "TALENTOS":
-            talentos = datos_proyecto_vida.get("talentos", {}).copy()
-            
-            # Agregar al final una entrada adicional desde entrevista
-            observacion_extra = datos_entrevista.get("talentos_familia")
-            if observacion_extra:
-                talentos["Talentos según la Familia"] = [observacion_extra]
-
-            if talentos:
-                talentos_data = []
-                for pregunta, respuestas in talentos.items():
-                    if respuestas:
-                        pregunta_parrafo = Paragraph(f"<b>{pregunta}</b>", normal_style)
-                        respuesta_parrafo = Paragraph(", ".join(respuestas), normal_style)
-                        talentos_data.append([pregunta_parrafo, respuesta_parrafo])
-                if talentos_data:
-                    table = Table(talentos_data, colWidths=[200, 250])
-                    table.setStyle(estilo_tabla)
-                    elements.append(table)
-                else:
-                    elements.append(Paragraph("No se registraron talentos con contenido en esta sección.", normal_style))
-            else:
-                elements.append(Paragraph("No se registraron talentos para este usuario.", normal_style))
-                elements.append(Spacer(1, 20))
-
-    # === Página 3: SECCIÓN SIS ===
+    elements.extend(draw_table(tables["Evaluación Diagnóstica"], "Evaluación Diagnóstica"))
     elements.append(PageBreak())
-    # Título y logo SIS
-    sis_title = Paragraph("<b><font size=16>ESCALA DE INTENSIDAD DE APOYOS (SIS)</font></b>", ParagraphStyle(
-    name="SISTitle",
-    alignment=0,
-    spaceAfter=10,
-    fontName="Helvetica-Bold",
-    fontSize=16,
-    ))
-
-    logo_ceil_path = os.path.join(settings.MEDIA_ROOT, "logos/sis.png")
-    logo_jap_path = os.path.join(settings.MEDIA_ROOT, "logos/sis2.png")
-
-    logo_ceil = Image(logo_ceil_path, width=50, height=50) if os.path.exists(logo_ceil_path) else Paragraph("", normal_style)
-    logo_jap = Image(logo_jap_path, width=50, height=50) if os.path.exists(logo_jap_path) else Paragraph("", normal_style)
-
-    sis_header_row = [[sis_title, logo_ceil, logo_jap]]
-    sis_header = Table(sis_header_row, colWidths=[260, 100, 100])
-    sis_header.setStyle(TableStyle([
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('ALIGN', (0, 0), (0, 0), 'CENTER'),
-        ('ALIGN', (1, 0), (1, 0), 'CENTER'),
-        ('ALIGN', (2, 0), (2, 0), 'CENTER'),
-    ]))
-    elements.append(sis_header)
-    elements.append(Spacer(1, 24))
-
     updated_table, celdas_coloreadas = get_habilidades_adaptativas_coloreadas(uid, tables["Habilidades Adaptativas - Tabla de resultados SIS"])
-    elements.extend(draw_table(updated_table, "", celdas_coloreadas))
+    elements.extend(draw_table(updated_table, "Habilidades Adaptativas", celdas_coloreadas))
     elements.append(PageBreak())
-
-    elements.append(section_header("PROTECCIÓN Y DEFENSA"))
-    prot_table = draw_table(tables["Protección y Defensa"], "PROTECCIÓN Y DEFENSA")
-    elements.extend(prot_table)
+    elements.extend(draw_table(tables["Protección y Defensa"], "Protección y Defensa"))
     elements.append(Spacer(1, 24))
-
-    elements.append(section_header("NECESIDADES MÉDICAS Y CONDUCTUALES"))
-    med_table = draw_table(tables["Necesidades Médicas y Conductuales"], "NECESIDADES MÉDICAS Y CONDUCTUALES")
-    elements.extend(med_table)
-    elements.append(Spacer(1, 12))
-
+    elements.extend(draw_table(tables["Necesidades Médicas y Conductuales"], "Necesidades Médicas y Conductuales"))
+    elements.append(PageBreak())
+    elements.extend(draw_table(tables["Proyecto de Vida"], "Proyecto de Vida"))
     doc.build(elements)
     buffer.seek(0)
     response = HttpResponse(buffer.getvalue(), content_type='application/pdf')

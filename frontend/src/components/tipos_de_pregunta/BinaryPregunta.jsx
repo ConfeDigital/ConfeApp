@@ -19,7 +19,7 @@ const BinaryPregunta = ({
 
   const opciones = [
     { id: "0", texto: "Sí" },
-    { id: "1", texto: "No" },
+    { id: "1", texto: "No" }
   ];
 
   const handleChange = (event) => {
@@ -48,10 +48,9 @@ const BinaryPregunta = ({
             key={opcion.id}
             sx={{
               width: { xs: "100%", sm: "80%" },
-              backgroundColor:
-                seleccionOpcion === opcion.id
-                  ? "success.light"
-                  : colors.grey[700],
+              backgroundColor: seleccionOpcion === opcion.id
+                ? "success.light"
+                : colors.grey[700],
               borderRadius: "8px",
               margin: "8px 0",
               padding: "12px",
@@ -68,10 +67,9 @@ const BinaryPregunta = ({
                   value={opcion.id}
                   name="binary-question"
                   sx={{
-                    color:
-                      seleccionOpcion === opcion.id
-                        ? "success.light"
-                        : colors.grey[900],
+                    color: seleccionOpcion === opcion.id
+                      ? "success.light"
+                      : colors.grey[900],
                     "&.Mui-checked": {
                       color: "success.main",
                     },
@@ -83,13 +81,13 @@ const BinaryPregunta = ({
                 <Typography
                   variant="h6"
                   sx={{
-                    color:
-                      seleccionOpcion === opcion.id
-                        ? "success.contrastText"
-                        : "grey.contrastText",
+                    color: seleccionOpcion === opcion.id
+                      ? "success.contrastText"
+                      : "grey.contrastText",
                     fontSize: { xs: "1rem", sm: "1.25rem" },
-                    fontWeight:
-                      seleccionOpcion === opcion.id ? "bold" : "normal",
+                    fontWeight: seleccionOpcion === opcion.id
+                      ? "bold"
+                      : "normal",
                   }}
                 >
                   {opcion.texto}

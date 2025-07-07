@@ -5,12 +5,15 @@ import {
   TextField,
   Button,
   IconButton,
+  MenuItem,
   Paper,
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import AddIcon from "@mui/icons-material/Add";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+
+const encargados = ["Familiar", "Individual", "Profesional"];
 
 const MetaPregunta = ({
   seleccionOpcion,
@@ -80,15 +83,21 @@ const MetaPregunta = ({
               sx={{ my: 1 }}
             />
             <TextField
-              fullWidth
+              select
               label="Encargado"
               value={paso.encargado}
               onChange={(e) =>
                 handlePasoChange(index, "encargado", e.target.value)
               }
               disabled={disabled}
-              placeholder="Escribe el encargado"
-            />
+              fullWidth
+            >
+              {encargados.map((op) => (
+                <MenuItem key={op} value={op}>
+                  {op}
+                </MenuItem>
+              ))}
+            </TextField>
             <Box
               sx={{
                 display: "flex",

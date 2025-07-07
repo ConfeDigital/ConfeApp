@@ -14,9 +14,6 @@ import requests
 from copy import deepcopy
 
 from cuestionarios.utils import evaluar_rango, get_user_evaluation_summary
-from reportlab.lib.units import cm
-
-
 
 def draw_logo_header():
     logo_paths = [
@@ -177,7 +174,7 @@ def get_habilidades_adaptativas_coloreadas(uid, table):
         percentil_global = resumen_global.get("percentil")
         col_idx = col_index_map.get("índice de necesidades de apoyo")
         if col_idx is not None:
-            procesar_seccion("índice de necesidades de apoyo", indice, percentil_global)
+            procesar_seccion("índice de necesidades de necesidades de apoyo", indice, percentil_global)
 
         print(celdas_a_colorear)
         return table, celdas_a_colorear
@@ -194,12 +191,6 @@ def draw_table(data, title, celdas_coloreadas=None):
     styles = getSampleStyleSheet()
     elements = []
 
-    # Calcular ancho disponible de la página (letter size - márgenes)
-    # Letter size: 612 x 792 points, márgenes: 50 puntos cada lado
-    page_width = 612  # points
-    margins = 50 * 2  # left + right margins
-    available_width = page_width - margins
-    
     # Insertar estructura especial para Habilidades Adaptativas
     if title == "Habilidades Adaptativas":
         # Título largo como fila dentro de la tabla
@@ -346,15 +337,14 @@ def draw_table(data, title, celdas_coloreadas=None):
             table_style.add('TEXTCOLOR', (col_idx, row_idx), (col_idx, row_idx), text_color)
             table_style.add('FONTNAME', (col_idx, row_idx), (col_idx, row_idx), font_name)
 
-    # Crear y agregar tabla con anchos dinámicos
+    # Crear y agregar tabla
     repeat_rows = 3 if title == "Habilidades Adaptativas" else 1
-    
-    # Calcular anchos de columna dinámicamente
-    num_cols = len(formatted_data[0]) if formatted_data else 1
-    
+    table = Table(formatted_data, repeatRows=repeat_rows)
+    table.setStyle(table_style)
+    elements.append(table)
+
+    # Leyenda solo si es tabla adaptativa
     if title == "Habilidades Adaptativas":
-        # Para la tabla de Habilidades Adaptativas, mantener proporciones específicas
-        col_widths = [available_width * 0.15] + [available_width * 0.12] * 7 + [available_width * 0.15]
         legend_style = ParagraphStyle(
             name="Legend",
             parent=styles['Normal'],
@@ -366,57 +356,6 @@ def draw_table(data, title, celdas_coloreadas=None):
             "Las celdas resaltadas en azul indican el valor correspondiente al puntaje estándar del usuario o su percentil.",
             legend_style
         ))
-        elements.append(Paragraph(
-            "American Association on Intellectual and Developmental Disabilities (AAIDD). (2020). Escala de Intensidad de Apoyos - Versión para Adultos (SIS-A). Traducción autorizada. AAIDD. https://www.aaidd.org/sis/sis-a",
-            legend_style
-        ))
-    else:
-        # Para otras tablas, distribuir el ancho uniformemente
-        col_widths = [available_width / num_cols] * num_cols
-    
-    if title.lower() == "evaluación diagnóstica":
-        col1, col2 = [], []
-        for i, row in enumerate(data[1:]):  # Saltar encabezado
-            if len(row) >= 2:
-                pregunta = Paragraph(f"<b>{row[0]}</b>: {row[1]}", styles['Normal'])
-                (col1 if i % 2 == 0 else col2).append(pregunta)
-                (col1 if i % 2 == 0 else col2).append(Spacer(1, 6))
-
-        elements.append(Paragraph(f"<b>{title}</b>", header_style))
-        elements.append(Spacer(1, 6))
-
-        two_col_table = Table([[col1, col2]], colWidths=[available_width / 2] * 2)
-        two_col_table.setStyle(TableStyle([
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-            ('TOPPADDING', (0, 0), (-1, -1), 0),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-        ]))
-        elements.append(two_col_table)
-        elements.append(Spacer(1, 12))
-        return elements
-    
-    table = Table(formatted_data, repeatRows=repeat_rows, colWidths=col_widths)
-    table.setStyle(table_style)
-    elements.append(table)
-
-    # Leyenda solo si es tabla adaptativa
-    # if title == "Habilidades Adaptativas - Tabla de resultados SIS":
-    #     legend_style = ParagraphStyle(
-    #         name="Legend",
-    #         parent=styles['Normal'],
-    #         fontSize=9,
-    #         textColor=colors.black,
-    #         spaceBefore=6
-    #     )
-    #     elements.append(Paragraph(
-    #         "Las celdas resaltadas en azul indican el valor correspondiente al puntaje estándar del usuario o su percentil.",
-    #         legend_style
-    #     ))
-    #     elements.append(Paragraph(
-    #         "American Association on Intellectual and Developmental Disabilities (AAIDD). (2020). Escala de Intensidad de Apoyos - Versión para Adultos (SIS-A). Traducción autorizada. AAIDD. https://www.aaidd.org/sis/sis-a",
-    #         legend_style
-    #     ))
 
     elements.append(Spacer(1, 12))
     return elements
