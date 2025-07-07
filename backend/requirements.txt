@@ -24,6 +24,3 @@ whitenoise
 django-simple-history
 python-pptx
 mssql-django
-pyodbc
-msal
-azure-identity
