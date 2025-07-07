@@ -1,9 +1,6 @@
-// This import is still needed for PdfMakeWrapper.setFonts()
-import * as pdfFonts from "pdfmake/build/vfs_fonts";
 import { PdfMakeWrapper, Txt, Table } from "pdfmake-wrapper";
+import * as pdfFonts from "pdfmake/build/vfs_fonts.js";
 
-// PdfMakeWrapper.setFonts() will now correctly use the fonts
-// that were attached to window.pdfMake.vfs by pdfFonts (set in main.jsx).
 PdfMakeWrapper.setFonts(pdfFonts);
 
 export const generarReporteApoyos = async (apoyos, candidate) => {
