@@ -18,6 +18,8 @@ from api.models import CustomUser
 from datetime import datetime
 import json
 from django.http import FileResponse, FileResponse, Http404
+import unicodedata
+import re
 
 import logging
 from django.views.decorators.http import require_http_methods
@@ -38,10 +40,39 @@ from .serializers import (
     OpcionSerializer, UsuarioRespuestaSerializer, DesbloqueoPreguntaSerializer, 
     CuestionarioDesbloqueosSerializer, BaseCuestionariosSerializer,
     RespuestaDesbloqueadaSerializer, RespuestaUnlockedPathSerializer,
-    RespuestaSISSerializer, ResumenSISSerializer, 
+    RespuestaSISSerializer, ResumenSISSerializer, ReporteCuestionariosSerializer,
 )
 
-from .utils import cargar_cuestionarios_desde_excel, evaluar_rango, generar_plantilla_cuestionarios, get_resumen_sis, get_user_evaluation_summary, validar_columnas_excel
+from .utils import (
+    cargar_cuestionarios_desde_excel,
+    evaluar_rango,
+    descargar_plantilla_cuestionario,
+    get_resumen_sis,
+    get_user_evaluation_summary,
+    validar_columnas_excel
+)
+
+
+def normalizar_nombre_cuestionario(nombre):
+    """
+    Normaliza el nombre del cuestionario:
+    - Mantiene mayúsculas/minúsculas originales
+    - Mantiene acentos
+    - Quita símbolos extraños (mantener solo letras, números, espacios y acentos)
+    - Normaliza espacios múltiples a uno solo
+    - Quita espacios al inicio y final
+    """
+    if not nombre:
+        return nombre
+    
+    # Quitar símbolos extraños (mantener solo letras, números, espacios y caracteres acentuados)
+    # Usar una expresión regular que permita letras con acentos
+    normalizado = re.sub(r'[^a-zA-ZÀ-ÿ0-9\s]', '', nombre)
+    
+    # Normalizar espacios múltiples a uno solo y quitar espacios al inicio/final
+    normalizado = re.sub(r'\s+', ' ', normalizado).strip()
+    
+    return normalizado
 
 
 class CuestionarioSeleccion(APIView):
@@ -132,12 +163,19 @@ class RespuestasGuardadas(APIView):
     def post(self, request):
         """Guarda la respuesta del usuario y desbloquea preguntas si es necesario"""
         data = request.data
+        print("=== INICIO PROCESO DE DESBLOQUEO ===")
         print("Datos recibidos:", data)  # Imprime los datos recibidos en los registros del servidor
 
         usuario_id = data.get('usuario')
         cuestionario_id = data.get('cuestionario')
         pregunta_id = data.get('pregunta')
         respuesta = data.get('respuesta')
+
+        print(f"Usuario ID: {usuario_id}")
+        print(f"Cuestionario ID: {cuestionario_id}")
+        print(f"Pregunta ID: {pregunta_id}")
+        print(f"Respuesta recibida: {respuesta}")
+        print(f"Tipo de respuesta: {type(respuesta)}")
 
         # Verificar si la respuesta es una cadena de fecha y eliminar comillas adicionales
         if isinstance(respuesta, str) and respuesta.startswith('"') and respuesta.endswith('"'):
@@ -147,6 +185,9 @@ class RespuestasGuardadas(APIView):
         cuestionario = get_object_or_404(Cuestionario, id=cuestionario_id)
         pregunta = get_object_or_404(Pregunta, id=pregunta_id)
 
+        print(f"Pregunta encontrada: {pregunta.texto}")
+        print(f"Tipo de pregunta: {pregunta.tipo}")
+
         respuesta_obj, created = Respuesta.objects.update_or_create(
             usuario=usuario,
             cuestionario=cuestionario,
@@ -154,34 +195,103 @@ class RespuestasGuardadas(APIView):
             defaults={'respuesta': respuesta}
         )
 
+        print(f"Respuesta guardada: {created}")
+
         # Desbloquear preguntas si la opción seleccionada tiene reglas de desbloqueo
         if pregunta.tipo != 'abierta':
+            print("=== PROCESANDO DESBLOQUEOS ===")
             try:
-                # Verifica si la respuesta es un número antes de intentar convertirla
-                if isinstance(respuesta, str) and respuesta.isdigit():
-                    opciones_seleccionadas = Opcion.objects.filter(
-                        pregunta=pregunta,
-                        valor=int(respuesta)
-                    )
+                # Para checkbox, la respuesta es una lista de valores
+                if pregunta.tipo == 'checkbox':
+                    print("Procesando pregunta tipo CHECKBOX")
+                    
+                    # Mostrar todas las opciones disponibles para esta pregunta
+                    todas_opciones = Opcion.objects.filter(pregunta=pregunta)
+                    print(f"Todas las opciones disponibles para la pregunta {pregunta.id}:")
+                    for op in todas_opciones:
+                        print(f"  - ID: {op.id}, Valor: {op.valor}, Texto: {op.texto}")
+                    
+                    if isinstance(respuesta, str):
+                        try:
+                            opciones_seleccionadas = json.loads(respuesta)
+                            print(f"Opciones seleccionadas (JSON parseado): {opciones_seleccionadas}")
+                        except json.JSONDecodeError:
+                            opciones_seleccionadas = []
+                            print("Error al parsear JSON, opciones_seleccionadas = []")
+                    else:
+                        opciones_seleccionadas = respuesta if isinstance(respuesta, list) else []
+                        print(f"Opciones seleccionadas (directo): {opciones_seleccionadas}")
 
-                    for opcion_seleccionada in opciones_seleccionadas:
-                        desbloqueos = DesbloqueoPregunta.objects.filter(
-                            cuestionario=cuestionario,
-                            pregunta_origen=pregunta,
-                            opcion_desbloqueadora=opcion_seleccionada
+                    print(f"Total de opciones seleccionadas: {len(opciones_seleccionadas)}")
+
+                    for valor in opciones_seleccionadas:
+                        print(f"Procesando valor: {valor}")
+                        # Buscar por ID de la opción en lugar de por valor
+                        opciones = Opcion.objects.filter(
+                            pregunta=pregunta,
+                            id=valor
                         )
-
-                        for desbloqueo in desbloqueos:
-                            # Crear una nueva respuesta vacía para indicar que la pregunta fue desbloqueada
-                            Respuesta.objects.get_or_create(
-                                usuario=usuario,
+                        print(f"Opciones encontradas para ID {valor}: {opciones.count()}")
+                        
+                        for opcion in opciones:
+                            print(f"Procesando opción: {opcion.texto} (ID: {opcion.id}, valor: {opcion.valor})")
+                            desbloqueos = DesbloqueoPregunta.objects.filter(
                                 cuestionario=cuestionario,
-                                pregunta=desbloqueo.pregunta_desbloqueada,
-                                defaults={'respuesta': ''}
+                                pregunta_origen=pregunta,
+                                opcion_desbloqueadora=opcion
                             )
-            except Opcion.DoesNotExist:
+                            print(f"Desbloqueos encontrados para esta opción: {desbloqueos.count()}")
+                            
+                            for desbloqueo in desbloqueos:
+                                print(f"Desbloqueando pregunta: {desbloqueo.pregunta_desbloqueada.texto}")
+                                # Crear una nueva respuesta vacía para indicar que la pregunta fue desbloqueada
+                                resp_desbloqueada, created_desbloqueo = Respuesta.objects.get_or_create(
+                                    usuario=usuario,
+                                    cuestionario=cuestionario,
+                                    pregunta=desbloqueo.pregunta_desbloqueada,
+                                    defaults={'respuesta': ''}
+                                )
+                                print(f"Respuesta de desbloqueo creada: {created_desbloqueo}")
+
+                else:
+                    print(f"Procesando pregunta tipo: {pregunta.tipo}")
+                    # Para otros tipos de preguntas
+                    if isinstance(respuesta, str) and respuesta.isdigit():
+                        opciones_seleccionadas = Opcion.objects.filter(
+                            pregunta=pregunta,
+                            valor=int(respuesta)
+                        )
+                        print(f"Opciones encontradas para respuesta {respuesta}: {opciones_seleccionadas.count()}")
+
+                        for opcion_seleccionada in opciones_seleccionadas:
+                            print(f"Procesando opción: {opcion_seleccionada.texto}")
+                            desbloqueos = DesbloqueoPregunta.objects.filter(
+                                cuestionario=cuestionario,
+                                pregunta_origen=pregunta,
+                                opcion_desbloqueadora=opcion_seleccionada
+                            )
+                            print(f"Desbloqueos encontrados: {desbloqueos.count()}")
+
+                            for desbloqueo in desbloqueos:
+                                print(f"Desbloqueando pregunta: {desbloqueo.pregunta_desbloqueada.texto}")
+                                # Crear una nueva respuesta vacía para indicar que la pregunta fue desbloqueada
+                                resp_desbloqueada, created_desbloqueo = Respuesta.objects.get_or_create(
+                                    usuario=usuario,
+                                    cuestionario=cuestionario,
+                                    pregunta=desbloqueo.pregunta_desbloqueada,
+                                    defaults={'respuesta': ''}
+                                )
+                                print(f"Respuesta de desbloqueo creada: {created_desbloqueo}")
+                    else:
+                        print(f"Respuesta no es un número válido: {respuesta}")
+
+            except Exception as e:
+                print(f"Error al procesar desbloqueos: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 pass
 
+        print("=== FIN PROCESO DE DESBLOQUEO ===")
         serializer = RespuestaSerializer(respuesta_obj)
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
     
@@ -209,8 +319,6 @@ def validar_columnas_excel_view(request):
         resultado_validacion = validar_columnas_excel(ruta_archivo)
         return JsonResponse(resultado_validacion)
 
-    return JsonResponse({'status': 'error', 'message': 'Método no permitido.'}, status=405)
-
 
 
 @csrf_exempt
@@ -231,9 +339,13 @@ def upload_excel(request):
 
 class DescargarPlantillaCuestionarios(APIView):
     permission_classes = [permissions.AllowAny]
+    
     def get(self, request, *args, **kwargs):
-        permission_classes = [permissions.AllowAny]
-        return generar_plantilla_cuestionarios()
+        """
+        Endpoint para descargar la plantilla de precarga de cuestionarios.
+        Retorna el archivo Excel o un mensaje de error.
+        """
+        return descargar_plantilla_cuestionario()
 
 
 class UsuarioRespuestasView(APIView):
@@ -499,9 +611,6 @@ class EtapaCuestionarioView(APIView):
             {'value': 'Can', 'label': 'Canalización'},
             {'value': 'Ent', 'label': 'Entrevista'},
             {'value': 'Cap', 'label': 'Capacitación'},
-            {'value': 'Bol', 'label': 'Bolsa de Trabajo'},
-            {'value': 'Emp', 'label': 'Empleado'},
-            {'value': 'Des', 'label': 'Desempleado'},
         ]
         return Response(STAGE_CHOICES)
 
@@ -526,13 +635,24 @@ class CrearCuestionario(APIView):
         if not nombre or not etapa:
             return Response({"error": "Se requiere el nombre y la etapa del cuestionario"}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Normalizar el nombre del cuestionario
+        nombre_normalizado = normalizar_nombre_cuestionario(nombre)
+        
+        # Verificar si ya existe un cuestionario con el nombre normalizado
+        cuestionario_existente = BaseCuestionarios.objects.filter(
+            nombre__iexact=nombre_normalizado
+        ).first()
+        
+        if cuestionario_existente:
+            return Response({"error": "Ya existe un cuestionario con ese nombre"}, status=status.HTTP_400_BAD_REQUEST)
+
         base_cuestionario, created = BaseCuestionarios.objects.get_or_create(
-            nombre=nombre,
+            nombre=nombre_normalizado,
             defaults={'estado_desbloqueo': etapa, 'responsable': responsable, 'inicio': inicio}
         )
 
         cuestionario, created = Cuestionario.objects.get_or_create(
-            nombre=nombre,
+            nombre=nombre_normalizado,
             base_cuestionario=base_cuestionario,
             defaults={
                 'version': 1,
@@ -600,6 +720,25 @@ class EditarCuestionarioView(UpdateAPIView):
     def put(self, request, *args, **kwargs):
         """Maneja la actualización de una base de cuestionarios."""
         instance = self.get_object()  # Obtiene la base de cuestionarios a editar
+        
+        # Si se está actualizando el nombre, normalizarlo
+        if 'nombre' in request.data:
+            nombre_normalizado = normalizar_nombre_cuestionario(request.data['nombre'])
+            
+            # Verificar si ya existe otro cuestionario con el nombre normalizado (excluyendo el actual)
+            cuestionario_existente = BaseCuestionarios.objects.filter(
+                nombre__iexact=nombre_normalizado
+            ).exclude(id=instance.id).first()
+            
+            if cuestionario_existente:
+                return Response(
+                    {"error": "Ya existe otro cuestionario con ese nombre"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Actualizar el nombre normalizado en los datos
+            request.data['nombre'] = nombre_normalizado
+        
         serializer = self.get_serializer(instance, data=request.data, partial=True)  # Permite actualización parcial
         # print(f"\n\n\n Esto se mando: {request.data} \n\n\n")
         serializer.is_valid(raise_exception=True)  # Valida los datos
@@ -952,6 +1091,7 @@ def ver_imagen_pregunta(request, pregunta_id):
     except Pregunta.DoesNotExist:
         print(f"❌ Pregunta con ID {pregunta_id} no encontrada.")
         raise Http404("Pregunta no encontrada.")
+
 class PrecargaCuestionarioView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -1012,3 +1152,58 @@ class GuardarCuestionarioView(APIView):
         except Exception as e:
             print("❌ Error al guardar:", e)
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ReporteCuestionariosView(APIView):
+    """
+    Vista para generar reportes de cuestionarios con información detallada:
+    - cuestionario_nombre
+    - base_cuestionario
+    - texto_pregunta
+    - tipo_pregunta
+    - respuesta
+    
+    No requiere parámetros obligatorios, pero se pueden filtrar por:
+    - usuario_id: Filtrar por usuario específico
+    - cuestionario_id: Filtrar por cuestionario específico
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request):
+        # Obtener parámetros opcionales
+        usuario_id = request.query_params.get('usuario_id')
+        cuestionario_id = request.query_params.get('cuestionario_id')
+
+        # Obtener todas las respuestas
+        respuestas = Respuesta.objects.select_related(
+            'usuario', 
+            'cuestionario', 
+            'cuestionario__base_cuestionario',
+            'pregunta'
+        ).all()
+
+        # Filtrar por usuario_id si está presente
+        if usuario_id:
+            try:
+                usuario = get_object_or_404(CustomUser, id=usuario_id)
+                respuestas = respuestas.filter(usuario=usuario)
+            except ValueError:
+                return Response(
+                    {"detail": "El usuario_id debe ser un número entero válido."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Filtrar por cuestionario_id si está presente
+        if cuestionario_id:
+            try:
+                cuestionario = get_object_or_404(Cuestionario, id=cuestionario_id)
+                respuestas = respuestas.filter(cuestionario=cuestionario)
+            except ValueError:
+                return Response(
+                    {"detail": "El cuestionario_id debe ser un número entero válido."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        # Serializar las respuestas
+        serializer = ReporteCuestionariosSerializer(respuestas, many=True)
+        
+        return Response(serializer.data, status=status.HTTP_200_OK)

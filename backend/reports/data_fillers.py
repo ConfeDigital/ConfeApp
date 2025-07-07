@@ -1,6 +1,5 @@
 # data_fillers.py
 import json
-import requests
 from collections import defaultdict
 from copy import deepcopy
 from django.core.files.storage import default_storage
@@ -8,6 +7,7 @@ from cuestionarios.models import Cuestionario, Respuesta, Pregunta, Opcion
 from reportlab.platypus import Paragraph
 from reportlab.lib.styles import getSampleStyleSheet
 from cuestionarios.utils import get_user_evaluation_summary
+from django.db.models import Q
 
 def get_pv_answers(profile):
     """Retrieves Proyecto de Vida answers."""
@@ -179,16 +179,163 @@ def build_tabla_salud_necesidades_conductuales(profile):
 def fill_table_data(profile, TABLE_TEMPLATES):
     from copy import deepcopy
     tables = deepcopy(TABLE_TEMPLATES)
-    respuestas = Respuesta.objects.filter(usuario=profile.user)
-    respuestas_dict = {r.pregunta.texto.strip(): r.respuesta for r in respuestas}
-    preguntas_map = {}
-    preguntas = Pregunta.objects.filter(cuestionario__nombre__iexact="Evaluación Diagnóstica").prefetch_related("opciones")
-    for pregunta in preguntas:
-        opciones_list = sorted(pregunta.opciones.all(), key=lambda x: x.id)
-        opciones_dict = {str(i): opcion.texto for i, opcion in enumerate(opciones_list)}
-        preguntas_map[pregunta.texto] = opciones_dict
+    
+    # Obtener respuestas procesadas directamente de la base de datos
+    try:
+        print("🔍 OBTENIENDO RESPUESTAS PROCESADAS DESDE LA BD:")
+        print("=" * 50)
+        
+        # Obtener respuestas del cuestionario "Evaluación Diagnóstica" con búsqueda flexible
+        diagnostica_cuestionario = None
+        
+        # Intentar diferentes variaciones del nombre
+        posibles_nombres = [
+            "Evaluación Diagnóstica",
+            "evaluacion diagnostica", 
+            "Evaluacion Diagnostica",
+            "evaluación diagnóstica",
+            "EVALUACIÓN DIAGNÓSTICA",
+            "EVALUACION DIAGNOSTICA"
+        ]
+        
+        for nombre in posibles_nombres:
+            diagnostica_cuestionario = Cuestionario.objects.filter(
+                nombre__iexact=nombre, 
+                activo=True
+            ).first()
+            if diagnostica_cuestionario:
+                print(f"✅ Cuestionario encontrado: '{diagnostica_cuestionario.nombre}'")
+                break
+        
+        # Si no se encuentra con nombres exactos, buscar con contains usando Q objects
+        if not diagnostica_cuestionario:
+            diagnostica_cuestionario = Cuestionario.objects.filter(
+                Q(nombre__icontains="evaluacion") & Q(nombre__icontains="diagnostica"),
+                activo=True
+            ).first()
+            if diagnostica_cuestionario:
+                print(f"✅ Cuestionario encontrado con búsqueda parcial: '{diagnostica_cuestionario.nombre}'")
+        
+        # Si aún no se encuentra, buscar cualquier cuestionario que contenga "diagnostica"
+        if not diagnostica_cuestionario:
+            diagnostica_cuestionario = Cuestionario.objects.filter(
+                nombre__icontains="diagnostica",
+                activo=True
+            ).first()
+            if diagnostica_cuestionario:
+                print(f"✅ Cuestionario encontrado con búsqueda por 'diagnostica': '{diagnostica_cuestionario.nombre}'")
+        
+        if not diagnostica_cuestionario:
+            print("❌ No se encontró ningún cuestionario de evaluación diagnóstica")
+            print("📋 Cuestionarios disponibles:")
+            todos_cuestionarios = Cuestionario.objects.filter(activo=True)
+            for c in todos_cuestionarios:
+                print(f"   - {c.nombre}")
+            return tables
+        
+        respuestas = Respuesta.objects.filter(
+            usuario=profile.user,
+            cuestionario=diagnostica_cuestionario
+        ).select_related('pregunta')
+        
+        print(f"📊 Encontradas {respuestas.count()} respuestas para el cuestionario")
+        
+        # Crear diccionario de respuestas procesadas
+        respuestas_dict = {}
+        for respuesta in respuestas:
+            pregunta_texto = respuesta.pregunta.texto.strip()
+            respuesta_raw = respuesta.respuesta
+            
+            print(f"📝 Procesando: {pregunta_texto}")
+            print(f"   Respuesta raw: {respuesta_raw}")
+            
+            # Procesar la respuesta según el formato
+            if isinstance(respuesta_raw, str):
+                try:
+                    # Intentar parsear como JSON
+                    parsed = json.loads(respuesta_raw)
+                    if isinstance(parsed, dict) and 'texto' in parsed:
+                        # Es una respuesta procesada
+                        respuesta_text = parsed['texto']
+                        print(f"   ✅ Respuesta procesada encontrada: {respuesta_text}")
+                    else:
+                        # Es una respuesta simple
+                        respuesta_text = str(parsed)
+                        print(f"   📄 Respuesta simple: {respuesta_text}")
+                except json.JSONDecodeError:
+                    # No es JSON, usar como string
+                    respuesta_text = respuesta_raw
+                    print(f"   📄 Respuesta string: {respuesta_text}")
+            elif isinstance(respuesta_raw, dict):
+                # Es un diccionario (respuesta procesada)
+                respuesta_text = respuesta_raw.get('texto', str(respuesta_raw))
+                print(f"   ✅ Respuesta procesada (dict): {respuesta_text}")
+            else:
+                # Otro tipo de dato
+                respuesta_text = str(respuesta_raw)
+                print(f"   📄 Respuesta otro tipo: {respuesta_text}")
+            
+            respuestas_dict[pregunta_texto] = respuesta_text
+            print("-" * 30)
+        
+        print("=" * 50)
+        
+    except Exception as e:
+        print(f"❌ Error obteniendo respuestas procesadas: {e}")
+        respuestas_dict = {}
+    
+    # Mapeo de preguntas para la tabla de Evaluación Diagnóstica
+    diagnostica_mapping = {
+        "Lectura": "Describe el nivel de lectura del/la candidato/a",
+        "Escritura": "Describe el nivel de escritura del/la candidato/a", 
+        "Números": "Describe el conocimiento de números del/la candidato/a",
+        "Suma": "Describe el nivel de suma del/la candidato/a",
+        "Resta": "Describe el nivel de resta del/la candidato/a",
+        "Manejo de Dinero": "Describe el nivel de manejo de dinero del/la candidato/a",
+        "Cruzar la Calle": "Describe el nivel de cruzar la calle del/la candidato/a",
+        "Transporte": "Describe el nivel de uso de transporte del/la candidato/a",
+        "Comunicación": "Describe como se comunica el/la candidato/a",
+    }
+
+    # Llenar la tabla de Evaluación Diagnóstica
+    if "Evaluación Diagnóstica" in tables:
+        print("📋 LLENANDO TABLA EVALUACIÓN DIAGNÓSTICA:")
+        print("=" * 50)
+        
+        for i in range(1, len(tables["Evaluación Diagnóstica"])):
+            row_label = tables["Evaluación Diagnóstica"][i][0]
+            question_text = diagnostica_mapping.get(row_label)
+            
+            if not question_text:
+                continue
+
+            # Obtener la respuesta procesada
+            respuesta_text = respuestas_dict.get(question_text, "No especificado")
+            
+            print(f"🔍 Fila: {row_label}")
+            print(f"   Pregunta: {question_text}")
+            print(f"   Respuesta: {respuesta_text}")
+            
+            # Asignar la respuesta a la tabla
+            tables["Evaluación Diagnóstica"][i][1] = respuesta_text
+            print(f"   ✅ Asignado: {respuesta_text}")
+            print("-" * 30)
+        
+        print("=" * 50)
+        
+        # Mostrar tabla final
+        print("📋 TABLA EVALUACIÓN DIAGNÓSTICA FINAL:")
+        print("=" * 50)
+        for i, row in enumerate(tables["Evaluación Diagnóstica"]):
+            print(f"Row {i}: {row}")
+        print("=" * 50)
+
+    # Construir otras tablas
     from .data_fillers import build_tabla_salud_necesidades_conductuales, build_proyecto_vida_table
+    
     tables["Necesidades Médicas y Conductuales"] = build_tabla_salud_necesidades_conductuales(profile)
+    
+    # Tabla de Protección y Defensa
     tabla_pd = [["Actividad", "Puntaje Directo"]]
     items_con_puntaje = {}
     respuestas_sis = Respuesta.objects.filter(
@@ -196,6 +343,7 @@ def fill_table_data(profile, TABLE_TEMPLATES):
         pregunta__nombre_seccion="Actividades de protección y defensa",
         pregunta__tipo__in=["sis", "sis2"]
     ).select_related("pregunta")
+    
     for r in respuestas_sis:
         item_name = r.pregunta.texto.strip()
         try:
@@ -210,55 +358,20 @@ def fill_table_data(profile, TABLE_TEMPLATES):
                 items_con_puntaje[item_name] = total
         except Exception as e:
             continue
+    
     top_3 = sorted(items_con_puntaje.items(), key=lambda x: x[1], reverse=True)[:3]
     top_items = {item for item, _ in top_3}
+    
     for item, score in sorted(items_con_puntaje.items(), key=lambda x: x[1], reverse=True):
         if item in top_items:
             tabla_pd.append([f"<b>{item}</b>", f"<b>{score}</b>"])
         else:
             tabla_pd.append([item, score])
+    
     tables["Protección y Defensa"] = tabla_pd
-    if "Evaluación Diagnóstica" in tables:
-        diagnostica_mapping = {
-            "Lectura": "Describe el nivel de lectura del/la candidato/a",
-            "Escritura": "Describe el nivel de escritura del/la candidato/a",
-            "Números": "Describe el conocimiento de números del/la candidato/a",
-            "Suma": "Describe el nivel de suma del/la candidato/a",
-            "Resta": "Describe el nivel de resta del/la candidato/a",
-            "Manejo de Dinero": "Describe el nivel de manejo de dinero del/la candidato/a",
-            "Cruzar la Calle": "Describe el nivel de cruzar la calle del/la candidato/a",
-            "Transporte": "Describe el nivel de uso de transporte del/la candidato/a",
-            "Comunicación": "Describe como se comunica el/la candidato/a",
-        }
 
-        for i in range(1, len(tables["Evaluación Diagnóstica"])):
-            row_label = tables["Evaluación Diagnóstica"][i][0]
-            question_text = diagnostica_mapping.get(row_label)
-            if not question_text:
-                continue
-
-            raw_respuesta = respuestas_dict.get(question_text, "").strip()
-            opciones_dict = preguntas_map.get(question_text, {})
-
-            if not opciones_dict:
-                respuesta_text = raw_respuesta or "No especificado"
-            elif question_text == "Describir el nivel de sumar y restar":
-                try:
-                    import json
-                    id_list = json.loads(raw_respuesta) if raw_respuesta else []
-                    selected_texts = [opciones_dict.get(str(i), f"ID {i}") for i in id_list]
-                    respuesta_text = ", ".join(selected_texts) if selected_texts else "No especificado"
-                except Exception:
-                    respuesta_text = "No especificado"
-            else:
-                # Preguntas de opción única
-                respuesta_text = opciones_dict.get(raw_respuesta, raw_respuesta or "No especificado")
-
-            tables["Evaluación Diagnóstica"][i][1] = respuesta_text
-
+    # Tabla de Proyecto de Vida
     pv_table = build_proyecto_vida_table(profile)
     tables["Proyecto de Vida"] = pv_table if pv_table else [["📘 Proyecto de Vida", "No hay respuestas registradas."]]
 
-    # Reemplazamos o añadimos "Protección y Defensa" desde el API dinámicamente
-    tables["Protección y Defensa"] = build_tabla_proteccion_defensa(profile)
     return tables

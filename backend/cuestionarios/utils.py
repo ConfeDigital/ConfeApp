@@ -8,11 +8,15 @@ from tablas_de_equivalencia.utils import get_filtered_and_formatted_puntuaciones
 from io import BytesIO
 from django.http import JsonResponse, HttpResponse
 import re
+import os
+from django.conf import settings
+from django.shortcuts import get_object_or_404
 
 from openpyxl import load_workbook
 from openpyxl.drawing.image import Image as OpenpyxlImage
 from django.core.files.base import ContentFile
 import io
+from django.db.models import Q
 
 
 logger = logging.getLogger(__name__)
@@ -228,23 +232,42 @@ def cargar_cuestionarios_desde_excel(ruta_archivo, cuestionario_id):
         logger.error(f"Error al cargar el archivo Excel: {str(e)}")
         return {'status': 'error', 'message': str(e)}
     
-def generar_plantilla_cuestionarios():
+def descargar_plantilla_cuestionario():
+    """
+    Función para descargar la plantilla de precarga de cuestionarios.
+    Retorna un HttpResponse con el archivo Excel o un JsonResponse con error.
+    """
     try:
-        # Ruta al archivo de plantilla
-        file_path = 'cuestionarios/plantillas/plantilla_de_carga_CUESTIONARIOS.xlsx'
+        # Construir la ruta absoluta al archivo
+        template_path = os.path.join(settings.BASE_DIR, 'cuestionarios', 'plantilla', 'Plantilla_cuestionarios_precarga.xlsx')
         
         # Verificar si el archivo existe
-        try:
-            with open(file_path, 'rb') as f:
-                response = HttpResponse(f.read(), content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-                response['Content-Disposition'] = 'attachment; filename=plantilla_de_carga_CUESTIONARIOS.xlsx'
-                return response
-        except FileNotFoundError:
-            logger.error(f"Archivo no encontrado: {file_path}")
-            return JsonResponse({'error': 'Archivo de plantilla no encontrado'}, status=404)
+        if not os.path.exists(template_path):
+            logger.error(f"Archivo de plantilla no encontrado en: {template_path}")
+            return JsonResponse({
+                'error': 'Archivo de plantilla no encontrado',
+                'detalle': 'La plantilla no está disponible en el servidor'
+            }, status=404)
+
+        # Leer el archivo
+        with open(template_path, 'rb') as excel_file:
+            response = HttpResponse(
+                excel_file.read(),
+                content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            )
+            
+            # Configurar los headers para la descarga
+            response['Content-Disposition'] = 'attachment; filename=Plantilla_cuestionarios_precarga.xlsx'
+            response['Access-Control-Expose-Headers'] = 'Content-Disposition'
+            
+            return response
+
     except Exception as e:
-        logger.error(f"Error al generar la plantilla: {str(e)}")
-        return JsonResponse({'error': 'Error al generar la plantilla'}, status=500)
+        logger.error(f"Error al procesar la plantilla: {str(e)}")
+        return JsonResponse({
+            'error': 'Error al procesar la plantilla',
+            'detalle': str(e)
+        }, status=500)
 
 def get_resumen_sis(usuario_id=None):
     """
@@ -458,3 +481,139 @@ def get_user_evaluation_summary(usuario_id, query_params=None):
         "resumen_global": resumen_global,
         "detalles_por_seccion": resultados
     }
+
+def get_texto_respuesta_transformada(respuesta_obj):
+    """
+    Retorna el texto legible de una respuesta, extrayendo el campo 'texto' si la respuesta es un JSON.
+    """
+    raw = respuesta_obj.respuesta
+    tipo = respuesta_obj.pregunta.tipo
+
+    if not raw:
+        return ""
+
+    try:
+        data = json.loads(raw)
+        if isinstance(data, dict) and "texto" in data:
+            return data["texto"]
+        elif isinstance(data, list):  # checkbox u otro tipo con múltiples opciones
+            opciones = respuesta_obj.pregunta.opciones
+            textos = [o["texto"] for o in opciones if o["id"] in data]
+            return ", ".join(textos)
+    except Exception:
+        pass  # Si no es JSON o falla, sigue abajo
+
+    # Si no es JSON o no tiene campo 'texto', devuelve tal cual
+    return str(raw).strip()
+
+
+def get_resumen_cuestionarios_completo(usuario_id):
+    """
+    Devuelve:
+    - respuestas_crudas: lista de todas las respuestas para inspección general
+    - entrevista: preguntas clave
+    - proyecto_vida: textos, metas desanidadas y talentos agrupados
+    - evaluacion_diagnostica: respuestas clave para habilidades básicas
+    """
+    resumen_general = {
+        "respuestas_crudas": [],
+        "entrevista": {
+            "futuro_usuario": None,
+            "futuro_hijo": None,
+            "observaciones_entrevistador": None,
+            "talentos_familia": None
+        },
+        "proyecto_vida": {
+            "lo_mas_importante": None,
+            "me_gusta": None,
+            "metas": [],
+            "talentos": {}
+        },
+        "evaluacion_diagnostica": {}
+    }
+
+    preguntas_entrevista = {
+        "futuro_usuario": "Necesidades de apoyo según la familia",
+        "futuro_hijo": "Necesidades de apoyo según el candidato",
+        "observaciones_entrevistador": "Necesidades de apoyo según el entrevistador",
+        "talentos_familia": "Comentarios de la familia sobre los talentos del candidato"
+    }
+
+    preguntas_texto_pv = {
+        "lo_mas_importante": "Lo más importante para mi",
+        "me_gusta": "Me gusta, me tranquiliza, me hace sentir bien, me divierte"
+    }
+
+    preguntas_talento = [
+        "Talentos - Relaciones", "Talentos - Gustos", "Talentos - Historia",
+        "Talentos - Salud", "Talentos - Seguridad", "Talentos - Emociones", "Talentos - Elecciones"
+    ]
+
+    diagnostica_mapping = {
+        "Lectura": "Describe el nivel de lectura del/la candidato/a",
+        "Escritura": "Describe el nivel de escritura del/la candidato/a",
+        "Números": "Describe el conocimiento de números del/la candidato/a",
+        "Suma": "Describe el nivel de suma del/la candidato/a",
+        "Resta": "Describe el nivel de resta del/la candidato/a",
+        "Manejo de Dinero": "Describe el nivel de manejo de dinero del/la candidato/a",
+        "Cruzar la Calle": "Describe el nivel de cruzar la calle del/la candidato/a",
+        "Transporte": "Describe el nivel de uso de transporte del/la candidato/a",
+        "Comunicación": "Describe como se comunica el/la candidato/a"
+    }
+
+    respuestas = Respuesta.objects.select_related(
+        "pregunta", "cuestionario", "cuestionario__base_cuestionario"
+    ).filter(usuario_id=usuario_id)
+
+    for r in respuestas:
+        pregunta = r.pregunta
+        texto_pregunta = pregunta.texto.strip()
+        tipo_pregunta = pregunta.tipo
+        texto_respuesta = get_texto_respuesta_transformada(r)
+
+        # Acumulador general
+        resumen_general["respuestas_crudas"].append({
+            "cuestionario_nombre": r.cuestionario.nombre,
+            "base_cuestionario": r.cuestionario.base_cuestionario.nombre if r.cuestionario.base_cuestionario else None,
+            "texto_pregunta": texto_pregunta,
+            "tipo_pregunta": tipo_pregunta,
+            "respuesta": texto_respuesta
+        })
+
+        # ENTREVISTA
+        if "entrevista" in r.cuestionario.nombre.lower():
+            for key, expected in preguntas_entrevista.items():
+                if texto_pregunta == expected:
+                    resumen_general["entrevista"][key] = texto_respuesta
+
+        # PROYECTO DE VIDA
+        elif "pv" in r.cuestionario.nombre.lower():
+            if texto_pregunta == preguntas_texto_pv.get("lo_mas_importante"):
+                resumen_general["proyecto_vida"]["lo_mas_importante"] = texto_respuesta
+            elif texto_pregunta == preguntas_texto_pv.get("me_gusta"):
+                resumen_general["proyecto_vida"]["me_gusta"] = texto_respuesta
+            elif tipo_pregunta == "meta":
+                try:
+                    meta_obj = json.loads(texto_respuesta)
+                    if meta_obj.get("meta") and meta_obj.get("pasos"):
+                        pasos = meta_obj["pasos"]
+                        resumen_general["proyecto_vida"]["metas"].append({
+                            "meta": meta_obj["meta"],
+                            "pasos": pasos
+                        })
+                except Exception:
+                    pass
+            elif texto_pregunta in preguntas_talento:
+                if texto_pregunta not in resumen_general["proyecto_vida"]["talentos"]:
+                    resumen_general["proyecto_vida"]["talentos"][texto_pregunta] = []
+                resumen_general["proyecto_vida"]["talentos"][texto_pregunta].append(texto_respuesta)
+
+        # EVALUACIÓN DIAGNÓSTICA
+        elif "evaluación diagnóstica" in r.cuestionario.nombre.lower():
+            for key, label in diagnostica_mapping.items():
+                if texto_pregunta == label:
+                    resumen_general["evaluacion_diagnostica"][key] = texto_respuesta
+                    print(f"texto_respuesta: {texto_respuesta}")
+    
+
+    return resumen_general

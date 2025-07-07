@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -47,14 +47,78 @@ function DespliegueCuestionario({
     respuestasCuestionarioFinalizado,
     setRespuestasCuestionarioFinalizado,
   ] = useState([]);
-  const [globalQuestionIndex, setGlobalQuestionIndex] = useState(0); // Contador global de preguntas
+  const [globalQuestionIndex, setGlobalQuestionIndex] = useState(0);
   const [modoEdicionGlobal, setModoEdicionGlobal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-
   const [subitems, setSubitems] = useState([]);
   const [technicalAids, setTechnicalAids] = useState([]);
   const [chAids, setCHAids] = useState([]);
+  const [unlockedQuestions, setUnlockedQuestions] = useState(new Set());
+  const [totalUnlockedQuestions, setTotalUnlockedQuestions] = useState(0);
+  const [answeredUnlockedQuestions, setAnsweredUnlockedQuestions] = useState(0);
+
+  const isRespuestaValida = useCallback((respuesta, tipoPregunta) => {
+    if (respuesta === undefined || respuesta === null || respuesta === "") {
+      return false;
+    }
+    if (Array.isArray(respuesta) && respuesta.length === 0) {
+      return false;
+    }
+    if (typeof respuesta === "object" && Object.keys(respuesta).length === 0) {
+      return false;
+    }
+    switch (tipoPregunta) {
+      case "abierta":
+        // Para preguntas abiertas, el texto no puede estar vacío
+        return typeof respuesta === "string" && respuesta.trim().length > 0;
+
+      case "numero":
+        // Para preguntas numéricas, debe ser un número válido
+        return !isNaN(Number(respuesta)) && respuesta !== "";
+
+      case "multiple":
+      case "dropdown":
+        // Para opciones múltiples y dropdown, debe tener un valor seleccionado
+        return respuesta !== "" && respuesta !== null;
+
+      case "checkbox":
+        // Para checkbox, debe tener al menos una opción seleccionada
+        return Array.isArray(respuesta) && respuesta.length > 0;
+
+      case "sis":
+      case "sis2":
+        // Para preguntas SIS, debe tener al menos un valor seleccionado
+        return (
+          typeof respuesta === "object" && Object.keys(respuesta).length > 0
+        );
+
+      case "ed":
+      case "ch":
+        // Para preguntas especiales, debe tener al menos un valor seleccionado
+        return (
+          typeof respuesta === "object" && Object.keys(respuesta).length > 0
+        );
+
+      case "binaria":
+        // Para preguntas binarias, debe tener un valor seleccionado
+        return respuesta === true || respuesta === false;
+
+      default:
+        return true;
+    }
+  }, []);
+
+  const isQuestionVisible = useCallback(
+    (pregunta) => {
+      // Si la pregunta no tiene desbloqueos recibidos, siempre es visible
+      if (pregunta.desbloqueos_recibidos.length === 0) return true;
+      // Si tiene desbloqueos, solo es visible si está en unlockedQuestions
+      return unlockedQuestions.has(pregunta.id);
+    },
+    [unlockedQuestions]
+  );
+
   useEffect(() => {
     const fetchSISAids = async () => {
       try {
@@ -233,6 +297,8 @@ function DespliegueCuestionario({
           setPreguntaIndex(lastAnsweredQuestionIndex);
         }
       }
+
+      console.log("Respuestas actuales:", respuestasFiltradas);
     } catch (error) {
       console.error("Error fetching existing answers:", error);
     }
@@ -335,6 +401,7 @@ function DespliegueCuestionario({
 
       setCuestionarioFinalizado(true);
       if (onClose) onClose();
+      navigate(`/candidatos/${usuario.id}`);
     } catch (error) {
       console.error("Error al finalizar el cuestionario:", error);
     }
@@ -342,19 +409,55 @@ function DespliegueCuestionario({
 
   // Función para obtener el texto de la respuesta
   const obtenerRespuestaTexto = (respuesta) => {
-    if (respuesta.tipo_pregunta === "checkbox") {
-      return respuesta.respuesta.map((opcion) => opcion.texto).join(", ");
-    } else if (respuesta.tipo_pregunta === "sis") {
-      return JSON.stringify(respuesta.respuesta);
-    } else if (
-      respuesta.tipo_pregunta === "multiple" ||
-      respuesta.tipo_pregunta === "dropdown"
-    ) {
-      return respuesta.respuesta.texto;
-    } else if (respuesta.respuesta) {
-      return respuesta.respuesta;
-    } else {
+    try {
+      // Si no hay respuesta, retornar "Sin respuesta"
+      if (!respuesta.respuesta) {
+        return "Sin respuesta";
+      }
+
+      // Si es un string directo, retornarlo
+      if (typeof respuesta.respuesta === "string") {
+        return respuesta.respuesta;
+      }
+
+      // Si es un objeto JSON (parseado)
+      if (typeof respuesta.respuesta === "object") {
+        // Para respuestas tipo checkbox
+        if (respuesta.tipo_pregunta === "checkbox") {
+          return Array.isArray(respuesta.respuesta)
+            ? respuesta.respuesta.map((opcion) => opcion.texto).join(", ")
+            : "Sin respuesta";
+        }
+
+        // Para respuestas tipo SIS
+        if (respuesta.tipo_pregunta === "sis") {
+          return JSON.stringify(respuesta.respuesta);
+        }
+
+        // Para respuestas tipo multiple o dropdown
+        if (
+          respuesta.tipo_pregunta === "multiple" ||
+          respuesta.tipo_pregunta === "dropdown"
+        ) {
+          return respuesta.respuesta.texto || "Sin respuesta";
+        }
+
+        // Para otros tipos de respuestas con texto
+        if (respuesta.respuesta.texto) {
+          return respuesta.respuesta.texto;
+        }
+      }
+
+      // Si es un array
+      if (Array.isArray(respuesta.respuesta)) {
+        return respuesta.respuesta.join(", ");
+      }
+
+      // Si no se pudo procesar la respuesta
       return "Sin respuesta";
+    } catch (error) {
+      console.error("Error al procesar respuesta:", error);
+      return "Error al procesar la respuesta";
     }
   };
 
@@ -411,6 +514,30 @@ function DespliegueCuestionario({
       console.error("Error saving changes:", error);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Función para actualizar el estado de desbloqueo de una pregunta
+  const updateQuestionUnlockStatus = (questionId, isUnlocked) => {
+    if (questionId === "counter") {
+      // Actualizar contadores
+      setTotalUnlockedQuestions(isUnlocked.total);
+      setAnsweredUnlockedQuestions(isUnlocked.answered);
+    } else {
+      // Actualizar preguntas desbloqueadas
+      setUnlockedQuestions((prev) => {
+        const newUnlocked = new Set(prev);
+        if (isUnlocked) {
+          newUnlocked.add(questionId);
+        } else {
+          newUnlocked.delete(questionId);
+        }
+        console.log("=== ACTUALIZACIÓN DE DESBLOQUEOS ===");
+        console.log("Pregunta ID:", questionId);
+        console.log("Desbloqueos anteriores:", Array.from(prev));
+        console.log("Nuevos desbloqueos:", Array.from(newUnlocked));
+        return newUnlocked;
+      });
     }
   };
 
@@ -514,79 +641,99 @@ function DespliegueCuestionario({
                     },
                   }}
                 >
-                  {respuestasCuestionarioFinalizado.map((respuesta, idx) => (
-                    <React.Fragment key={idx}>
-                      <ListItem
-                        sx={{
-                          mb: 2,
-                          pb: 2,
-                          borderRadius: 3,
-                          background: "#fff",
-                          boxShadow: 1,
-                          transition: "box-shadow 0.2s, background 0.2s",
-                          "&:hover": {
-                            background: "#f1f5fb",
-                            boxShadow: 3,
-                          },
-                          display: "flex",
-                          flexDirection: "column",
-                          alignItems: "flex-start",
-                        }}
-                      >
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", mb: 1 }}
+                  {respuestasCuestionarioFinalizado
+                    .filter((respuesta) => {
+                      const respuestaTexto = obtenerRespuestaTexto(respuesta);
+                      return (
+                        respuestaTexto &&
+                        respuestaTexto !== "Sin respuesta" &&
+                        respuestaTexto !== "Error al procesar la respuesta"
+                      );
+                    })
+                    .map((respuesta, idx) => (
+                      <React.Fragment key={idx}>
+                        <ListItem
+                          sx={{
+                            mb: 2,
+                            pb: 2,
+                            borderRadius: 3,
+                            background: "#fff",
+                            boxShadow: 1,
+                            transition: "box-shadow 0.2s, background 0.2s",
+                            "&:hover": {
+                              background: "#f1f5fb",
+                              boxShadow: 3,
+                            },
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "flex-start",
+                          }}
                         >
                           <Box
                             sx={{
-                              minWidth: 32,
-                              minHeight: 32,
-                              bgcolor: "primary.light",
-                              color: "primary.main",
-                              fontWeight: "bold",
-                              borderRadius: "50%",
                               display: "flex",
                               alignItems: "center",
-                              justifyContent: "center",
-                              mr: 2,
-                              fontSize: "1.1rem",
-                              boxShadow: 1,
+                              mb: 1,
                             }}
                           >
-                            {idx + 1}
+                            <Box
+                              sx={{
+                                minWidth: 32,
+                                minHeight: 32,
+                                bgcolor: "primary.light",
+                                color: "primary.main",
+                                fontWeight: "bold",
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                mr: 2,
+                                fontSize: "1.1rem",
+                                boxShadow: 1,
+                              }}
+                            >
+                              {idx + 1}
+                            </Box>
+                            <Typography
+                              variant="subtitle1"
+                              sx={{
+                                fontWeight: "bold",
+                                color: "#1a237e",
+                                fontSize: { xs: "1rem", sm: "1.1rem" },
+                              }}
+                            >
+                              {respuesta.pregunta_texto}
+                            </Typography>
                           </Box>
                           <Typography
-                            variant="subtitle1"
+                            variant="body2"
                             sx={{
-                              fontWeight: "bold",
-                              color: "#1a237e",
-                              fontSize: { xs: "1rem", sm: "1.1rem" },
+                              backgroundColor: "#f3f6fa",
+                              padding: "10px 14px",
+                              borderRadius: "8px",
+                              width: "100%",
+                              textAlign: "left",
+                              wordWrap: "break-word",
+                              fontSize: { xs: "0.98rem", sm: "1.05rem" },
+                              color: "#374151",
+                              fontFamily: "inherit",
                             }}
                           >
-                            {respuesta.pregunta_texto}
+                            {`Respuesta: ${obtenerRespuestaTexto(respuesta)}`}
                           </Typography>
-                        </Box>
-                        <Typography
-                          variant="body2"
-                          sx={{
-                            backgroundColor: "#f3f6fa",
-                            padding: "10px 14px",
-                            borderRadius: "8px",
-                            width: "100%",
-                            textAlign: "left",
-                            wordWrap: "break-word",
-                            fontSize: { xs: "0.98rem", sm: "1.05rem" },
-                            color: "#374151",
-                            fontFamily: "inherit",
-                          }}
-                        >
-                          {`Respuesta: ${obtenerRespuestaTexto(respuesta)}`}
-                        </Typography>
-                      </ListItem>
-                      {idx !== respuestasCuestionarioFinalizado.length - 1 && (
-                        <Divider sx={{ my: 1, width: "100%" }} />
-                      )}
-                    </React.Fragment>
-                  ))}
+                        </ListItem>
+                        {idx !==
+                          respuestasCuestionarioFinalizado.filter((r) => {
+                            const rt = obtenerRespuestaTexto(r);
+                            return (
+                              rt &&
+                              rt !== "Sin respuesta" &&
+                              rt !== "Error al procesar la respuesta"
+                            );
+                          }).length -
+                            1 && <Divider sx={{ my: 1, width: "100%" }} />}
+                      </React.Fragment>
+                    ))}
                 </List>
               )}
             </Paper>
@@ -661,16 +808,25 @@ function DespliegueCuestionario({
           >
             <Preguntas
               cuestionario={cuestionario}
+              usuario={usuario}
               preentrevista={preentrevista}
-              usuario={usuario.id}
+              preguntaIndex={preguntaIndex}
+              setPreguntaIndex={setPreguntaIndex}
+              questionsPerPage={1}
+              lastAnsweredQuestionIndex={lastAnsweredQuestionIndex}
               cuestionarioFinalizado={cuestionarioFinalizado}
               setCuestionarioFinalizado={setCuestionarioFinalizado}
               subitems={subitems}
-              esEditable={modoEdicionGlobal}
               technicalAids={technicalAids}
               chAids={chAids}
+              esEditable={modoEdicionGlobal}
+              onQuestionUnlock={updateQuestionUnlockStatus}
             />
           </Box>
+          <Typography variant="body2" color="textSecondary">
+            Preguntas respondidas: {answeredUnlockedQuestions} de{" "}
+            {totalUnlockedQuestions}
+          </Typography>
         </Box>
       </Box>
 

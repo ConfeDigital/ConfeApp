@@ -71,7 +71,9 @@ const styles = StyleSheet.create({
 
 // Componente PDF principal
 const MyDocument = ({ secciones, activoPorSubitem, resultados, profile }) => {
-  const fullName = `${profile?.user?.first_name || ""} ${profile?.user?.last_name || ""} ${profile?.user?.second_last_name || ""}`;
+  const fullName = `${profile?.user?.first_name || ""} ${
+    profile?.user?.last_name || ""
+  } ${profile?.user?.second_last_name || ""}`;
   const curp = profile?.curp || "N/A";
   const phone = profile?.phone_number || "N/A";
   const birthDate = profile?.birth_date
@@ -106,13 +108,15 @@ const MyDocument = ({ secciones, activoPorSubitem, resultados, profile }) => {
                   {/* Encabezado tabla */}
                   <View style={styles.tableRow}>
                     <View style={styles.tableColHeader}>
-                      <Text style={styles.tableCellHeader}>Subitem</Text>
+                      <Text style={styles.tableCellHeader}>Actividad</Text>
                     </View>
                     <View style={styles.tableColHeader}>
                       <Text style={styles.tableCellHeader}>Ayuda activa</Text>
                     </View>
                     <View style={styles.tableColHeader}>
-                      <Text style={styles.tableCellHeader}>Resultado</Text>
+                      <Text style={styles.tableCellHeader}>
+                        Resultado del uso del apoyo
+                      </Text>
                     </View>
                     <View style={styles.tableColHeader}>
                       <Text style={styles.tableCellHeader}>Comentario</Text>
