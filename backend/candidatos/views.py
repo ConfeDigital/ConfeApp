@@ -583,7 +583,7 @@ class SISAidCandidateHistoryDetailAPIView(APIView):
 
 
 class SISAidCandidateHistoryHistoryAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, candidate_id):
         historial = []
@@ -634,7 +634,7 @@ class TAidCandidateHistoryListAPIView(generics.ListAPIView):
 
 
 class TAidCandidateHistoryHistoryAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, candidate_id):
         historial = []
@@ -699,7 +699,7 @@ class CHAidCandidateHistoryCreateAPIView(APIView):
 
 
 class CHAidCandidateHistoryListAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, candidate_id):
         queryset = CHAidCandidateHistory.objects.filter(candidate__user__id=candidate_id)
@@ -727,7 +727,7 @@ class CHAidCandidateHistoryListAPIView(APIView):
 
 
 class CHAidCandidateHistoryHistoryAPIView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get(self, request, candidate_id):
         historial = []

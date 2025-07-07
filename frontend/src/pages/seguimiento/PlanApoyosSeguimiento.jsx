@@ -32,6 +32,7 @@ import RemoveCircleOutlineIcon from "@mui/icons-material/RemoveCircleOutline";
 import axios from "../../api";
 import ExportarApoyosPDF from "./ExportarApoyosPDF";
 
+
 import { tokens } from "../../theme";
 
 const normalizarClave = (texto) =>
@@ -430,6 +431,9 @@ const PlanApoyosSeguimiento = ({ uid }) => {
 
   if (loading) return <Typography>Cargando...</Typography>;
   if (error) return <Typography color="error">{error}</Typography>;
+
+
+
 
   return (
     <Box sx={{ p: 2 }}>

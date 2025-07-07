@@ -36,22 +36,27 @@ const AgregarDespuesIcon = () => (
 
 // Nombre visible por tipo
 const nombreTipoPregunta = {
+  multiple: "Opción Múltiple",
   abierta: "Abierta",
-  multiple: "Opción múltiple",
-  checkbox: "Casillas (checkbox)",
   numero: "Número",
-  dropdown: "Desplegable",
+  checkbox: "Checkbox",
+  binaria: "Binaria",
   fecha: "Fecha",
   fecha_hora: "Fecha y Hora",
-  numero_telefono: "Número de teléfono",
-  meta: "Meta y pasos",
-  imagen: "Imagen",
+  dropdown: "Dropdown",
+  sis: "SIS DE 0-4",
+  sis2: "SIS DE 0-2",
+  datos_personales: "Datos Personales",
+  datos_domicilio: "Datos Domicilio",
+  datos_medicos: "Datos Médicos",
+  contactos: "Contactos",
+  tipo_discapacidad: "Discapacidad",
   canalizacion: "Canalización",
   canalizacion_centro: "Canalización Centro",
-  sis: "SIS (0-4)",
-  sis2: "SIS (0-2)",
+  ed: "Evaluación Diagnóstica",
   ch: "Cuadro de Habilidades",
-  binaria: "Binaria",
+  imagen: "Imagen",
+  meta: "Meta",
 };
 
 const PreguntaCard = ({
@@ -67,19 +72,102 @@ const PreguntaCard = ({
   tiposPermitidos,
   preguntas,
   mostrarDesbloqueoDropdown,
-  deshabilitado, // ← Agregado
+  deshabilitado,
   secciones,
   agregarSeccionSiNoExiste,
 }) => {
   const tiposConOpciones = ["multiple", "checkbox", "dropdown", "binaria"];
 
+  // Efecto para manejar opciones según el tipo de pregunta
+  React.useEffect(() => {
+    if (tiposConOpciones.includes(pregunta.tipo)) {
+      let opcionesActualizadas = [...(pregunta.opciones || [])];
+
+      // Para preguntas binarias, asegurar que siempre tenga "Sí" y "No"
+      if (pregunta.tipo === "binaria") {
+        if (
+          opcionesActualizadas.length !== 2 ||
+          opcionesActualizadas[0] !== "Sí" ||
+          opcionesActualizadas[1] !== "No"
+        ) {
+          opcionesActualizadas = ["Sí", "No"];
+        }
+      }
+
+      // Actualizar desbloqueos si existen
+      const desbloqueosActualizados = pregunta.desbloqueo?.map((d) => {
+        const preguntaOrigen = preguntas[d.pregunta_id];
+        if (!preguntaOrigen) return d;
+
+        // Si la pregunta origen es binaria, convertir valores
+        if (preguntaOrigen.tipo === "binaria") {
+          return {
+            ...d,
+            valor: d.valor === "0" ? "Sí" : d.valor === "1" ? "No" : d.valor,
+          };
+        }
+
+        // Para otros tipos, asegurar que el valor coincida con las opciones
+        const opcionesOrigen = preguntaOrigen.opciones || [];
+        const valorActual = d.valor;
+        const opcionEncontrada = opcionesOrigen.find(
+          (opt) => (typeof opt === "object" ? opt.texto : opt) === valorActual
+        );
+
+        return {
+          ...d,
+          valor: opcionEncontrada ? valorActual : opcionesOrigen[0] || "",
+        };
+      });
+
+      if (
+        JSON.stringify(opcionesActualizadas) !==
+          JSON.stringify(pregunta.opciones) ||
+        JSON.stringify(desbloqueosActualizados) !==
+          JSON.stringify(pregunta.desbloqueo)
+      ) {
+        updatePregunta(index, {
+          ...pregunta,
+          opciones: opcionesActualizadas,
+          desbloqueo: desbloqueosActualizados,
+        });
+      }
+    }
+  }, [
+    pregunta.tipo,
+    pregunta.opciones,
+    pregunta.desbloqueo,
+    preguntas,
+    index,
+    updatePregunta,
+  ]);
+
   const handleOptionChange = (i, value) => {
+    if (pregunta.tipo === "binaria") {
+      return; // No permitir cambios en preguntas binarias
+    }
     const nuevasOpciones = [...(pregunta.opciones || [])];
     nuevasOpciones[i] = value;
-    updatePregunta(index, { ...pregunta, opciones: nuevasOpciones });
+
+    // Actualizar desbloqueos que usen esta opción
+    const desbloqueosActualizados = pregunta.desbloqueo?.map((d) => {
+      if (d.valor === nuevasOpciones[i]) {
+        return { ...d, valor: value };
+      }
+      return d;
+    });
+
+    updatePregunta(index, {
+      ...pregunta,
+      opciones: nuevasOpciones,
+      desbloqueo: desbloqueosActualizados,
+    });
   };
 
   const addOpcion = () => {
+    if (pregunta.tipo === "binaria") {
+      return; // No permitir agregar opciones en preguntas binarias
+    }
     updatePregunta(index, {
       ...pregunta,
       opciones: [...(pregunta.opciones || []), ""],
@@ -87,6 +175,9 @@ const PreguntaCard = ({
   };
 
   const deleteOpcion = (i) => {
+    if (pregunta.tipo === "binaria") {
+      return; // No permitir eliminar opciones en preguntas binarias
+    }
     updatePregunta(index, {
       ...pregunta,
       opciones: (pregunta.opciones || []).filter((_, idx) => idx !== i),
@@ -97,17 +188,6 @@ const PreguntaCard = ({
     const file = e.target.files[0];
     updatePregunta(index, { ...pregunta, imagen: file });
   };
-
-  // Efecto para insertar automáticamente opciones binaria si corresponde
-  React.useEffect(() => {
-    if (
-      pregunta.tipo === "binaria" &&
-      (!pregunta.opciones || pregunta.opciones.length === 0)
-    ) {
-      updatePregunta(index, { ...pregunta, opciones: ["Sí", "No"] });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pregunta.tipo]);
 
   return (
     <Card sx={{ mb: 2 }}>
@@ -313,13 +393,6 @@ const PreguntaCard = ({
                   <InputLabel>{`Desbloqueo desde Pregunta ${
                     i + 1
                   }`}</InputLabel>
-                  {console.log(
-                    "🧪 Verificando desbloqueo para pregunta",
-                    index,
-                    "desde origen",
-                    i,
-                    pregunta.desbloqueo?.find((d) => d.pregunta_id === i)
-                  )}
                   <Select
                     label="Desbloqueo desde Pregunta"
                     value={(() => {
@@ -332,31 +405,28 @@ const PreguntaCard = ({
                             (d) => d.pregunta_origen === i
                           );
                         if (!desbloqueoItem) return "";
-                        const opciones =
-                          p.tipo === "binaria"
-                            ? ["Sí", "No"]
-                            : p.opciones || [];
-                        const opcionValor =
-                          desbloqueoItem.opcion ||
+
+                        const opciones = p.opciones || [];
+                        const valorActual =
+                          desbloqueoItem.valor ||
                           desbloqueoItem.opcion_desbloqueadora;
-                        return opciones.findIndex((opt) =>
-                          typeof opt === "object"
-                            ? opt.texto === opcionValor
-                            : opt === opcionValor
+
+                        return opciones.findIndex(
+                          (opt) =>
+                            (typeof opt === "object" ? opt.texto : opt) ===
+                            valorActual
                         );
                       } else {
                         const match = pregunta.desbloqueos_recibidos?.find(
                           (d) => d.pregunta_origen === p.texto
                         );
                         if (!match) return "";
-                        const opciones =
-                          p.tipo === "binaria"
-                            ? ["Sí", "No"]
-                            : p.opciones || [];
-                        return opciones.findIndex((opt) =>
-                          typeof opt === "object"
-                            ? opt.texto === match.opcion_desbloqueadora
-                            : opt === match.opcion_desbloqueadora
+
+                        const opciones = p.opciones || [];
+                        return opciones.findIndex(
+                          (opt) =>
+                            (typeof opt === "object" ? opt.texto : opt) ===
+                            match.opcion_desbloqueadora
                         );
                       }
                     })()}
@@ -368,17 +438,18 @@ const PreguntaCard = ({
                         ),
                       ];
                       if (!isNaN(opcionIndex)) {
+                        const opciones = p.opciones || [];
                         const valor =
-                          p.tipo === "binaria"
-                            ? ["Sí", "No"][opcionIndex]
-                            : p.opciones[opcionIndex];
-                        const descripcion = `Pregunta ${i + 1}: ${p.texto}`;
+                          typeof opciones[opcionIndex] === "object"
+                            ? opciones[opcionIndex].texto
+                            : opciones[opcionIndex];
+
                         nuevaDesbloqueo.push({
                           origenIndex: i,
                           opcionIndex,
                           valor,
                           pregunta_id: i,
-                          descripcion,
+                          descripcion: `Pregunta ${i + 1}: ${p.texto}`,
                         });
                       }
                       updatePregunta(index, {
@@ -389,10 +460,7 @@ const PreguntaCard = ({
                     disabled={deshabilitado}
                   >
                     <MenuItem value="">Ninguna</MenuItem>
-                    {(p.tipo === "binaria"
-                      ? ["Sí", "No"]
-                      : p.opciones || []
-                    ).map((opt, j) => (
+                    {(p.opciones || []).map((opt, j) => (
                       <MenuItem key={j} value={j}>
                         {typeof opt === "object" ? opt.texto : opt}
                       </MenuItem>
