@@ -611,9 +611,6 @@ class EtapaCuestionarioView(APIView):
             {'value': 'Can', 'label': 'Canalización'},
             {'value': 'Ent', 'label': 'Entrevista'},
             {'value': 'Cap', 'label': 'Capacitación'},
-            {'value': 'Bol', 'label': 'Bolsa de Trabajo'},
-            {'value': 'Emp', 'label': 'Empleado'},
-            {'value': 'Des', 'label': 'Desempleado'},
         ]
         return Response(STAGE_CHOICES)
 
