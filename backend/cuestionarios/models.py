@@ -113,7 +113,8 @@ class Pregunta(models.Model):
         ('canalizacion_centro', 'Canalización Centro'),
         ('ed', 'Evaluación Diagnóstica'),
         ('ch', 'Cuadro de Habilidades'),
-        ('imagen', 'Imagen')
+        ('imagen', 'Imagen'),
+        ('meta', 'Meta'),
     ]
 
     cuestionario = models.ForeignKey(Cuestionario, on_delete=models.CASCADE, related_name="preguntas")

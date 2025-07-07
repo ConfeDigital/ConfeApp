@@ -13,6 +13,7 @@ import {
   InputLabel,
   Select,
   MenuItem,
+  Alert,
 } from "@mui/material";
 import api from "../../../api";
 
@@ -33,6 +34,7 @@ const PopupPrecargaCuestionario = ({
   const [openConfirmSubmit, setOpenConfirmSubmit] = useState(false);
   const [preguntasPrecargadas, setPreguntasPrecargadas] = useState([]);
   const [erroresPrecarga, setErroresPrecarga] = useState([]);
+  const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 
   // Log preguntasPrecargadas JSON crudo al frontend cuando cambia
   useEffect(() => {
@@ -133,6 +135,46 @@ const PopupPrecargaCuestionario = ({
     setLoading(false);
   };
 
+  const handleDownloadTemplate = async () => {
+    setDownloadingTemplate(true);
+    try {
+      const response = await api.get(
+        "/api/cuestionarios/descargar-plantilla/",
+        {
+          responseType: "blob",
+        }
+      );
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+
+      // Create a temporary link element
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", "Plantilla_cuestionarios_precarga.xlsx");
+
+      // Append to body, click and remove
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      // Clean up the URL
+      window.URL.revokeObjectURL(url);
+      setMessage({
+        type: "success",
+        text: "Plantilla descargada exitosamente.",
+      });
+    } catch (error) {
+      console.error("Error downloading template:", error);
+      setMessage({
+        type: "error",
+        text: "Error al descargar la plantilla. Por favor, intente nuevamente.",
+      });
+    } finally {
+      setDownloadingTemplate(false);
+    }
+  };
+
   return (
     <>
       <Dialog open={open} onClose={onClose} fullWidth maxWidth="md">
@@ -140,7 +182,26 @@ const PopupPrecargaCuestionario = ({
         <DialogContent>
           <Box>
             <Typography variant="body2" gutterBottom>
-              Selecciona un archivo Excel (.xlsx):
+              Para precargar un cuestionario, primero descarga la plantilla de
+              Excel y complétala con la información requerida.
+            </Typography>
+
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleDownloadTemplate}
+              disabled={downloadingTemplate}
+              startIcon={
+                downloadingTemplate ? <CircularProgress size={20} /> : null
+              }
+              sx={{ mb: 2 }}
+            >
+              {downloadingTemplate ? "Descargando..." : "Descargar Plantilla"}
+            </Button>
+
+            <Typography variant="body2" gutterBottom>
+              Una vez completada la plantilla, selecciona el archivo Excel
+              (.xlsx):
             </Typography>
             <Button variant="outlined" component="label" sx={{ mb: 1 }}>
               Escoger archivo

@@ -24,22 +24,27 @@ import PopupPrecargaCuestionario from "./PopupPrecargaCuestionario";
 import api from "../../../api"; // Asegúrate de que esta ruta sea correcta
 
 const TIPOS_COMPLETOS = [
-  "abierta",
   "multiple",
-  "checkbox",
+  "abierta",
   "numero",
-  "dropdown",
+  "checkbox",
+  "binaria",
   "fecha",
   "fecha_hora",
-  "numero_telefono",
-  "meta",
-  "imagen",
-  "canalizacion",
-  "canalizacion_centro",
+  "dropdown",
   "sis",
   "sis2",
+  "datos_personales",
+  "datos_domicilio",
+  "datos_medicos",
+  "contactos",
+  "tipo_discapacidad",
+  "canalizacion",
+  "canalizacion_centro",
+  "ed",
   "ch",
-  "binaria",
+  "imagen",
+  "meta",
 ];
 
 const tiposPorCuestionario = {
@@ -283,9 +288,23 @@ const EditorCuestionario = () => {
       );
       return;
     }
-    const preguntasFormateadas = preguntas.map((p) =>
-      p.tipo === "binaria" ? { ...p, tipo: "multiple" } : p
-    );
+
+    // Procesar preguntas antes de enviar
+    const preguntasFormateadas = preguntas.map((p) => {
+      // Si es una pregunta binaria, asegurarse de que tenga las opciones correctas
+      if (p.tipo === "binaria") {
+        return {
+          ...p,
+          tipo: "multiple", // Cambiar a multiple para el backend
+          opciones: ["Sí", "No"], // Asegurar que tenga las opciones correctas
+          desbloqueo: p.desbloqueo?.map((d) => ({
+            ...d,
+            valor: d.valor === "0" ? "Sí" : d.valor === "1" ? "No" : d.valor,
+          })),
+        };
+      }
+      return p;
+    });
 
     const data = {
       cuestionario_id: parseInt(idCuestionario, 10),
