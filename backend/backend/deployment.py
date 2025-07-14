@@ -1,12 +1,33 @@
 import os
 import logging
+import socket
 from .settings import *
 from .settings import BASE_DIR
 
 logger = logging.getLogger(__name__)
 
+# --- Function to get container's internal IP ---
+def get_container_ip():
+    """Get the container's internal IP address"""
+    try:
+        hostname = socket.gethostname()
+        container_ip = socket.gethostbyname(hostname)
+        logger.info(f"Container IP detected: {container_ip}")
+        return container_ip
+    except Exception as e:
+        logger.warning(f"Could not detect container IP: {e}")
+        return None
+
 # --- Configuración del Host y CSRF ---
-ALLOWED_HOSTS = [os.environ['WEBSITE_HOSTNAME'], 'localhost', '127.0.0.1', '169.254.130.2']
+base_allowed_hosts = [os.environ['WEBSITE_HOSTNAME'], 'localhost', '127.0.0.1']
+
+# Add container IP dynamically
+container_ip = get_container_ip()
+if container_ip:
+    base_allowed_hosts.append(container_ip)
+
+ALLOWED_HOSTS = base_allowed_hosts
+
 CSRF_TRUSTED_ORIGINS = ['https://'+os.environ['WEBSITE_HOSTNAME']]
 DEBUG = False
 SECRET_KEY = os.environ['MY_SECRET_KEY']
@@ -17,8 +38,12 @@ try:
 except KeyError:
     logger.error("DEBUGGING: WEBSITE_HOSTNAME environment variable not found!")
 
-# --- Middlewares ---
+# Log the allowed hosts for debugging
+logger.info(f"DEBUGGING: ALLOWED_HOSTS configured: {ALLOWED_HOSTS}")
+
+# --- Middlewares (ADD DynamicHostMiddleware FIRST) ---
 MIDDLEWARE = [
+    'middleware.dynamic_host.DynamicHostMiddleware',  # Add this first
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
@@ -51,9 +76,6 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = '/static/'
 
 # --- Configuración de la Base de Datos (AZURE SQL con SQL Authentication) ---
-# Ya no necesitamos DefaultAzureCredential ni pyodbc importados aquí,
-# ni la clase AzureADAccessTokenDatabaseWrapper.
-
 CONNECTION_STRING_RAW = os.environ['AZURE_SQL_CONNECTIONSTRING']
 
 # Parsear la cadena de conexión SQL Server (usando ';')
@@ -101,7 +123,6 @@ DATABASES = {
         "ATOMIC_REQUESTS": True,
     }
 }
-
 
 # --- Configuración de Redis Cache y Channels (sin cambios) ---
 REDISCACHE_HOST = os.environ.get('REDISCACHE_HOST')

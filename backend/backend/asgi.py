@@ -9,7 +9,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", settings_module)
 
 django.setup()
 
-from api.middleware import JWTAuthMiddlewareStack
+from middleware.jwt_auth import JWTAuthMiddlewareStack
 from .routing import websocket_urlpatterns
 
 application = ProtocolTypeRouter({
