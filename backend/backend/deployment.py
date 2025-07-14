@@ -3,6 +3,7 @@ import logging
 import socket
 from .settings import *
 from .settings import BASE_DIR
+import sys
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +163,75 @@ else:
             'BACKEND': 'channels.layers.InMemoryChannelLayer',
         },
     }
+
+# --- Configuración de Logging ---
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console_info': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,  # Send INFO/DEBUG to stdout
+            'formatter': 'verbose',
+        },
+        'console_error': {
+            'level': 'ERROR',
+            'class': 'logging.StreamHandler',
+            'stream': sys.stderr,  # Send only real errors to stderr
+            'formatter': 'verbose',
+        },
+        'console_warning': {
+            'level': 'WARNING',
+            'class': 'logging.StreamHandler',
+            'stream': sys.stdout,  # Send warnings to stdout too
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console_info', 'console_error'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console_info', 'console_error'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['console_warning'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.security': {
+            'handlers': ['console_warning'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        # Your app loggers
+        'middleware.dynamic_host': {
+            'handlers': ['console_info'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        # Add your app name here
+        'backend': {  # Replace 'backend' with your app name
+            'handlers': ['console_info', 'console_error'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
 
 # --- Configuración de ASGI ---
 ASGI_APPLICATION = "backend.asgi.application"
