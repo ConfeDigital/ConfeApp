@@ -11,8 +11,7 @@ const WebSocketProvider = ({ instance, children }) => {
   const userUpdateSocketRef = useRef(null);
   const isUnmounted = useRef(false);
   const retries = useRef({ notifications: 0, userUpdates: 0 });
-  // const MAX_RETRIES = 5;
-  const MAX_RETRIES = 2;
+  const MAX_RETRIES = 5;
 
   useEffect(() => {
     const notificationSound = new Audio('../../assets/sounds/notification.wav');
