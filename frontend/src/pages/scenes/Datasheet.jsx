@@ -486,6 +486,7 @@ const Datasheet = () => {
                   minWidth: "120px",
                   // fontSize: { xs: "0.75rem", sm: "0.875rem" },
                 }}
+                disabled={ candidateProfile.stage != 'Agn' && candidateProfile.stage != 'Cap' }
               >
                 Apoyos
               </Button>
@@ -519,6 +520,7 @@ const Datasheet = () => {
                 sx={{
                   minWidth: "120px",
                 }}
+                disabled={ candidateProfile.stage != 'Agn' && candidateProfile.stage != 'Cap' }
               >
                 Proyecto de Vida
               </Button>

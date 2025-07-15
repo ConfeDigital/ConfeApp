@@ -210,7 +210,7 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
     stage = serializers.CharField(write_only=True, required=False, default='Reg')
     photo = serializers.ImageField(write_only=True, required=False)
     
-    receives_pension = serializers.CharField(write_only=True, required=False)
+    receives_pension = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     # Booleans (optional)
     has_disability_certificate = serializers.BooleanField(write_only=True, required=False, default=False)
