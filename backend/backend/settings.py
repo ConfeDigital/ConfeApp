@@ -93,6 +93,7 @@ INSTALLED_APPS = [
     "agencia", 
     "seguimiento",
     "centros",
+    "communications",
 ]
 
 AUTH_ADFS = {

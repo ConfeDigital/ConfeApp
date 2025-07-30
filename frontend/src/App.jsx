@@ -75,6 +75,8 @@ import EmployerPanel from "./pages/empleadores/EmployerPanel";
 import EmployerProfile from "./pages/empleadores/EmployerProfile";
 import JobCandidatesPage from "./pages/empleadores/JobCandidatesPage";
 import QuestionnaireInterface from "./pages/cuestionarios/questionnaireInterface/QuestionnaireInterface";
+import CommunicationForum from "./pages/scenes/CommunicationForum";
+import CenterChat from "./pages/scenes/CenterChat";
 
 reactDebugHooks(React);
 
@@ -364,6 +366,8 @@ function App({ instance }) {
                     element={<CHAids />}
                   />
                   <Route path="/configuracion" element={<Settings />} />
+                  <Route path="/comunicados" element={<CommunicationForum />} />
+                  <Route path="/comunicacion-centros" element={<CenterChat />} />
                 </Route>
                 <Route
                   element={

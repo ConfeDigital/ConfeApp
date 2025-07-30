@@ -7,6 +7,7 @@ import MultiSelectForm from "../../components/calendar/MultiSelectForm";
 import DatePickerForm from "../../components/calendar/DatePickerForm";
 import MyModal from "../../components/calendar/Modal"; // Renamed to avoid confusion
 import ContentSkeleton from "../../components/ContentSkeleton";
+import { useLocation } from "react-router-dom";
 
 import useDocumentTitle from "../../components/hooks/useDocumentTitle";
 
@@ -33,6 +34,8 @@ const Calendar = () => {
 
   const calendarRef = useRef(null);
   const calendarContainerRef = useRef(null);
+
+  const location = useLocation();
 
   const NO_CATEGORY = "Sin Categoría";
 
@@ -155,7 +158,7 @@ const Calendar = () => {
         resizeObserver.unobserve(calendarContainerRef.current);
       }
     };
-  }, []);
+  }, [location.search]);
 
   const filteredEvents = currentEvents.filter((event) => {
     if (selectedCategory.includes(NO_CATEGORY)) {

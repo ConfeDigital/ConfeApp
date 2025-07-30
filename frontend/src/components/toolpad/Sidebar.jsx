@@ -10,14 +10,11 @@ import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined
 import BlindIcon from "@mui/icons-material/Blind";
 import MenuOutlinedIcon from "@mui/icons-material/MenuOutlined";
 import MenuOpenOutlinedIcon from "@mui/icons-material/MenuOpenOutlined";
-import UploadFileIcon from "@mui/icons-material/UploadFile";
 import AssistWalkerIcon from "@mui/icons-material/AssistWalker";
-import AccessibilityNewIcon from "@mui/icons-material/AccessibilityNew";
-import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
 import { UploadFileTwoTone } from "@mui/icons-material";
-import TableChartIcon from "@mui/icons-material/TableChart";
-import FollowTheSignsIcon from "@mui/icons-material/FollowTheSigns";
 import DynamicFormOutlinedIcon from '@mui/icons-material/DynamicFormOutlined';
+import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
+import SpeakerNotesOutlinedIcon from '@mui/icons-material/SpeakerNotesOutlined';
 import { useSelector } from "react-redux";
 
 const Item = ({ title, to, icon, selected }) => { // Removed setSelected prop
@@ -265,6 +262,19 @@ const Sidebar = forwardRef((props, ref) => {
                 selected={selected}
               />
             )} */}
+            <Item
+              title="Comunicados"
+              to="/comunicados"
+              icon={<SpeakerNotesOutlinedIcon />}
+              selected={selected}
+            />
+
+            <Item
+              title="Comunicación Centros"
+              to="/comunicacion-centros"
+              icon={<ForumOutlinedIcon />}
+              selected={selected}
+            />
           </Box>
         </Menu>
       </ProSidebar>

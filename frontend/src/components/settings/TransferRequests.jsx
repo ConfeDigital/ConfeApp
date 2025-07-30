@@ -23,11 +23,14 @@ import { useSelector } from "react-redux";
 import dayjs from 'dayjs';
 import localizedFormat from 'dayjs/plugin/localizedFormat';
 import 'dayjs/locale/es';
+import { useLocation } from 'react-router-dom';
 
 export default function TransferRequests({ setUsers, localSentRequests, setLocalSentRequests }) {
     const currentUser = useSelector((state) => state.auth.user);
     const [receivedRequests, setReceivedRequests] = useState([]);
     const [alert, setAlert] = useState(null);
+
+    const location = useLocation();
 
     dayjs.extend(localizedFormat);
     dayjs.locale('es');
@@ -53,7 +56,7 @@ export default function TransferRequests({ setUsers, localSentRequests, setLocal
                 })
                 .catch(() => setAlert({ severity: 'error', message: 'Error fetching transfer requests.' }));
         }
-    }, [currentUser?.center?.id, setAlert, setLocalSentRequests, localSentRequests.length]);
+    }, [currentUser?.center?.id, setAlert, setLocalSentRequests, localSentRequests.length, location.search]);
 
     const handleAcceptRequest = (requestId) => {
         api.post(`api/centros/transfer-requests/${requestId}/accept/`)

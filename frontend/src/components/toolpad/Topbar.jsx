@@ -19,7 +19,7 @@ import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
 import { useDispatch, useSelector } from "react-redux";
 import { fetchNotifications, markAsRead } from "../../features/notifications/notificationsSlice";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 
 const Topbar = () => {
@@ -35,6 +35,7 @@ const Topbar = () => {
   const isStaff = user?.is_staff;
   
   const navigate = useNavigate();
+  const location = useLocation();
   const { instance } = useMsal();
 
   const [pageTitle, setPageTitle] = useState(document.title);
@@ -72,7 +73,11 @@ const Topbar = () => {
   // Handles clicking the notification text/row
   const handleNotificationNavigateAndRead = (notification) => {
     if (notification.link) { // Only navigate if a link exists
-      navigate(notification.link);
+      if (location.pathname == notification.link) {
+        navigate(`${location.pathname}?refresh=${Date.now()}`, { replace: true });
+      } else {
+        navigate(notification.link); 
+      }
     }
     dispatch(markAsRead(notification.id));
     handleNotificationClose(); // Close the popover after action
@@ -196,7 +201,7 @@ const Topbar = () => {
         </Tooltip>
         
         <Tooltip title="Configuración">
-          <IconButton component={Link} to={hasGroup("personal") ? "/configuracion" : hasGroup("empleador") ? "/configuracion-empleador" : "/"}>
+          <IconButton component={Link} to={hasGroup("personal") ? "/configuracion" : hasGroup("empleador") ? "/configuracion-empleador" : "/"} disabled>
             <SettingsOutlinedIcon />
           </IconButton>
         </Tooltip>

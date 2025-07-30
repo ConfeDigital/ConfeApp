@@ -361,7 +361,7 @@ export default function Dashboard() {
             <Grid container spacing={2}>
                 <Grid item xs={12} sm={4}>
                     {renderTable("Registrados", [
-                        ["Sin iniciar preenvtrevista", "sinPre"],
+                        ["Sin iniciar preentrevista", "sinPre"],
                         ["Preentrevista incompleta", "preIncompleta"],
                         ["Preentrevista terminada", "preTerminada"],
                     ])}
