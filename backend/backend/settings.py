@@ -101,7 +101,7 @@ AUTH_ADFS = {
     "CLIENT_ID": client_id,
     'CLIENT_SECRET': client_secret,
     "CLAIM_MAPPING": {
-        "first_name": "give_name",
+        "first_name": "given_name",
         "last_name": "family_name",
     },
     "USERNAME_CLAIM": "preferred_username",

@@ -40,7 +40,7 @@ class TechnicalAidImpediment(models.Model):
 
 class TechnicalAidLink(models.Model):
     technical_aid = models.ForeignKey(TechnicalAid, on_delete=models.CASCADE, related_name="links")
-    url = models.URLField()
+    url = models.URLField(max_length=800)
 
     def __str__(self):
         return self.url

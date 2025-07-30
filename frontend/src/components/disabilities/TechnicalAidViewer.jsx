@@ -61,7 +61,7 @@ const TechnicalAidViewer = ({
         if (!linksString) return "Sin enlaces";
 
         const links = linksString
-            .split(",")
+            .split(" ")
             .map((link) => link.trim())
             .filter((link) => link);
 

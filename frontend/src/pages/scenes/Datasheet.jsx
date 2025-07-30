@@ -24,6 +24,7 @@ import {
   DialogActions,
   useTheme,
   useMediaQuery,
+  Tooltip,
 } from "@mui/material";
 import Edit from "@mui/icons-material/Edit";
 import AssistWalkerIcon from "@mui/icons-material/AssistWalker";
@@ -35,6 +36,7 @@ import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../../api";
 import dayjs from "dayjs";
+import 'dayjs/locale/es';
 import DatasheetSkeleton from "../../components/datasheet/DatasheetSkeleton";
 import { formatCanonicalPhoneNumber } from "../../components/phone_number/phoneUtils";
 import ContactList from "../../components/candidate_create/ContactList";
@@ -93,6 +95,8 @@ const Datasheet = () => {
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
   const handleChange = (event, newValue) => setSelectedTab(newValue);
+
+  dayjs.locale('es');
 
   const fetchInterviewAppointment = async () => {
     if (!candidateProfile) return;
@@ -439,6 +443,17 @@ const Datasheet = () => {
                   {candidateProfile.user.email}
                 </Link>
               </Typography>
+              { candidateProfile.cycle ? ( 
+                <Tooltip title={`De ${dayjs(candidateProfile.cycle.start_date).format('LL')} a ${dayjs(candidateProfile.cycle.end_date).format('LL')}`}>
+                  <Typography variant='subtitle1' color="textSecondary">
+                    {candidateProfile.cycle.name}
+                  </Typography>
+                </Tooltip>
+              ):(
+                <Typography variant='subtitle1' color="textSecondary">
+                  Sin ciclo
+                </Typography>
+              )}
             </Box>
           </Box>
           {/* Right Side: Edit Button and Status */}
