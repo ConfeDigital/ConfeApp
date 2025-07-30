@@ -102,6 +102,7 @@ const Preguntas = ({
           if (pregunta.tipo === "checkbox") {
             // Para checkbox, la respuesta es un array de IDs de opciones
             let opcionesSeleccionadas = [];
+            // Manejar tanto strings JSON como arrays nativos (para compatibilidad)
             if (typeof respuesta === "string") {
               try {
                 opcionesSeleccionadas = JSON.parse(respuesta);
@@ -110,6 +111,10 @@ const Preguntas = ({
               }
             } else if (Array.isArray(respuesta)) {
               opcionesSeleccionadas = respuesta;
+            } else if (respuesta && typeof respuesta === "object") {
+              // Si es un objeto, intentar extraer el array de opciones
+              opcionesSeleccionadas =
+                respuesta.opciones || respuesta.valor_original || [];
             }
 
             // Buscar cada opción por ID y procesar sus desbloqueos

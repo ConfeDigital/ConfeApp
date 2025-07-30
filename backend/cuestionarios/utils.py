@@ -302,12 +302,25 @@ def get_resumen_sis(usuario_id=None):
         seccion = respuesta.pregunta.nombre_seccion
 
         try:
-            datos_respuesta = json.loads(respuesta.respuesta)
+            # Manejar tanto objetos JSON nativos como strings JSON (para compatibilidad)
+            if isinstance(respuesta.respuesta, str):
+                datos_respuesta = json.loads(respuesta.respuesta)
+            else:
+                datos_respuesta = respuesta.respuesta
+            
             frecuencia = int(datos_respuesta.get("frecuencia", 0))
             tiempo_apoyo = int(datos_respuesta.get("tiempo_apoyo", 0))
             tipo_apoyo = int(datos_respuesta.get("tipo_apoyo", 0))
-            subitems_ids = [int(sid) for sid in datos_respuesta.get("subitems", []) if sid is not None]
-        except (json.JSONDecodeError, ValueError):
+            
+            # Manejar subitems que pueden ser IDs simples o objetos con id y texto
+            subitems_raw = datos_respuesta.get("subitems", [])
+            subitems_ids = []
+            for item in subitems_raw:
+                if isinstance(item, dict) and 'id' in item:
+                    subitems_ids.append(int(item['id']))
+                elif isinstance(item, (int, str)):
+                    subitems_ids.append(int(item))
+        except (json.JSONDecodeError, ValueError, TypeError):
             frecuencia, tiempo_apoyo, tipo_apoyo, subitems_ids = 0, 0, 0, []
 
         clave = (usuario, seccion)

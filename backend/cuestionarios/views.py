@@ -937,7 +937,12 @@ class ResumenCHView(APIView):
             if respuesta.respuesta:
                 resumen["preguntas_respondidas"] += 1
                 try:
-                    data = json.loads(respuesta.respuesta)
+                    # Manejar tanto objetos JSON nativos como strings JSON (para compatibilidad)
+                    if isinstance(respuesta.respuesta, str):
+                        data = json.loads(respuesta.respuesta)
+                    else:
+                        data = respuesta.respuesta
+                    
                     resultado = data.get("resultado")
                     if resultado == "lo_hace":
                         resumen["lo_hace"] += 1

@@ -49,7 +49,7 @@ const estadosPaso = {
 
 const ProyectoDeVidaSeguimiento = () => {
   const uid = useParams().uid;
-  
+
   const [metas, setMetas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -88,7 +88,12 @@ const ProyectoDeVidaSeguimiento = () => {
           .filter((item) => item.tipo_pregunta === "meta")
           .map((item) => {
             try {
-              const respuesta = JSON.parse(item.respuesta);
+              // Manejar tanto objetos JSON nativos como strings JSON (para compatibilidad)
+              const respuesta =
+                typeof item.respuesta === "string"
+                  ? JSON.parse(item.respuesta)
+                  : item.respuesta;
+
               return {
                 id: item.pregunta_id,
                 titulo: respuesta.meta || item.pregunta_texto,
@@ -338,8 +343,8 @@ const ProyectoDeVidaSeguimiento = () => {
 
   return (
     <Box sx={{ p: 2 }}>
-      <Header 
-        subtitle={`${candidate?.first_name} ${candidate?.last_name} ${candidate?.second_last_name}`} 
+      <Header
+        subtitle={`${candidate?.first_name} ${candidate?.last_name} ${candidate?.second_last_name}`}
         actionButton={
           <Button
             variant="outlined"
@@ -348,7 +353,7 @@ const ProyectoDeVidaSeguimiento = () => {
           >
             Volver al Perfil
           </Button>
-        } 
+        }
       />
       {metas.map((meta) => {
         const estado = getEstadoMeta(meta.pasos);

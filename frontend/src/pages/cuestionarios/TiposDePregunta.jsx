@@ -66,7 +66,14 @@ const TiposDePregunta = ({
     try {
       switch (tipo) {
         case "checkbox":
-          return Array.isArray(respuesta) ? respuesta : JSON.parse(respuesta);
+          // Manejar tanto arrays como strings JSON (para compatibilidad)
+          if (Array.isArray(respuesta)) {
+            return respuesta;
+          } else if (typeof respuesta === "string") {
+            return JSON.parse(respuesta);
+          } else {
+            return respuesta;
+          }
         case "fecha":
         case "fecha_hora":
           return respuesta ? new Date(respuesta) : null;
@@ -155,12 +162,12 @@ const TiposDePregunta = ({
 
       case "binaria":
         return (
-          <BinaryPregunta 
+          <BinaryPregunta
             seleccionOpcion={respuestaParseada}
             setSeleccionOpcion={onRespuestaChange}
             disabled={!habilitada}
           />
-        )
+        );
 
       case "fecha":
         return (

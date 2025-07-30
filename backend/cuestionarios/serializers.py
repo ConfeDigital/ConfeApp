@@ -436,8 +436,21 @@ class ResumenSISSerializer(serializers.Serializer):
 
         for respuesta in respuestas_sis:
             try:
-                datos_sis = json.loads(respuesta.respuesta)
-                subitems_ids = datos_sis.get("subitems", [])
+                # Manejar tanto objetos JSON nativos como strings JSON (para compatibilidad)
+                if isinstance(respuesta.respuesta, str):
+                    datos_sis = json.loads(respuesta.respuesta)
+                else:
+                    datos_sis = respuesta.respuesta
+                
+                subitems_raw = datos_sis.get("subitems", [])
+                # Manejar subitems que pueden ser IDs simples o objetos con id y texto
+                subitems_ids = []
+                for item in subitems_raw:
+                    if isinstance(item, dict) and 'id' in item:
+                        subitems_ids.append(int(item['id']))
+                    elif isinstance(item, (int, str)):
+                        subitems_ids.append(int(item))
+                
                 subitems = SISAid.objects.filter(id__in=subitems_ids)
                 
                 for subitem in subitems:
@@ -476,7 +489,12 @@ class ResumenSISSerializer(serializers.Serializer):
 
         for respuesta in respuestas_sis:
             try:
-                datos_sis = json.loads(respuesta.respuesta)
+                # Manejar tanto objetos JSON nativos como strings JSON (para compatibilidad)
+                if isinstance(respuesta.respuesta, str):
+                    datos_sis = json.loads(respuesta.respuesta)
+                else:
+                    datos_sis = respuesta.respuesta
+                
                 frecuencia = safe_int(datos_sis.get("frecuencia"))
                 tiempo = safe_int(datos_sis.get("tiempo_apoyo"))
                 tipo = safe_int(datos_sis.get("tipo_apoyo"))
@@ -601,7 +619,11 @@ class RespuestaUnlockedPathSerializer(serializers.ModelSerializer):
         # ✅ Si la pregunta es de tipo 'sis' o 'sis2'
         if obj.pregunta.tipo in ['sis', 'sis2']:
             try:
-                datos_sis = json.loads(obj.respuesta)
+                # Manejar tanto objetos JSON nativos como strings JSON (para compatibilidad)
+                if isinstance(obj.respuesta, str):
+                    datos_sis = json.loads(obj.respuesta)
+                else:
+                    datos_sis = obj.respuesta
 
                 subitems_ids = datos_sis.get("subitems", [])
 
@@ -742,7 +764,12 @@ class ReporteCuestionariosSerializer(serializers.ModelSerializer):
         # Para preguntas tipo 'sis' o 'sis2'
         if obj.pregunta.tipo in ['sis', 'sis2']:
             try:
-                datos_sis = json.loads(obj.respuesta)
+                # Manejar tanto objetos JSON nativos como strings JSON (para compatibilidad)
+                if isinstance(obj.respuesta, str):
+                    datos_sis = json.loads(obj.respuesta)
+                else:
+                    datos_sis = obj.respuesta
+                
                 subitems_ids = datos_sis.get("subitems", [])
                 
                 # Filtrar subitems desde la app discapacidad
