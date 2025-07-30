@@ -131,9 +131,30 @@ const SIS_0a4 = ({
 
       let updatedSubitems;
       if (checked) {
-        updatedSubitems = [...prevSelectedSubitems, subitemId]; // Agregar subitem
+        // Buscar la pregunta para obtener su texto
+        const pregunta = preguntas.find((p) => p.id === preguntaId);
+        const preguntaTexto = pregunta?.texto;
+
+        // Buscar el subitem completo para obtener id y texto
+        const subitemCompleto = subitems[preguntaTexto]?.find(
+          (subitem) => subitem.id === subitemId
+        );
+        const subitemConTexto = {
+          id: subitemId,
+          texto:
+            subitemCompleto?.sub_item ||
+            subitemCompleto?.texto ||
+            `Subitem ${subitemId}`,
+        };
+
+        updatedSubitems = [...prevSelectedSubitems, subitemConTexto]; // Agregar subitem con id y texto
       } else {
-        updatedSubitems = prevSelectedSubitems.filter((id) => id !== subitemId); // Remover subitem
+        updatedSubitems = prevSelectedSubitems.filter((subitem) => {
+          // Manejar tanto objetos como IDs directos (para compatibilidad)
+          const subitemIdToCheck =
+            typeof subitem === "object" ? subitem.id : subitem;
+          return subitemIdToCheck !== subitemId;
+        });
       }
 
       const updatedRespuesta = {
@@ -408,8 +429,16 @@ const SIS_0a4 = ({
                               control={
                                 <Checkbox
                                   checked={
-                                    respuestas[pregunta.id]?.subitems?.includes(
-                                      subitem.id
+                                    respuestas[pregunta.id]?.subitems?.some(
+                                      (subitemSeleccionado) => {
+                                        // Manejar tanto objetos como IDs directos (para compatibilidad)
+                                        const subitemIdToCheck =
+                                          typeof subitemSeleccionado ===
+                                          "object"
+                                            ? subitemSeleccionado.id
+                                            : subitemSeleccionado;
+                                        return subitemIdToCheck === subitem.id;
+                                      }
                                     ) || false
                                   }
                                   onChange={(e) =>
@@ -585,10 +614,19 @@ const SIS_0a4 = ({
                                   control={
                                     <Checkbox
                                       checked={
-                                        respuestas[
-                                          pregunta.id
-                                        ]?.subitems?.includes(subitem.id) ||
-                                        false
+                                        respuestas[pregunta.id]?.subitems?.some(
+                                          (subitemSeleccionado) => {
+                                            // Manejar tanto objetos como IDs directos (para compatibilidad)
+                                            const subitemIdToCheck =
+                                              typeof subitemSeleccionado ===
+                                              "object"
+                                                ? subitemSeleccionado.id
+                                                : subitemSeleccionado;
+                                            return (
+                                              subitemIdToCheck === subitem.id
+                                            );
+                                          }
+                                        ) || false
                                       }
                                       onChange={(e) =>
                                         handleSubitemChange(

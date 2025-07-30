@@ -530,14 +530,14 @@ const Preguntas = ({
           usuario: usuario.id,
           cuestionario: cuestionario.id,
           pregunta: preguntaId,
-          respuesta: JSON.stringify(respuestaProcesada),
+          respuesta: respuestaProcesada,
         });
 
         await api.post("/api/cuestionarios/respuestas/", {
           usuario: usuario.id,
           cuestionario: cuestionario.id,
           pregunta: preguntaId,
-          respuesta: JSON.stringify(respuestaProcesada),
+          respuesta: respuestaProcesada,
         });
 
         console.log("Respuesta enviada exitosamente al backend");

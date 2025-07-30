@@ -431,7 +431,14 @@ function DespliegueCuestionario({
 
         // Para respuestas tipo SIS
         if (respuesta.tipo_pregunta === "sis") {
-          return JSON.stringify(respuesta.respuesta);
+          if (respuesta.respuesta && typeof respuesta.respuesta === "object") {
+            const { frecuencia, tiempo_apoyo, tipo_apoyo } =
+              respuesta.respuesta;
+            return `F:${frecuencia || ""}, T:${tiempo_apoyo || ""}, A:${
+              tipo_apoyo || ""
+            }`;
+          }
+          return "Sin respuesta";
         }
 
         // Para respuestas tipo multiple o dropdown

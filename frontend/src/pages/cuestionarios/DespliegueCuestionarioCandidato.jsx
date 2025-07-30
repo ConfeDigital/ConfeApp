@@ -43,11 +43,13 @@ function DespliegueCuestionario({
         const response = await api.get("/api/cuestionarios/respuestas/", {
           params: { usuario: userId, cuestionario: questionnaireData.id },
         });
-        setRespuestas(response.data.filter(
-          (respuesta) =>
-            respuesta.usuario === userId &&
-            respuesta.cuestionario === questionnaireData.id
-        ));
+        setRespuestas(
+          response.data.filter(
+            (respuesta) =>
+              respuesta.usuario === userId &&
+              respuesta.cuestionario === questionnaireData.id
+          )
+        );
       } catch (error) {
         console.error("Error fetching existing answers:", error);
         setShowError(true);
@@ -61,11 +63,15 @@ function DespliegueCuestionario({
     async (userId, questionnaireData) => {
       if (!userId || !questionnaireData?.id) return;
       try {
-        const response = await api.get("/api/cuestionarios/finalizar-cuestionario/", {
-          params: { usuario: userId, cuestionario: questionnaireData.id },
-        });
+        const response = await api.get(
+          "/api/cuestionarios/finalizar-cuestionario/",
+          {
+            params: { usuario: userId, cuestionario: questionnaireData.id },
+          }
+        );
         const estado = response.data?.[0]?.estado;
-        const finalizadoStatus = response.data?.[0]?.usuario?.finalizado === true;
+        const finalizadoStatus =
+          response.data?.[0]?.usuario?.finalizado === true;
 
         setCuestionarioFinalizado(finalizadoStatus);
         // If parent also needs this status, call its setter
@@ -88,8 +94,12 @@ function DespliegueCuestionario({
     if (usuarioId && initialCuestionario?.id) {
       fetchEstadoCuestionario(usuarioId, initialCuestionario);
     }
-  }, [usuarioId, initialCuestionario, initialRespuestas, fetchEstadoCuestionario]);
-
+  }, [
+    usuarioId,
+    initialCuestionario,
+    initialRespuestas,
+    fetchEstadoCuestionario,
+  ]);
 
   // Effect for fetching global aids data (SIS, Technical, CH) - runs once
   useEffect(() => {
@@ -129,15 +139,19 @@ function DespliegueCuestionario({
     }
 
     // Get IDs of questions that *must* be answered
-    const requiredQuestionIds = cuestionario.preguntas.map(q => q.id);
+    const requiredQuestionIds = cuestionario.preguntas.map((q) => q.id);
 
     // Get IDs of questions that have been answered
     const answeredQuestionIds = new Set(
-        respuestas.filter(r => r.cuestionario === cuestionario.id).map(r => r.pregunta)
+      respuestas
+        .filter((r) => r.cuestionario === cuestionario.id)
+        .map((r) => r.pregunta)
     );
 
     // Check if all required questions have corresponding answers
-    const allRequiredAnswered = requiredQuestionIds.every(qId => answeredQuestionIds.has(qId));
+    const allRequiredAnswered = requiredQuestionIds.every((qId) =>
+      answeredQuestionIds.has(qId)
+    );
 
     if (!allRequiredAnswered) {
       setShowError(true); // Use the specific error message from the Snackbar
@@ -163,14 +177,19 @@ function DespliegueCuestionario({
     }
   };
 
-
   // Helper function to get answer text for display
   const obtenerRespuestaTexto = (respuesta) => {
     if (respuesta.tipo_pregunta === "checkbox") {
       return respuesta.respuesta.map((opcion) => opcion.texto).join(", ");
     } else if (respuesta.tipo_pregunta === "sis") {
-      // You might want to format SIS answers more nicely
-      return JSON.stringify(respuesta.respuesta);
+      // Format SIS answers more nicely
+      if (respuesta.respuesta && typeof respuesta.respuesta === "object") {
+        const { frecuencia, tiempo_apoyo, tipo_apoyo } = respuesta.respuesta;
+        return `F:${frecuencia || ""}, T:${tiempo_apoyo || ""}, A:${
+          tipo_apoyo || ""
+        }`;
+      }
+      return "Sin respuesta";
     } else if (
       respuesta.tipo_pregunta === "multiple" ||
       respuesta.tipo_pregunta === "dropdown"
@@ -256,14 +275,15 @@ function DespliegueCuestionario({
     if (index !== -1) {
       setPreguntaIndex(index);
       setTimeout(() => {
-        const scrollContainer = document.querySelector(".MuiDialog-scrollPaper") || document.documentElement;
+        const scrollContainer =
+          document.querySelector(".MuiDialog-scrollPaper") ||
+          document.documentElement;
         if (scrollContainer) {
           scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
         }
       }, 100);
     }
   };
-
 
   return (
     <div>
@@ -276,7 +296,14 @@ function DespliegueCuestionario({
           overflowY: "auto",
         }}
       >
-        <Paper elevation={3} sx={{ p: { xs: 1, md: 3 }, borderRadius: 3, bgcolor: "background.default" }}>
+        <Paper
+          elevation={3}
+          sx={{
+            p: { xs: 1, md: 3 },
+            borderRadius: 3,
+            bgcolor: "background.default",
+          }}
+        >
           <Typography variant="h6" gutterBottom>
             {cuestionario.nombre}
           </Typography>
@@ -286,7 +313,6 @@ function DespliegueCuestionario({
             spacing={2}
             sx={{ mt: 2, flexDirection: { xs: "column", md: "row" }, gap: 2 }}
           >
-
             <Grid item xs={12} md={12} sx={{ width: "100%" }}>
               <Box
                 sx={{
@@ -313,19 +339,23 @@ function DespliegueCuestionario({
                     onClick={handleSaveChanges}
                     disabled={isSaving}
                   >
-                    {isSaving ? <CircularProgress size={24} /> : "Guardar cambios"}
+                    {isSaving ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      "Guardar cambios"
+                    )}
                   </Button>
                 )}
                 {!cuestionarioFinalizado && ( // Only show if not finalized
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={handleFinalizarCuestionario}
-                        disabled={isSaving} // Disable finalize while saving
-                        sx={{ ml: { sm: 1 } }} // Add some margin if side-by-side
-                    >
-                        Finalizar Cuestionario
-                    </Button>
+                  <Button
+                    variant="contained"
+                    color="primary"
+                    onClick={handleFinalizarCuestionario}
+                    disabled={isSaving} // Disable finalize while saving
+                    sx={{ ml: { sm: 1 } }} // Add some margin if side-by-side
+                  >
+                    Finalizar Cuestionario
+                  </Button>
                 )}
               </Box>
 
@@ -349,20 +379,27 @@ function DespliegueCuestionario({
                   chAids={chAids}
                   // Prop to update responses from child components (e.g., when an answer is saved)
                   onAnswerSaved={(updatedResponse) => {
-                      // Update responses in state
-                      setRespuestas(prevResponses => {
-                          const existingIndex = prevResponses.findIndex(r => r.id === updatedResponse.id);
-                          if (existingIndex !== -1) {
-                              return prevResponses.map((r, idx) => idx === existingIndex ? updatedResponse : r);
-                          }
-                          return [...prevResponses, updatedResponse];
-                      });
+                    // Update responses in state
+                    setRespuestas((prevResponses) => {
+                      const existingIndex = prevResponses.findIndex(
+                        (r) => r.id === updatedResponse.id
+                      );
+                      if (existingIndex !== -1) {
+                        return prevResponses.map((r, idx) =>
+                          idx === existingIndex ? updatedResponse : r
+                        );
+                      }
+                      return [...prevResponses, updatedResponse];
+                    });
                   }}
                   // If you only display one question at a time based on `preguntaIndex`
                   // pass the current question to `Preguntas`
                   currentQuestion={cuestionario.preguntas[preguntaIndex]}
                   // Also pass existing answers relevant to the current question
-                  currentAnswers={respuestas.filter(r => r.pregunta === (cuestionario.preguntas[preguntaIndex]?.id))}
+                  currentAnswers={respuestas.filter(
+                    (r) =>
+                      r.pregunta === cuestionario.preguntas[preguntaIndex]?.id
+                  )}
                 />
               </Box>
             </Grid>
