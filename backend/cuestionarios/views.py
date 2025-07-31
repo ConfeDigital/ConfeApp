@@ -242,7 +242,18 @@ class RespuestasGuardadas(APIView):
 
             # Process response according to type for Azure SQL compatibility
             try:
-                respuesta_procesada = procesar_respuesta_para_tipo(respuesta_limpia, pregunta.tipo)
+                # Para ciertos tipos, guardar el valor simple en lugar de procesarlo
+                if pregunta.tipo in ['numero', 'multiple', 'dropdown', 'binaria']:
+                    if pregunta.tipo == 'numero':
+                        respuesta_procesada = float(respuesta_limpia) if respuesta_limpia else 0
+                    elif pregunta.tipo in ['multiple', 'dropdown']:
+                        respuesta_procesada = int(respuesta_limpia) if respuesta_limpia else 0
+                    elif pregunta.tipo == 'binaria':
+                        respuesta_procesada = respuesta_limpia in [True, 'true', '1', 'sí', 'si']
+                    else:
+                        respuesta_procesada = respuesta_limpia
+                else:
+                    respuesta_procesada = procesar_respuesta_para_tipo(respuesta_limpia, pregunta.tipo)
                 print(f"Respuesta procesada para guardar: {respuesta_procesada}")
             except Exception as e:
                 print(f"Error procesando respuesta: {e}")

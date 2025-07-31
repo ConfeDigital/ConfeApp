@@ -95,7 +95,7 @@ const Datasheet = () => {
   const [openInterviewDialog, setOpenInterviewDialog] = useState(false);
 
   const [downloadLoading, setDownloadLoading] = useState(false);
-  const [datasheetLoading, setDatasheetLoading] = useState(true);
+  const [datasheetLoading, setDatasheetLoading] = useState(false);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -123,20 +123,17 @@ const Datasheet = () => {
 
   useEffect(() => {
     const fetchCandidateData = async () => {
-      // console.log("🚀 Iniciando carga del datasheet...");
       setDatasheetLoading(true);
 
       // Delay mínimo para que se vea el loading
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       try {
-        // console.log("📡 Obteniendo perfil del candidato...");
         const profileResponse = await axios.get(
           `/api/candidatos/profiles/${uid}/`
         );
         setCandidateProfile(profileResponse.data);
 
-        // console.log("📡 Obteniendo cuestionarios del usuario...");
         // Obtener solo los cuestionarios que tengan respuestas del usuario
         const questionnairesResponse = await axios.get(
           `/api/cuestionarios/usuario/${profileResponse.data.user.id}/cuestionarios-con-respuestas/`
@@ -154,45 +151,46 @@ const Datasheet = () => {
           (q) => q.estado_desbloqueo === currentStage && q.activo
         );
 
-        const stageIdx = stageOrder.findIndex((stage) => stage.code === currentStage);
+        const stageIdx = stageOrder.findIndex(
+          (stage) => stage.code === currentStage
+        );
         setCurrentStageIndex(stageIdx);
 
-        if (!currentStageQuestionnaires.length) return; // 🚨 Si no hay cuestionarios, salir
+        if (!currentStageQuestionnaires.length) {
+          // Si no hay cuestionarios, solo salir pero mantener el finally
+        } else {
+          // 🔍 Validar si TODOS los cuestionarios activos están finalizados
+          const allFinalized = currentStageQuestionnaires.every(
+            (q) => q.finalizado === true
+          );
 
-        // 🔍 Validar si TODOS los cuestionarios activos están finalizados
-        const allFinalized = currentStageQuestionnaires.every(
-          (q) => q.finalizado === true
-        );
+          // 📌 Si todos los cuestionarios están finalizados, avanzar de etapa
+          if (allFinalized) {
+            const nextStage = stageOrder[currentStageIndex + 1];
+            setCurrentStageIndex(currentStageIndex + 1);
 
-        // 📌 Si todos los cuestionarios están finalizados, avanzar de etapa
-        if (allFinalized && stageIdx >= 0) {
-          const nextStage = stageOrder[stageIdx + 1];
-        
-          if (nextStage) {
-            console.log("✅ Avanzando a la siguiente etapa:", nextStage.code);
-            try {
-              await axios.put(`/api/candidatos/editar/${uid}/`, {
-                stage: nextStage.code,
-                email: profileResponse.data.user.email,
-              });
-        
-              setCandidateProfile({
-                ...profileResponse.data,
-                stage: nextStage.code,
-              });
-        
-              setCurrentStageIndex(stageIdx + 1);
-            } catch (error) {
-              console.error("❌ Error al actualizar la etapa del candidato:", error);
+            if (nextStage) {
+              try {
+                await axios.put(`/api/candidatos/editar/${uid}/`, {
+                  stage: nextStage.code,
+                  email: profileResponse.data.user.email,
+                });
+                setCandidateProfile({
+                  ...profileResponse.data,
+                  stage: nextStage.code,
+                });
+              } catch (error) {
+                console.error(
+                  "❌ Error al actualizar la etapa del candidato:",
+                  error
+                );
+              }
             }
           }
         }
-
-        // console.log("✅ Datasheet cargado exitosamente");
       } catch (error) {
         console.error("❌ Error obteniendo datos del candidato:", error);
       } finally {
-        // console.log("🏁 Finalizando loading del datasheet");
         setDatasheetLoading(false);
       }
     };
@@ -886,14 +884,13 @@ const Datasheet = () => {
       >
         <CircularProgress color="inherit" />
       </Backdrop>
-
       {/* Loading popup para el datasheet */}
-      {/* {console.log("🔍 Estado datasheetLoading:", datasheetLoading)}
       <LoadingPopup
         open={datasheetLoading}
         message="Cargando expediente del candidato..."
         zIndex={9998}
-      /> */}
+      />{" "}
+      */}
     </Box>
   );
 };

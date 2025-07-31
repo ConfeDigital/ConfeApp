@@ -57,7 +57,7 @@ function DespliegueCuestionario({
   const [unlockedQuestions, setUnlockedQuestions] = useState(new Set());
   const [totalUnlockedQuestions, setTotalUnlockedQuestions] = useState(0);
   const [answeredUnlockedQuestions, setAnsweredUnlockedQuestions] = useState(0);
-  const [questionnaireLoading, setQuestionnaireLoading] = useState(true);
+  const [questionnaireLoading, setQuestionnaireLoading] = useState(false);
   const [finalizingLoading, setFinalizingLoading] = useState(false);
 
   const isRespuestaValida = useCallback((respuesta, tipoPregunta) => {
@@ -126,8 +126,6 @@ function DespliegueCuestionario({
       try {
         const response = await api.get("/api/discapacidad/sis-aids-view/");
 
-        // console.log("📦 Full API response:", response.data);
-
         // 🔹 Convertimos el objeto en un array de subitems
         const subitemsList = Object.entries(response.data).flatMap(
           ([key, value]) => value
@@ -142,7 +140,6 @@ function DespliegueCuestionario({
           {}
         );
 
-        // console.log("✅ Subitems agrupados por item.name:", subitemsMap);
         setSubitems(subitemsMap);
       } catch (error) {
         console.error("🔥 Error fetching SIS aids:", error);
@@ -171,7 +168,6 @@ function DespliegueCuestionario({
           {}
         );
         setTechnicalAids(aidsMap);
-        // console.log("✅ Technical Aids agrupados por item.name:", aidsMap);
       } catch (error) {
         console.error("🔥 Error fetching Technical Aids:", error);
       }
@@ -188,7 +184,6 @@ function DespliegueCuestionario({
           {}
         );
         setCHAids(aidsMap);
-        // console.log("✅ CH Aids agrupados por item.name:", aidsMap);
       } catch (error) {
         console.error("🔥 Error fetching CH Aids:", error);
       }
@@ -202,26 +197,22 @@ function DespliegueCuestionario({
   // Efecto para cargar datos iniciales
   useEffect(() => {
     const fetchData = async () => {
-      // console.log("🚀 Iniciando carga del cuestionario...");
       setIsLoading(true);
       setQuestionnaireLoading(true);
-      
+
       // Delay mínimo para que se vea el loading
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       try {
         if (usuarioId && cuestionarioId) {
-          // console.log("📡 Obteniendo datos del usuario...");
           const usuarioResponse = await api.get(`/api/usuarios/${usuarioId}/`);
           setUsuario(usuarioResponse.data);
 
-          // console.log("📡 Obteniendo datos del cuestionario...");
           const cuestionarioResponse = await api.get(
             `/api/cuestionarios/${cuestionarioId}/`
           );
           setCuestionario(cuestionarioResponse.data);
 
-          // console.log("📡 Obteniendo respuestas existentes...");
           // Llamar a fetchExistingResponses con los datos correctos
           await fetchExistingResponses(
             usuarioResponse.data,
@@ -232,13 +223,10 @@ function DespliegueCuestionario({
             cuestionarioResponse.data
           );
           await fetchCuestionariosFinalizados();
-          
-          // console.log("✅ Cuestionario cargado exitosamente");
         }
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
-        // console.log("🏁 Finalizando loading del cuestionario");
         setIsLoading(false);
         setQuestionnaireLoading(false);
       }
@@ -288,8 +276,6 @@ function DespliegueCuestionario({
           setPreguntaIndex(lastAnsweredQuestionIndex);
         }
       }
-
-      // console.log("Respuestas actuales:", respuestasFiltradas);
     } catch (error) {
       console.error("Error fetching existing answers:", error);
     }
@@ -329,7 +315,6 @@ function DespliegueCuestionario({
         }
       );
       const nombresFinalizados = response.data.map((item) => {
-        // console.log("📌 Item recibido:", item); // 🔍 Para verificar datos en consola
         return {
           id: item.cuestionario.id, // Extraer el id correctamente
           nombre: item.cuestionario.nombre, // Extraer el nombre correctamente
@@ -482,7 +467,7 @@ function DespliegueCuestionario({
   // Función para cambiar el cuestionario finalizado seleccionado
   const handleChangeCuestionarioFinalizado = async (event) => {
     const cuestionario_Id = event.target.value;
-    // console.log("evento: ", event);
+
     fetchRespuestasCuestionarioFinalizado(cuestionario_Id);
   };
 
@@ -533,10 +518,7 @@ function DespliegueCuestionario({
         } else {
           newUnlocked.delete(questionId);
         }
-        // console.log("=== ACTUALIZACIÓN DE DESBLOQUEOS ===");
-        // console.log("Pregunta ID:", questionId);
-        // console.log("Desbloqueos anteriores:", Array.from(prev));
-        // console.log("Nuevos desbloqueos:", Array.from(newUnlocked));
+
         return newUnlocked;
       });
     }
@@ -808,8 +790,9 @@ function DespliegueCuestionario({
             }}
           >
             <Preguntas
+              key={`${usuario?.id}-${cuestionario?.id}`}
               cuestionario={cuestionario}
-              usuario={usuario}
+              usuario={usuario?.id}
               preentrevista={preentrevista}
               preguntaIndex={preguntaIndex}
               setPreguntaIndex={setPreguntaIndex}

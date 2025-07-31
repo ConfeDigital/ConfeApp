@@ -12,7 +12,6 @@ const SiguienteBoton = ({
 }) => {
   function siguientePregunta() {
     setPreguntaIndex((curr) => curr + 1);
-    console.log(setPreguntaIndex);
   }
 
   return (
@@ -22,9 +21,6 @@ const SiguienteBoton = ({
         sx={{ width: "100%", height: "100%" }}
         onClick={siguientePregunta}
       >
-        {console.log(preguntasTotales)}
-        {console.log(preguntaIndex + 1)}
-        {console.log(preguntaIndex + 2 > preguntasTotales)}
         {preguntaIndex + 2 <= preguntasTotales
           ? "Siguiente: " + (preguntaIndex + 2)
           : "Enviar"}
