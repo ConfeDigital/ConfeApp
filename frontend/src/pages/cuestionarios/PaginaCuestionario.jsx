@@ -6,11 +6,9 @@ import useDocumentTitle from "../../components/hooks/useDocumentTitle";
 
 const PaginaCuestionario = () => {
   useDocumentTitle("Cuestionario");
-  
+
   const { uid, cuestionarioId } = useParams();
   const navigate = useNavigate();
-
-  console.log("ID usuario: ", uid, " - ID cuestionario: ", cuestionarioId);
 
   return (
     <div>

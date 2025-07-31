@@ -4,14 +4,13 @@ import { Button } from "@mui/material";
 import DespliegueCuestionario from "./DespliegueCuestionario";
 
 function PopupCuestionario({ usuarioId, cuestionarioId, onClose }) {
-  console.log("usuario:", usuarioId);
   const navigate = useNavigate();
   return (
     <>
       <Button
-        variant='outlined'
+        variant="outlined"
         sx={{
-          ml: 3
+          ml: 3,
         }}
         onClick={() => navigate(`/candidatos/${usuarioId}`)}
       >

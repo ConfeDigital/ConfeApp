@@ -145,6 +145,8 @@ const Preguntas = ({
   // Efecto para recargar respuestas cuando cambien
   useEffect(() => {
     if (usuario && cuestionario) {
+      // Limpiar respuestas anteriores antes de cargar nuevas
+      setRespuestas({});
       fetchRespuestas();
     }
   }, [usuario, cuestionario]);
@@ -167,7 +169,7 @@ const Preguntas = ({
         try {
           let respuestaParseada;
 
-          // Intentar parsear la respuesta JSON
+          // Intentar parsear la respuesta JSON si es string
           if (
             typeof respuesta.respuesta === "string" &&
             respuesta.respuesta.startsWith("{")
@@ -183,15 +185,38 @@ const Preguntas = ({
             typeof respuestaParseada === "object" &&
             respuestaParseada.valor_original !== undefined
           ) {
-            // console.log("Respuesta procesada encontrada:", respuestaParseada);
-            // console.log(
-            //   "Extrayendo valor_original:",
-            //   respuestaParseada.valor_original
-            // );
             respuestasMap[respuesta.pregunta] =
               respuestaParseada.valor_original;
+          } else if (
+            respuestaParseada &&
+            typeof respuestaParseada === "object" &&
+            respuestaParseada.valor !== undefined
+          ) {
+            // Para respuestas numéricas procesadas
+            respuestasMap[respuesta.pregunta] = respuestaParseada.valor;
+          } else if (
+            respuestaParseada &&
+            typeof respuestaParseada === "object" &&
+            respuestaParseada.texto !== undefined
+          ) {
+            // Para respuestas de texto procesadas
+            respuestasMap[respuesta.pregunta] = respuestaParseada.texto;
+          } else if (
+            respuestaParseada &&
+            typeof respuestaParseada === "object" &&
+            respuestaParseada.opciones !== undefined
+          ) {
+            // Para respuestas de checkbox procesadas
+            respuestasMap[respuesta.pregunta] = respuestaParseada.opciones;
+          } else if (
+            respuestaParseada &&
+            typeof respuestaParseada === "object" &&
+            respuestaParseada.indice !== undefined
+          ) {
+            // Para respuestas de dropdown/multiple procesadas
+            respuestasMap[respuesta.pregunta] = respuestaParseada.indice;
           } else {
-            // Respuesta en formato antiguo, usar tal como está
+            // Respuesta en formato simple, usar tal como está
             respuestasMap[respuesta.pregunta] = respuestaParseada;
           }
         } catch (error) {
@@ -413,17 +438,6 @@ const Preguntas = ({
       }
     ).length;
 
-    // Logs detallados (solo cuando hay cambios significativos)
-    if (process.env.NODE_ENV === "development") {
-      // console.log("=== ESTADO DE PREGUNTAS ===");
-      // console.log("Total de preguntas:", todasLasPreguntas.length);
-      // console.log("Preguntas no visibles:", preguntasNoVisibles.length);
-      // console.log("Preguntas desbloqueadas:", unlockedQuestions.size);
-      // console.log("Total a considerar:", totalPreguntas);
-      // console.log("Total de respuestas válidas:", respondidas);
-      // console.log("========================");
-    }
-
     // Notificar al componente padre sobre el cambio en el contador
     if (onQuestionUnlock) {
       onQuestionUnlock("counter", {
@@ -435,111 +449,56 @@ const Preguntas = ({
 
   // Función para procesar respuestas y agregar información adicional
   const procesarRespuesta = (respuesta, pregunta) => {
-    // console.log("=== PROCESANDO RESPUESTA ===");
-    // console.log("Respuesta original:", respuesta);
-    // console.log("Tipo de pregunta:", pregunta.tipo);
-    // console.log("Opciones disponibles:", pregunta.opciones);
-
-    // Procesar según el tipo de pregunta para asegurar compatibilidad con Azure SQL
-    switch (pregunta.tipo) {
-      case "abierta":
-        // console.log("Es pregunta abierta, devolviendo como objeto JSON");
-        return {
-          texto: respuesta,
-          valor_original: respuesta,
-        };
-
-      case "numero":
-        // console.log("Es pregunta numérica, procesando valor");
-        const valorNumerico = parseFloat(respuesta) || 0;
-        return {
-          valor: valorNumerico,
-          valor_original: respuesta,
-        };
-
-      case "binaria":
-        // console.log("Es pregunta binaria, procesando valor booleano");
-        const valorBooleano =
-          respuesta === true ||
-          respuesta === "true" ||
-          respuesta === "1" ||
-          respuesta === "sí" ||
-          respuesta === "si";
-        return {
-          valor: valorBooleano,
-          valor_original: respuesta,
-          texto: valorBooleano ? "Sí" : "No",
-        };
-
-      case "fecha":
-        // console.log("Es pregunta de fecha, procesando formato");
-        return {
-          fecha: respuesta,
-          valor_original: respuesta,
-          formato: "YYYY-MM-DD",
-        };
-
-      case "fecha_hora":
-        // console.log("Es pregunta de fecha y hora, procesando formato ISO");
-        return {
-          fecha_hora: respuesta,
-          valor_original: respuesta,
-          formato: "ISO",
-        };
-
-      case "sis":
-      case "sis2":
-        // console.log("Es pregunta SIS/SIS2, manteniendo estructura original");
-        return respuesta; // Mantener la estructura original para SIS
-
-      case "canalizacion":
-      case "canalizacion_centro":
-        // console.log(
-        //   "Es pregunta de canalización, manteniendo estructura original"
-        // );
-        return respuesta; // Mantener la estructura original para canalización
-
-      case "ch":
-        // console.log("Es pregunta CH, manteniendo estructura original");
-        return respuesta; // Mantener la estructura original para CH
-
-      case "ed":
-        // console.log("Es pregunta ED, manteniendo estructura original");
-        return respuesta; // Mantener la estructura original para ED
-
-      case "meta":
-        // console.log("Es pregunta de meta, manteniendo estructura original");
-        return respuesta; // Mantener la estructura original para meta
-
-      case "datos_personales":
-      case "datos_domicilio":
-      case "datos_medicos":
-      case "contactos":
-      case "tipo_discapacidad":
-      case "imagen":
-        // console.log(
-        //   "Es pregunta de datos especializados, manteniendo estructura original"
-        // );
-        return respuesta; // Mantener la estructura original para datos especializados
-
-      default:
-        // console.log("Tipo no específico, devolviendo respuesta original");
-        return respuesta;
-    }
-
-    let respuestaProcesada = {
-      valor_original: respuesta,
-      texto: null,
-      opciones_info: [],
-    };
-
     try {
-      if (pregunta.tipo === "checkbox") {
-        // Para checkbox, respuesta es un array de IDs de opciones seleccionadas
-        const opcionesSeleccionadas = Array.isArray(respuesta) ? respuesta : [];
+      // Procesar según el tipo de pregunta para asegurar compatibilidad con Azure SQL
+      switch (pregunta.tipo) {
+        case "abierta":
+          return {
+            texto: respuesta,
+            valor_original: respuesta,
+          };
 
-        respuestaProcesada.opciones_info = opcionesSeleccionadas.map(
-          (opcionId) => {
+        case "numero":
+          const valorNumerico = parseFloat(respuesta) || 0;
+          return {
+            valor: valorNumerico,
+            valor_original: respuesta,
+          };
+
+        case "binaria":
+          const valorBooleano =
+            respuesta === true ||
+            respuesta === "true" ||
+            respuesta === "1" ||
+            respuesta === "sí" ||
+            respuesta === "si";
+          return {
+            valor: valorBooleano,
+            valor_original: respuesta,
+            texto: valorBooleano ? "Sí" : "No",
+          };
+
+        case "fecha":
+          return {
+            fecha: respuesta,
+            valor_original: respuesta,
+            formato: "YYYY-MM-DD",
+          };
+
+        case "fecha_hora":
+          return {
+            fecha_hora: respuesta,
+            valor_original: respuesta,
+            formato: "ISO",
+          };
+
+        case "checkbox":
+          // Para checkbox, respuesta es un array de IDs de opciones seleccionadas
+          const opcionesSeleccionadas = Array.isArray(respuesta)
+            ? respuesta
+            : [];
+
+          const opciones_info = opcionesSeleccionadas.map((opcionId) => {
             const opcion = pregunta.opciones.find((op) => op.id === opcionId);
             const indice = pregunta.opciones.findIndex(
               (op) => op.id === opcionId
@@ -551,59 +510,58 @@ const Preguntas = ({
               valor: opcion ? opcion.valor : null,
               indice: indice >= 0 ? indice : null,
             };
-          }
-        );
+          });
 
-        respuestaProcesada.texto = respuestaProcesada.opciones_info
-          .map((op) => op.texto)
-          .join(", ");
-      } else if (pregunta.tipo === "dropdown" || pregunta.tipo === "multiple") {
-        // Para dropdown y multiple, respuesta es un índice numérico
-        const indice = parseInt(respuesta);
+          return {
+            opciones: opcionesSeleccionadas,
+            valor_original: respuesta,
+            texto: opciones_info.map((op) => op.texto).join(", "),
+            opciones_info: opciones_info,
+          };
 
-        if (
-          !isNaN(indice) &&
-          indice >= 0 &&
-          indice < pregunta.opciones.length
-        ) {
-          const opcion = pregunta.opciones[indice];
-
-          respuestaProcesada.opciones_info = [
-            {
-              id: opcion.id,
-              texto: opcion.texto,
-              valor: opcion.valor,
-              indice: indice,
-            },
-          ];
-
-          respuestaProcesada.texto = opcion.texto;
-        } else {
-          // Si el índice no es válido, intentar buscar por valor
-          const opcionPorValor = pregunta.opciones.find(
-            (op) => op.valor === parseInt(respuesta)
+        case "multiple":
+        case "dropdown":
+          // Para opciones múltiples y dropdown
+          const opcionSeleccionada = pregunta.opciones.find(
+            (op) => op.valor === respuesta
           );
-          if (opcionPorValor) {
-            const indiceEncontrado = pregunta.opciones.findIndex(
-              (op) => op.id === opcionPorValor.id
-            );
-            respuestaProcesada.opciones_info = [
-              {
-                id: opcionPorValor.id,
-                texto: opcionPorValor.texto,
-                valor: opcionPorValor.valor,
-                indice: indiceEncontrado,
-              },
-            ];
-            respuestaProcesada.texto = opcionPorValor.texto;
-          } else {
-            respuestaProcesada.texto = `Valor no encontrado: ${respuesta}`;
-          }
-        }
-      }
+          return {
+            indice: respuesta,
+            valor_original: respuesta,
+            texto: opcionSeleccionada
+              ? opcionSeleccionada.texto
+              : `Opción ${respuesta}`,
+            id: opcionSeleccionada ? opcionSeleccionada.id : null,
+          };
 
-      // console.log("Respuesta procesada:", respuestaProcesada);
-      return respuestaProcesada;
+        case "sis":
+        case "sis2":
+          return respuesta; // Mantener la estructura original para SIS
+
+        case "canalizacion":
+        case "canalizacion_centro":
+          return respuesta; // Mantener la estructura original para canalización
+
+        case "ch":
+          return respuesta; // Mantener la estructura original para CH
+
+        case "ed":
+          return respuesta; // Mantener la estructura original para ED
+
+        case "meta":
+          return respuesta; // Mantener la estructura original para meta
+
+        case "datos_personales":
+        case "datos_domicilio":
+        case "datos_medicos":
+        case "contactos":
+        case "tipo_discapacidad":
+        case "imagen":
+          return respuesta; // Mantener la estructura original para datos especializados
+
+        default:
+          return respuesta;
+      }
     } catch (error) {
       console.error("Error procesando respuesta:", error);
       return {
@@ -617,19 +575,11 @@ const Preguntas = ({
   // Handler para cambios en respuestas
   const handleRespuestaChange = useCallback(
     debounce(async (preguntaId, respuesta) => {
-      // console.log("=== INICIO HANDLE RESPUESTA CHANGE ===");
-      // console.log("Pregunta ID:", preguntaId);
-      // console.log("Respuesta recibida:", respuesta);
-      // console.log("Tipo de respuesta:", typeof respuesta);
-
       try {
         // Validar la respuesta antes de guardar
         const preguntaActual = cuestionario.preguntas.find(
           (p) => p.id === preguntaId
         );
-
-        // console.log("Pregunta encontrada:", preguntaActual?.texto);
-        // console.log("Tipo de pregunta:", preguntaActual?.tipo);
 
         // Validación específica para preguntas abiertas
         if (
@@ -660,25 +610,40 @@ const Preguntas = ({
           return newSet;
         });
 
-        // Procesar la respuesta para incluir información adicional
-        const respuestaProcesada = procesarRespuesta(respuesta, preguntaActual);
+        // Para ciertos tipos de preguntas, enviar el valor simple al backend
+        let respuestaParaEnviar = respuesta;
 
-        // console.log("Enviando respuesta procesada al backend...");
-        // console.log("Datos a enviar:", {
-        //   usuario: usuario.id,
-        //   cuestionario: cuestionario.id,
-        //   pregunta: preguntaId,
-        //   respuesta: respuestaProcesada,
-        // });
+        if (preguntaActual.tipo === "numero") {
+          // Para números, enviar solo el valor numérico
+          respuestaParaEnviar = parseFloat(respuesta) || 0;
+        } else if (
+          preguntaActual.tipo === "multiple" ||
+          preguntaActual.tipo === "dropdown"
+        ) {
+          // Para dropdowns, enviar solo el valor/índice
+          respuestaParaEnviar = respuesta;
+        } else if (preguntaActual.tipo === "binaria") {
+          // Para binarias, enviar solo el valor booleano
+          respuestaParaEnviar =
+            respuesta === true ||
+            respuesta === "true" ||
+            respuesta === "1" ||
+            respuesta === "sí" ||
+            respuesta === "si";
+        } else if (preguntaActual.tipo === "checkbox") {
+          // Para checkbox, enviar el array de IDs
+          respuestaParaEnviar = Array.isArray(respuesta) ? respuesta : [];
+        } else {
+          // Para otros tipos, procesar la respuesta
+          respuestaParaEnviar = procesarRespuesta(respuesta, preguntaActual);
+        }
 
         await api.post("/api/cuestionarios/respuestas/", {
-          usuario: usuario.id,
+          usuario: usuario,
           cuestionario: cuestionario.id,
           pregunta: preguntaId,
-          respuesta: respuestaProcesada,
+          respuesta: respuestaParaEnviar,
         });
-
-        // console.log("Respuesta enviada exitosamente al backend");
 
         // Actualizar respuestas locales (mantener la respuesta original para el frontend)
         setRespuestas((prev) => ({
@@ -687,23 +652,15 @@ const Preguntas = ({
         }));
 
         // Actualizar preguntas desbloqueadas
-        // console.log("=== PROCESANDO DESBLOQUEOS EN FRONTEND ===");
         setUnlockedQuestions((prev) => {
           const nuevos = new Set(prev);
           const pregunta = cuestionario.preguntas.find(
             (p) => p.id === preguntaId
           );
 
-          // console.log("Pregunta para desbloqueos:", pregunta?.texto);
-          // console.log("Opciones de la pregunta:", pregunta?.opciones);
-
           // Eliminar posibles desbloqueos antiguos
           pregunta?.opciones?.forEach((op) => {
             op.desbloqueos?.forEach((d) => {
-              // console.log(
-              //   "Eliminando desbloqueo antiguo:",
-              //   d.pregunta_desbloqueada
-              // );
               nuevos.delete(d.pregunta_desbloqueada);
             });
           });
@@ -749,29 +706,19 @@ const Preguntas = ({
               // console.log("Respuesta no es un array:", respuesta);
             }
           } else {
-            // console.log("Procesando desbloqueos para otro tipo de pregunta");
             // Para otros tipos de preguntas
             const opcionSeleccionada = pregunta?.opciones?.find(
               (op) => op.valor === respuesta
             );
-            // console.log("Opción seleccionada:", opcionSeleccionada?.texto);
-            // console.log(
-            //   "Desbloqueos de esta opción:",
-            //   opcionSeleccionada?.desbloqueos
-            // );
             if (opcionSeleccionada?.desbloqueos) {
               opcionSeleccionada.desbloqueos.forEach((d) => {
-                // console.log("Agregando desbloqueo:", d.pregunta_desbloqueada);
                 nuevos.add(d.pregunta_desbloqueada);
               });
             }
           }
 
-          // console.log("Nuevas preguntas desbloqueadas:", Array.from(nuevos));
           return nuevos;
         });
-
-        // console.log("=== FIN HANDLE RESPUESTA CHANGE ===");
       } catch (error) {
         console.error("Error updating respuesta:", error);
         setNotificacion({
@@ -1020,7 +967,7 @@ const Preguntas = ({
 
     try {
       await api.post("/api/cuestionarios/validar-estado-cuestionario/", {
-        usuario: usuario.id,
+        usuario: usuario,
         cuestionario: cuestionario.id,
         estado: "finalizado",
         fecha_finalizado: new Date().toISOString(),
@@ -1030,7 +977,7 @@ const Preguntas = ({
         mensaje: "Cuestionario finalizado con éxito!",
         tipo: "exito",
       });
-      navigate(`/candidatos/${usuario.id}`);
+      navigate(`/candidatos/${usuario}`);
     } catch (error) {
       console.error("Error finalizando cuestionario:", error);
       setNotificacion({
@@ -1059,7 +1006,7 @@ const Preguntas = ({
         "/api/cuestionarios/finalizar-cuestionario/",
         {
           params: {
-            usuario: usuario.id,
+            usuario: usuario,
             cuestionario: cuestionario.id,
           },
         }
@@ -1083,7 +1030,6 @@ const Preguntas = ({
   const specialQuestions = Object.values(groupedQuestions)
     .flat()
     .filter((pregunta) => pregunta.tipo === "ed" || pregunta.tipo === "ch");
-  // console.log("preguntas especiales:", specialQuestions.length);
 
   const otherQuestions = Object.entries(groupedQuestions).reduce(
     (acc, [section, preguntas]) => {
@@ -1360,7 +1306,7 @@ const Preguntas = ({
                             }}
                             unlockedQuestions={unlockedQuestions}
                             cuestionarioFinalizado={cuestionarioFinalizado}
-                            usuario={usuario.id}
+                            usuario={usuario}
                             cuestionario={cuestionario}
                             esEditable={esEditable}
                             onGuardarCambios={handleGuardarCambios}

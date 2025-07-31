@@ -8,7 +8,6 @@ import NavigateBeforeIcon from "@mui/icons-material/NavigateBefore";
 const AnteriorBoton = ({ preguntaIndex, setPreguntaIndex }) => {
   function anteriorPregunta() {
     setPreguntaIndex((curr) => curr - 1);
-    console.log(setPreguntaIndex);
   }
 
   return (

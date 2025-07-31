@@ -79,7 +79,15 @@ const TiposDePregunta = ({
           return respuesta ? new Date(respuesta) : null;
         case "multiple":
         case "dropdown":
-          return respuesta !== undefined ? parseInt(respuesta, 10) : -1;
+          if (
+            respuesta === undefined ||
+            respuesta === null ||
+            respuesta === ""
+          ) {
+            return -1;
+          }
+          const parsed = parseInt(respuesta, 10);
+          return isNaN(parsed) ? -1 : parsed;
         default:
           return respuesta || "";
       }
