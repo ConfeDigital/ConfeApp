@@ -46,6 +46,7 @@ const InterviewDialog = lazy(() =>
 
 import useDocumentTitle from "../../components/hooks/useDocumentTitle";
 import CandidateDetails from "../../components/candidate_create/DetailSection";
+import LoadingPopup from "../../components/LoadingPopup";
 
 // Define the ordered stages based on your Django STAGE_CHOICES with subphases for Capacitación.
 const stageOrder = [
@@ -94,6 +95,7 @@ const Datasheet = () => {
   const [openInterviewDialog, setOpenInterviewDialog] = useState(false);
 
   const [downloadLoading, setDownloadLoading] = useState(false);
+  const [datasheetLoading, setDatasheetLoading] = useState(true);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -121,12 +123,20 @@ const Datasheet = () => {
 
   useEffect(() => {
     const fetchCandidateData = async () => {
+      console.log("🚀 Iniciando carga del datasheet...");
+      setDatasheetLoading(true);
+
+      // Delay mínimo para que se vea el loading
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       try {
+        console.log("📡 Obteniendo perfil del candidato...");
         const profileResponse = await axios.get(
           `/api/candidatos/profiles/${uid}/`
         );
         setCandidateProfile(profileResponse.data);
 
+        console.log("📡 Obteniendo cuestionarios del usuario...");
         // Obtener solo los cuestionarios que tengan respuestas del usuario
         const questionnairesResponse = await axios.get(
           `/api/cuestionarios/usuario/${profileResponse.data.user.id}/cuestionarios-con-respuestas/`
@@ -144,9 +154,9 @@ const Datasheet = () => {
           (q) => q.estado_desbloqueo === currentStage && q.activo
         );
 
-        setCurrentStageIndex(stageOrder.findIndex(
-          (stage) => stage.code === currentStage
-        ));
+        setCurrentStageIndex(
+          stageOrder.findIndex((stage) => stage.code === currentStage)
+        );
 
         if (!currentStageQuestionnaires.length) return; // 🚨 Si no hay cuestionarios, salir
 
@@ -179,8 +189,13 @@ const Datasheet = () => {
             }
           }
         }
+
+        console.log("✅ Datasheet cargado exitosamente");
       } catch (error) {
         console.error("❌ Error obteniendo datos del candidato:", error);
+      } finally {
+        console.log("🏁 Finalizando loading del datasheet");
+        setDatasheetLoading(false);
       }
     };
 
@@ -738,7 +753,8 @@ const Datasheet = () => {
                               : btnProps.color + ".main",
                           color:
                             expandedPhase === stage.code
-                              ? expandedPhase === candidateProfile.stage && "white"
+                              ? expandedPhase === candidateProfile.stage &&
+                                "white"
                               : btnProps.color + ".contrastText",
                         }}
                         onClick={() => handleStageClick(stage.code)}
@@ -872,6 +888,14 @@ const Datasheet = () => {
       >
         <CircularProgress color="inherit" />
       </Backdrop>
+
+      {/* Loading popup para el datasheet */}
+      {console.log("🔍 Estado datasheetLoading:", datasheetLoading)}
+      <LoadingPopup
+        open={datasheetLoading}
+        message="Cargando expediente del candidato..."
+        zIndex={9998}
+      />
     </Box>
   );
 };

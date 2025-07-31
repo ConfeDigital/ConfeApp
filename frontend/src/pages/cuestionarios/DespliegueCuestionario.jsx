@@ -21,6 +21,7 @@ import Preguntas from "./Preguntas";
 import ControlPaginas from "./ControlPaginas";
 import SeleccionCuestionarioVisualizacion from "./seleccionCuestionarioVisualizacion";
 import { useNavigate } from "react-router-dom";
+import LoadingPopup from "../../components/LoadingPopup";
 
 function DespliegueCuestionario({
   usuarioId,
@@ -57,6 +58,8 @@ function DespliegueCuestionario({
   const [unlockedQuestions, setUnlockedQuestions] = useState(new Set());
   const [totalUnlockedQuestions, setTotalUnlockedQuestions] = useState(0);
   const [answeredUnlockedQuestions, setAnsweredUnlockedQuestions] = useState(0);
+  const [questionnaireLoading, setQuestionnaireLoading] = useState(true);
+  const [finalizingLoading, setFinalizingLoading] = useState(false);
 
   const isRespuestaValida = useCallback((respuesta, tipoPregunta) => {
     if (respuesta === undefined || respuesta === null || respuesta === "") {
@@ -200,17 +203,26 @@ function DespliegueCuestionario({
   // Efecto para cargar datos iniciales
   useEffect(() => {
     const fetchData = async () => {
+      console.log("🚀 Iniciando carga del cuestionario...");
       setIsLoading(true);
+      setQuestionnaireLoading(true);
+      
+      // Delay mínimo para que se vea el loading
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       try {
         if (usuarioId && cuestionarioId) {
+          console.log("📡 Obteniendo datos del usuario...");
           const usuarioResponse = await api.get(`/api/usuarios/${usuarioId}/`);
           setUsuario(usuarioResponse.data);
 
+          console.log("📡 Obteniendo datos del cuestionario...");
           const cuestionarioResponse = await api.get(
             `/api/cuestionarios/${cuestionarioId}/`
           );
           setCuestionario(cuestionarioResponse.data);
 
+          console.log("📡 Obteniendo respuestas existentes...");
           // Llamar a fetchExistingResponses con los datos correctos
           await fetchExistingResponses(
             usuarioResponse.data,
@@ -221,42 +233,22 @@ function DespliegueCuestionario({
             cuestionarioResponse.data
           );
           await fetchCuestionariosFinalizados();
+          
+          console.log("✅ Cuestionario cargado exitosamente");
         }
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
+        console.log("🏁 Finalizando loading del cuestionario");
         setIsLoading(false);
+        setQuestionnaireLoading(false);
       }
     };
 
     fetchData();
   }, [usuarioId, cuestionarioId]);
 
-  useEffect(() => {
-    const fetchEstadoCuestionario = async () => {
-      try {
-        const response = await api.get(
-          "/api/cuestionarios/finalizar-cuestionario/",
-          {
-            params: {
-              usuario: usuario.id,
-              cuestionario: cuestionario.id,
-            },
-          }
-        );
-        const estado = response.data?.[0]?.estado;
-        if (estado === "finalizado") {
-          setCuestionarioFinalizado(true);
-        }
-      } catch (error) {
-        console.error("Error al obtener el estado del cuestionario:", error);
-      }
-    };
-
-    if (usuario?.id && cuestionario?.id) {
-      fetchEstadoCuestionario();
-    }
-  }, [usuario?.id, cuestionario?.id]);
+  // Removido useEffect duplicado - ya se maneja en el useEffect principal
 
   // Función para obtener respuestas existentes
   const fetchExistingResponses = async (usuario, cuestionario) => {
@@ -392,6 +384,7 @@ function DespliegueCuestionario({
       return;
     }
 
+    setFinalizingLoading(true);
     try {
       await api.post("/api/cuestionarios/finalizar-cuestionario/", {
         usuario: usuario.id,
@@ -404,6 +397,8 @@ function DespliegueCuestionario({
       navigate(`/candidatos/${usuario.id}`);
     } catch (error) {
       console.error("Error al finalizar el cuestionario:", error);
+    } finally {
+      setFinalizingLoading(false);
     }
   };
 
@@ -859,6 +854,20 @@ function DespliegueCuestionario({
           ¡Cambios guardados correctamente!
         </Alert>
       </Snackbar>
+
+      {/* Loading popup para el cuestionario */}
+      <LoadingPopup
+        open={questionnaireLoading}
+        message="Cargando cuestionario..."
+        zIndex={9997}
+      />
+
+      {/* Loading popup para finalización */}
+      <LoadingPopup
+        open={finalizingLoading}
+        message="Finalizando cuestionario..."
+        zIndex={9996}
+      />
     </div>
   );
 }
