@@ -183,11 +183,11 @@ const Preguntas = ({
             typeof respuestaParseada === "object" &&
             respuestaParseada.valor_original !== undefined
           ) {
-            console.log("Respuesta procesada encontrada:", respuestaParseada);
-            console.log(
-              "Extrayendo valor_original:",
-              respuestaParseada.valor_original
-            );
+            // console.log("Respuesta procesada encontrada:", respuestaParseada);
+            // console.log(
+            //   "Extrayendo valor_original:",
+            //   respuestaParseada.valor_original
+            // );
             respuestasMap[respuesta.pregunta] =
               respuestaParseada.valor_original;
           } else {
@@ -415,13 +415,13 @@ const Preguntas = ({
 
     // Logs detallados (solo cuando hay cambios significativos)
     if (process.env.NODE_ENV === "development") {
-      console.log("=== ESTADO DE PREGUNTAS ===");
-      console.log("Total de preguntas:", todasLasPreguntas.length);
-      console.log("Preguntas no visibles:", preguntasNoVisibles.length);
-      console.log("Preguntas desbloqueadas:", unlockedQuestions.size);
-      console.log("Total a considerar:", totalPreguntas);
-      console.log("Total de respuestas válidas:", respondidas);
-      console.log("========================");
+      // console.log("=== ESTADO DE PREGUNTAS ===");
+      // console.log("Total de preguntas:", todasLasPreguntas.length);
+      // console.log("Preguntas no visibles:", preguntasNoVisibles.length);
+      // console.log("Preguntas desbloqueadas:", unlockedQuestions.size);
+      // console.log("Total a considerar:", totalPreguntas);
+      // console.log("Total de respuestas válidas:", respondidas);
+      // console.log("========================");
     }
 
     // Notificar al componente padre sobre el cambio en el contador
@@ -435,22 +435,22 @@ const Preguntas = ({
 
   // Función para procesar respuestas y agregar información adicional
   const procesarRespuesta = (respuesta, pregunta) => {
-    console.log("=== PROCESANDO RESPUESTA ===");
-    console.log("Respuesta original:", respuesta);
-    console.log("Tipo de pregunta:", pregunta.tipo);
-    console.log("Opciones disponibles:", pregunta.opciones);
+    // console.log("=== PROCESANDO RESPUESTA ===");
+    // console.log("Respuesta original:", respuesta);
+    // console.log("Tipo de pregunta:", pregunta.tipo);
+    // console.log("Opciones disponibles:", pregunta.opciones);
 
     // Procesar según el tipo de pregunta para asegurar compatibilidad con Azure SQL
     switch (pregunta.tipo) {
       case "abierta":
-        console.log("Es pregunta abierta, devolviendo como objeto JSON");
+        // console.log("Es pregunta abierta, devolviendo como objeto JSON");
         return {
           texto: respuesta,
           valor_original: respuesta,
         };
 
       case "numero":
-        console.log("Es pregunta numérica, procesando valor");
+        // console.log("Es pregunta numérica, procesando valor");
         const valorNumerico = parseFloat(respuesta) || 0;
         return {
           valor: valorNumerico,
@@ -458,7 +458,7 @@ const Preguntas = ({
         };
 
       case "binaria":
-        console.log("Es pregunta binaria, procesando valor booleano");
+        // console.log("Es pregunta binaria, procesando valor booleano");
         const valorBooleano =
           respuesta === true ||
           respuesta === "true" ||
@@ -472,7 +472,7 @@ const Preguntas = ({
         };
 
       case "fecha":
-        console.log("Es pregunta de fecha, procesando formato");
+        // console.log("Es pregunta de fecha, procesando formato");
         return {
           fecha: respuesta,
           valor_original: respuesta,
@@ -480,7 +480,7 @@ const Preguntas = ({
         };
 
       case "fecha_hora":
-        console.log("Es pregunta de fecha y hora, procesando formato ISO");
+        // console.log("Es pregunta de fecha y hora, procesando formato ISO");
         return {
           fecha_hora: respuesta,
           valor_original: respuesta,
@@ -489,26 +489,26 @@ const Preguntas = ({
 
       case "sis":
       case "sis2":
-        console.log("Es pregunta SIS/SIS2, manteniendo estructura original");
+        // console.log("Es pregunta SIS/SIS2, manteniendo estructura original");
         return respuesta; // Mantener la estructura original para SIS
 
       case "canalizacion":
       case "canalizacion_centro":
-        console.log(
-          "Es pregunta de canalización, manteniendo estructura original"
-        );
+        // console.log(
+        //   "Es pregunta de canalización, manteniendo estructura original"
+        // );
         return respuesta; // Mantener la estructura original para canalización
 
       case "ch":
-        console.log("Es pregunta CH, manteniendo estructura original");
+        // console.log("Es pregunta CH, manteniendo estructura original");
         return respuesta; // Mantener la estructura original para CH
 
       case "ed":
-        console.log("Es pregunta ED, manteniendo estructura original");
+        // console.log("Es pregunta ED, manteniendo estructura original");
         return respuesta; // Mantener la estructura original para ED
 
       case "meta":
-        console.log("Es pregunta de meta, manteniendo estructura original");
+        // console.log("Es pregunta de meta, manteniendo estructura original");
         return respuesta; // Mantener la estructura original para meta
 
       case "datos_personales":
@@ -517,13 +517,13 @@ const Preguntas = ({
       case "contactos":
       case "tipo_discapacidad":
       case "imagen":
-        console.log(
-          "Es pregunta de datos especializados, manteniendo estructura original"
-        );
+        // console.log(
+        //   "Es pregunta de datos especializados, manteniendo estructura original"
+        // );
         return respuesta; // Mantener la estructura original para datos especializados
 
       default:
-        console.log("Tipo no específico, devolviendo respuesta original");
+        // console.log("Tipo no específico, devolviendo respuesta original");
         return respuesta;
     }
 
@@ -602,7 +602,7 @@ const Preguntas = ({
         }
       }
 
-      console.log("Respuesta procesada:", respuestaProcesada);
+      // console.log("Respuesta procesada:", respuestaProcesada);
       return respuestaProcesada;
     } catch (error) {
       console.error("Error procesando respuesta:", error);
@@ -617,10 +617,10 @@ const Preguntas = ({
   // Handler para cambios en respuestas
   const handleRespuestaChange = useCallback(
     debounce(async (preguntaId, respuesta) => {
-      console.log("=== INICIO HANDLE RESPUESTA CHANGE ===");
-      console.log("Pregunta ID:", preguntaId);
-      console.log("Respuesta recibida:", respuesta);
-      console.log("Tipo de respuesta:", typeof respuesta);
+      // console.log("=== INICIO HANDLE RESPUESTA CHANGE ===");
+      // console.log("Pregunta ID:", preguntaId);
+      // console.log("Respuesta recibida:", respuesta);
+      // console.log("Tipo de respuesta:", typeof respuesta);
 
       try {
         // Validar la respuesta antes de guardar
@@ -628,8 +628,8 @@ const Preguntas = ({
           (p) => p.id === preguntaId
         );
 
-        console.log("Pregunta encontrada:", preguntaActual?.texto);
-        console.log("Tipo de pregunta:", preguntaActual?.tipo);
+        // console.log("Pregunta encontrada:", preguntaActual?.texto);
+        // console.log("Tipo de pregunta:", preguntaActual?.tipo);
 
         // Validación específica para preguntas abiertas
         if (
@@ -663,13 +663,13 @@ const Preguntas = ({
         // Procesar la respuesta para incluir información adicional
         const respuestaProcesada = procesarRespuesta(respuesta, preguntaActual);
 
-        console.log("Enviando respuesta procesada al backend...");
-        console.log("Datos a enviar:", {
-          usuario: usuario.id,
-          cuestionario: cuestionario.id,
-          pregunta: preguntaId,
-          respuesta: respuestaProcesada,
-        });
+        // console.log("Enviando respuesta procesada al backend...");
+        // console.log("Datos a enviar:", {
+        //   usuario: usuario.id,
+        //   cuestionario: cuestionario.id,
+        //   pregunta: preguntaId,
+        //   respuesta: respuestaProcesada,
+        // });
 
         await api.post("/api/cuestionarios/respuestas/", {
           usuario: usuario.id,
@@ -678,7 +678,7 @@ const Preguntas = ({
           respuesta: respuestaProcesada,
         });
 
-        console.log("Respuesta enviada exitosamente al backend");
+        // console.log("Respuesta enviada exitosamente al backend");
 
         // Actualizar respuestas locales (mantener la respuesta original para el frontend)
         setRespuestas((prev) => ({
@@ -687,91 +687,91 @@ const Preguntas = ({
         }));
 
         // Actualizar preguntas desbloqueadas
-        console.log("=== PROCESANDO DESBLOQUEOS EN FRONTEND ===");
+        // console.log("=== PROCESANDO DESBLOQUEOS EN FRONTEND ===");
         setUnlockedQuestions((prev) => {
           const nuevos = new Set(prev);
           const pregunta = cuestionario.preguntas.find(
             (p) => p.id === preguntaId
           );
 
-          console.log("Pregunta para desbloqueos:", pregunta?.texto);
-          console.log("Opciones de la pregunta:", pregunta?.opciones);
+          // console.log("Pregunta para desbloqueos:", pregunta?.texto);
+          // console.log("Opciones de la pregunta:", pregunta?.opciones);
 
           // Eliminar posibles desbloqueos antiguos
           pregunta?.opciones?.forEach((op) => {
             op.desbloqueos?.forEach((d) => {
-              console.log(
-                "Eliminando desbloqueo antiguo:",
-                d.pregunta_desbloqueada
-              );
+              // console.log(
+              //   "Eliminando desbloqueo antiguo:",
+              //   d.pregunta_desbloqueada
+              // );
               nuevos.delete(d.pregunta_desbloqueada);
             });
           });
 
           // Agregar desbloqueos de las opciones seleccionadas
           if (pregunta?.tipo === "checkbox") {
-            console.log("Procesando desbloqueos para CHECKBOX");
-            console.log("Respuesta checkbox:", respuesta);
+            // console.log("Procesando desbloqueos para CHECKBOX");
+            // console.log("Respuesta checkbox:", respuesta);
 
             // Mostrar todas las opciones de la pregunta
-            console.log("Todas las opciones de la pregunta:");
+            // console.log("Todas las opciones de la pregunta:");
             pregunta.opciones?.forEach((op, index) => {
-              console.log(
-                `  - Índice: ${index}, Valor: ${op.valor}, Texto: ${op.texto}`
-              );
+              // console.log(
+              //   `  - Índice: ${index}, Valor: ${op.valor}, Texto: ${op.texto}`
+              // );
             });
 
             // Para checkbox, respuesta es un array de opciones seleccionadas
             if (Array.isArray(respuesta)) {
-              console.log("Respuesta es un array, procesando...");
+              // console.log("Respuesta es un array, procesando...");
               respuesta.forEach((opcionSeleccionada) => {
-                console.log(
-                  "Procesando opción seleccionada:",
-                  opcionSeleccionada
-                );
+                // console.log(
+                //   "Procesando opción seleccionada:",
+                //   opcionSeleccionada
+                // );
                 // Buscar por ID de la opción en lugar de por valor
                 const opcion = pregunta.opciones?.find(
                   (op) => op.id === opcionSeleccionada
                 );
-                console.log("Opción encontrada:", opcion?.texto);
-                console.log("Desbloqueos de esta opción:", opcion?.desbloqueos);
+                // console.log("Opción encontrada:", opcion?.texto);
+                // console.log("Desbloqueos de esta opción:", opcion?.desbloqueos);
                 if (opcion?.desbloqueos) {
                   opcion.desbloqueos.forEach((d) => {
-                    console.log(
-                      "Agregando desbloqueo:",
-                      d.pregunta_desbloqueada
-                    );
+                    // console.log(
+                    //   "Agregando desbloqueo:",
+                    //   d.pregunta_desbloqueada
+                    // );
                     nuevos.add(d.pregunta_desbloqueada);
                   });
                 }
               });
             } else {
-              console.log("Respuesta no es un array:", respuesta);
+              // console.log("Respuesta no es un array:", respuesta);
             }
           } else {
-            console.log("Procesando desbloqueos para otro tipo de pregunta");
+            // console.log("Procesando desbloqueos para otro tipo de pregunta");
             // Para otros tipos de preguntas
             const opcionSeleccionada = pregunta?.opciones?.find(
               (op) => op.valor === respuesta
             );
-            console.log("Opción seleccionada:", opcionSeleccionada?.texto);
-            console.log(
-              "Desbloqueos de esta opción:",
-              opcionSeleccionada?.desbloqueos
-            );
+            // console.log("Opción seleccionada:", opcionSeleccionada?.texto);
+            // console.log(
+            //   "Desbloqueos de esta opción:",
+            //   opcionSeleccionada?.desbloqueos
+            // );
             if (opcionSeleccionada?.desbloqueos) {
               opcionSeleccionada.desbloqueos.forEach((d) => {
-                console.log("Agregando desbloqueo:", d.pregunta_desbloqueada);
+                // console.log("Agregando desbloqueo:", d.pregunta_desbloqueada);
                 nuevos.add(d.pregunta_desbloqueada);
               });
             }
           }
 
-          console.log("Nuevas preguntas desbloqueadas:", Array.from(nuevos));
+          // console.log("Nuevas preguntas desbloqueadas:", Array.from(nuevos));
           return nuevos;
         });
 
-        console.log("=== FIN HANDLE RESPUESTA CHANGE ===");
+        // console.log("=== FIN HANDLE RESPUESTA CHANGE ===");
       } catch (error) {
         console.error("Error updating respuesta:", error);
         setNotificacion({
@@ -1083,7 +1083,7 @@ const Preguntas = ({
   const specialQuestions = Object.values(groupedQuestions)
     .flat()
     .filter((pregunta) => pregunta.tipo === "ed" || pregunta.tipo === "ch");
-  console.log("preguntas especiales:", specialQuestions.length);
+  // console.log("preguntas especiales:", specialQuestions.length);
 
   const otherQuestions = Object.entries(groupedQuestions).reduce(
     (acc, [section, preguntas]) => {

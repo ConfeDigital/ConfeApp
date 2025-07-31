@@ -15,10 +15,10 @@ const OpcionMultiple = ({
 
   const seleccionRespuesta = (index) => {
     setSeleccionOpcion(index);
-    console.log("index: ", index);
+    // console.log("index: ", index);
   };
 
-  console.log("seleccionOpcion: ", seleccionOpcion);
+  // console.log("seleccionOpcion: ", seleccionOpcion);
 
   return (
     <Box

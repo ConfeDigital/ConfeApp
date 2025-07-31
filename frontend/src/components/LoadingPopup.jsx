@@ -27,7 +27,7 @@ const LoadingPopup = ({
   showSpinner = true,
   zIndex = 9999,
 }) => {
-  console.log("🎯 LoadingPopup renderizado - open:", open, "message:", message);
+  // console.log("🎯 LoadingPopup renderizado - open:", open, "message:", message);
   return (
     <Backdrop
       sx={{
