@@ -1306,7 +1306,7 @@ const Preguntas = ({
                             }}
                             unlockedQuestions={unlockedQuestions}
                             cuestionarioFinalizado={cuestionarioFinalizado}
-                            usuario={usuario}
+                            usuario={usuario.id}
                             cuestionario={cuestionario}
                             esEditable={esEditable}
                             onGuardarCambios={handleGuardarCambios}
