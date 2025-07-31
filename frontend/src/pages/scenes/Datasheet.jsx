@@ -885,12 +885,11 @@ const Datasheet = () => {
         <CircularProgress color="inherit" />
       </Backdrop>
       {/* Loading popup para el datasheet */}
-      <LoadingPopup
+      {/* <LoadingPopup
         open={datasheetLoading}
         message="Cargando expediente del candidato..."
         zIndex={9998}
-      />{" "}
-      */}
+      /> */}
     </Box>
   );
 };
