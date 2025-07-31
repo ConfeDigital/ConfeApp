@@ -3,7 +3,7 @@
 // Displays candidate profile, progress timeline, and deliverables
 // ==========================================
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, lazy, Suspense } from "react";
 import {
   Box,
   Typography,
@@ -40,7 +40,9 @@ import "dayjs/locale/es";
 import DatasheetSkeleton from "../../components/datasheet/DatasheetSkeleton";
 import { formatCanonicalPhoneNumber } from "../../components/phone_number/phoneUtils";
 import ContactList from "../../components/candidate_create/ContactList";
-import InterviewDialog from "../../components/candidate_create/InterviewModal";
+const InterviewDialog = lazy(() =>
+  import("../../components/candidate_create/InterviewModal")
+);
 
 import useDocumentTitle from "../../components/hooks/useDocumentTitle";
 import CandidateDetails from "../../components/candidate_create/DetailSection";
@@ -846,13 +848,17 @@ const Datasheet = () => {
         </Dialog>
       </Paper>
       {/* Integración del Dialog para agendar la entrevista */}
-      <InterviewDialog
-        uid={uid}
-        open={openInterviewDialog}
-        handleClose={handleCloseInterviewDialog}
-        getData={getAppointments}
-        candidateProfile={candidateProfile}
-      />
+      {openInterviewDialog && (
+        <Suspense fallback={<CircularProgress sx={{ mt: 2 }} />}>
+          <InterviewDialog
+            uid={uid}
+            open={openInterviewDialog}
+            handleClose={handleCloseInterviewDialog}
+            getData={getAppointments}
+            candidateProfile={candidateProfile}
+          />
+        </Suspense>
+      )}
       <Backdrop
         sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.modal + 2 }}
         open={downloadLoading}
