@@ -191,25 +191,54 @@ class Respuesta(models.Model):
             elif self.pregunta.texto == "Apellido Materno":
                 self.usuario.apellido_materno = self.respuesta
             self.usuario.save()
-
+    
         super().save(*args, **kwargs)
-
-        # Check for unlocked questions
+    
+        # Check for unlocked questions - only for specific question types
         if self.pregunta.tipo in ['multiple', 'checkbox', 'binaria']:
             try:
-                # Skip if respuesta is empty or not a valid integer
-                if not self.respuesta or not str(self.respuesta).strip().isdigit():
+                # Handle different response formats safely
+                respuesta_valor = None
+                
+                # Handle different types of responses
+                if isinstance(self.respuesta, (int, float)):
+                    respuesta_valor = int(self.respuesta)
+                elif isinstance(self.respuesta, str):
+                    # Only process if it's a numeric string
+                    if self.respuesta.strip().isdigit():
+                        respuesta_valor = int(self.respuesta)
+                    else:
+                        # For non-numeric strings, skip processing
+                        return
+                elif isinstance(self.respuesta, dict):
+                    # For JSON responses, check if there's a 'valor' key
+                    respuesta_valor = self.respuesta.get('valor')
+                    if respuesta_valor is not None:
+                        try:
+                            respuesta_valor = int(respuesta_valor)
+                        except (ValueError, TypeError):
+                            return
+                elif isinstance(self.respuesta, list) and len(self.respuesta) > 0:
+                    # For array responses, try to get the first numeric value
+                    try:
+                        first_val = self.respuesta[0]
+                        if isinstance(first_val, (int, float)):
+                            respuesta_valor = int(first_val)
+                        elif isinstance(first_val, str) and first_val.isdigit():
+                            respuesta_valor = int(first_val)
+                    except (IndexError, ValueError, TypeError):
+                        return
+                
+                # Skip if we couldn't extract a valid numeric value
+                if respuesta_valor is None:
                     return
-
-                # Convert respuesta to integer
-                respuesta_valor = int(self.respuesta)
-
+    
                 # Find selected options
                 opciones_seleccionadas = Opcion.objects.filter(
                     pregunta=self.pregunta,
                     valor=respuesta_valor
                 )
-
+    
                 # Unlock questions based on selected options
                 for opcion_seleccionada in opciones_seleccionadas:
                     desbloqueos = DesbloqueoPregunta.objects.filter(
@@ -217,17 +246,20 @@ class Respuesta(models.Model):
                         pregunta_origen=self.pregunta,
                         opcion_desbloqueadora=opcion_seleccionada
                     )
-
+    
                     for desbloqueo in desbloqueos:
                         print(f"Pregunta desbloqueada: {desbloqueo.pregunta_desbloqueada.texto}")
                         # Create an empty response for the unlocked question
+                        # Use None instead of empty string to avoid constraint issues
                         Respuesta.objects.get_or_create(
                             usuario=self.usuario,
                             cuestionario=self.cuestionario,
                             pregunta=desbloqueo.pregunta_desbloqueada,
-                            defaults={'respuesta': ''}
+                            defaults={'respuesta': None}
                         )
-            except Opcion.DoesNotExist:
+            except (ValueError, TypeError, Opcion.DoesNotExist) as e:
+                # Handle any conversion errors gracefully
+                print(f"Error in save method unlock logic: {e}")
                 pass
 
 class EstadoCuestionario(models.Model):

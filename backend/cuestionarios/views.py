@@ -1,3 +1,4 @@
+from django.db import IntegrityError, transaction
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -138,9 +139,6 @@ class PreguntaSeleccion(APIView):
         return Response(serializer.data)
     
 
-
-
-
 class RespuestasGuardadas(APIView):
     """Guarda o actualiza respuestas de los usuarios y desbloquea nuevas preguntas si aplica"""
     permission_classes = [permissions.AllowAny]
@@ -160,11 +158,51 @@ class RespuestasGuardadas(APIView):
         serializer = RespuestaSerializer(respuestas, many=True)
         return Response(serializer.data)
 
+    def validate_response_data(self, respuesta, pregunta_tipo):
+        """Validate response data based on question type"""
+        if respuesta is None:
+            return None
+            
+        # Handle string dates with extra quotes
+        if isinstance(respuesta, str) and respuesta.startswith('"') and respuesta.endswith('"'):
+            respuesta = respuesta[1:-1]
+        
+        # For certain question types, ensure proper format
+        if pregunta_tipo in ['fecha', 'fecha_hora']:
+            # Date/datetime validation could go here
+            return respuesta
+        elif pregunta_tipo == 'numero':
+            # Numeric validation
+            try:
+                if isinstance(respuesta, str):
+                    float(respuesta)  # Test if it's a valid number
+                return respuesta
+            except ValueError:
+                raise ValueError(f"Invalid numeric value: {respuesta}")
+        elif pregunta_tipo in ['multiple', 'binaria']:
+            # Should be a single value
+            if isinstance(respuesta, list) and len(respuesta) == 1:
+                return respuesta[0]
+            return respuesta
+        elif pregunta_tipo == 'checkbox':
+            # Should be a list
+            if isinstance(respuesta, str):
+                try:
+                    parsed = json.loads(respuesta)
+                    return parsed if isinstance(parsed, list) else [parsed]
+                except json.JSONDecodeError:
+                    return [respuesta]
+            elif not isinstance(respuesta, list):
+                return [respuesta]
+            return respuesta
+        
+        return respuesta
+
     def post(self, request):
         """Guarda la respuesta del usuario y desbloquea preguntas si es necesario"""
         data = request.data
-        print("=== INICIO PROCESO DE DESBLOQUEO ===")
-        print("Datos recibidos:", data)  # Imprime los datos recibidos en los registros del servidor
+        print("=== INICIO PROCESO DE GUARDADO ===")
+        print("Datos recibidos:", data)
 
         usuario_id = data.get('usuario')
         cuestionario_id = data.get('cuestionario')
@@ -177,123 +215,158 @@ class RespuestasGuardadas(APIView):
         print(f"Respuesta recibida: {respuesta}")
         print(f"Tipo de respuesta: {type(respuesta)}")
 
-        # Verificar si la respuesta es una cadena de fecha y eliminar comillas adicionales
-        if isinstance(respuesta, str) and respuesta.startswith('"') and respuesta.endswith('"'):
-            respuesta = respuesta[1:-1]
+        # Validate required fields
+        if not all([usuario_id, cuestionario_id, pregunta_id]):
+            return Response(
+                {"error": "usuario, cuestionario, and pregunta are required fields"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        usuario = get_object_or_404(CustomUser, id=usuario_id)
-        cuestionario = get_object_or_404(Cuestionario, id=cuestionario_id)
-        pregunta = get_object_or_404(Pregunta, id=pregunta_id)
+        try:
+            usuario = get_object_or_404(CustomUser, id=usuario_id)
+            cuestionario = get_object_or_404(Cuestionario, id=cuestionario_id)
+            pregunta = get_object_or_404(Pregunta, id=pregunta_id)
 
-        print(f"Pregunta encontrada: {pregunta.texto}")
-        print(f"Tipo de pregunta: {pregunta.tipo}")
+            print(f"Pregunta encontrada: {pregunta.texto}")
+            print(f"Tipo de pregunta: {pregunta.tipo}")
 
-        respuesta_obj, created = Respuesta.objects.update_or_create(
-            usuario=usuario,
-            cuestionario=cuestionario,
-            pregunta=pregunta,
-            defaults={'respuesta': respuesta}
-        )
-
-        print(f"Respuesta guardada: {created}")
-
-        # Desbloquear preguntas si la opción seleccionada tiene reglas de desbloqueo
-        if pregunta.tipo != 'abierta':
-            print("=== PROCESANDO DESBLOQUEOS ===")
+            # Validate and clean response data
             try:
-                # Para checkbox, la respuesta es una lista de valores
-                if pregunta.tipo == 'checkbox':
-                    print("Procesando pregunta tipo CHECKBOX")
-                    
-                    # Mostrar todas las opciones disponibles para esta pregunta
-                    todas_opciones = Opcion.objects.filter(pregunta=pregunta)
-                    print(f"Todas las opciones disponibles para la pregunta {pregunta.id}:")
-                    for op in todas_opciones:
-                        print(f"  - ID: {op.id}, Valor: {op.valor}, Texto: {op.texto}")
-                    
-                    if isinstance(respuesta, str):
-                        try:
-                            opciones_seleccionadas = json.loads(respuesta)
-                            print(f"Opciones seleccionadas (JSON parseado): {opciones_seleccionadas}")
-                        except json.JSONDecodeError:
-                            opciones_seleccionadas = []
-                            print("Error al parsear JSON, opciones_seleccionadas = []")
-                    else:
-                        opciones_seleccionadas = respuesta if isinstance(respuesta, list) else []
-                        print(f"Opciones seleccionadas (directo): {opciones_seleccionadas}")
+                respuesta_limpia = self.validate_response_data(respuesta, pregunta.tipo)
+                print(f"Respuesta validada: {respuesta_limpia}")
+            except ValueError as e:
+                return Response(
+                    {"error": f"Invalid response format: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-                    print(f"Total de opciones seleccionadas: {len(opciones_seleccionadas)}")
+            # Use transaction to ensure atomicity
+            with transaction.atomic():
+                try:
+                    respuesta_obj, created = Respuesta.objects.update_or_create(
+                        usuario=usuario,
+                        cuestionario=cuestionario,
+                        pregunta=pregunta,
+                        defaults={'respuesta': respuesta_limpia}
+                    )
+                    print(f"Respuesta guardada: {created}")
+                    
+                except IntegrityError as e:
+                    print(f"IntegrityError al guardar respuesta: {e}")
+                    return Response(
+                        {"error": "Database constraint violation. The response format may be invalid for this question type."},
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
-                    for valor in opciones_seleccionadas:
-                        print(f"Procesando valor: {valor}")
-                        # Buscar por ID de la opción en lugar de por valor
-                        opciones = Opcion.objects.filter(
-                            pregunta=pregunta,
-                            id=valor
-                        )
-                        print(f"Opciones encontradas para ID {valor}: {opciones.count()}")
-                        
-                        for opcion in opciones:
-                            print(f"Procesando opción: {opcion.texto} (ID: {opcion.id}, valor: {opcion.valor})")
-                            desbloqueos = DesbloqueoPregunta.objects.filter(
-                                cuestionario=cuestionario,
-                                pregunta_origen=pregunta,
-                                opcion_desbloqueadora=opcion
-                            )
-                            print(f"Desbloqueos encontrados para esta opción: {desbloqueos.count()}")
+                # Process unlocking logic (your existing code with minor improvements)
+                if pregunta.tipo != 'abierta':
+                    print("=== PROCESANDO DESBLOQUEOS ===")
+                    try:
+                        if pregunta.tipo == 'checkbox':
+                            print("Procesando pregunta tipo CHECKBOX")
                             
-                            for desbloqueo in desbloqueos:
-                                print(f"Desbloqueando pregunta: {desbloqueo.pregunta_desbloqueada.texto}")
-                                # Crear una nueva respuesta vacía para indicar que la pregunta fue desbloqueada
-                                resp_desbloqueada, created_desbloqueo = Respuesta.objects.get_or_create(
-                                    usuario=usuario,
-                                    cuestionario=cuestionario,
-                                    pregunta=desbloqueo.pregunta_desbloqueada,
-                                    defaults={'respuesta': ''}
+                            todas_opciones = Opcion.objects.filter(pregunta=pregunta)
+                            print(f"Todas las opciones disponibles para la pregunta {pregunta.id}:")
+                            for op in todas_opciones:
+                                print(f"  - ID: {op.id}, Valor: {op.valor}, Texto: {op.texto}")
+                            
+                            if isinstance(respuesta_limpia, str):
+                                try:
+                                    opciones_seleccionadas = json.loads(respuesta_limpia)
+                                    print(f"Opciones seleccionadas (JSON parseado): {opciones_seleccionadas}")
+                                except json.JSONDecodeError:
+                                    opciones_seleccionadas = []
+                                    print("Error al parsear JSON, opciones_seleccionadas = []")
+                            else:
+                                opciones_seleccionadas = respuesta_limpia if isinstance(respuesta_limpia, list) else []
+                                print(f"Opciones seleccionadas (directo): {opciones_seleccionadas}")
+
+                            print(f"Total de opciones seleccionadas: {len(opciones_seleccionadas)}")
+
+                            for valor in opciones_seleccionadas:
+                                print(f"Procesando valor: {valor}")
+                                opciones = Opcion.objects.filter(
+                                    pregunta=pregunta,
+                                    id=valor
                                 )
-                                print(f"Respuesta de desbloqueo creada: {created_desbloqueo}")
+                                print(f"Opciones encontradas para ID {valor}: {opciones.count()}")
+                                
+                                for opcion in opciones:
+                                    print(f"Procesando opción: {opcion.texto} (ID: {opcion.id}, valor: {opcion.valor})")
+                                    desbloqueos = DesbloqueoPregunta.objects.filter(
+                                        cuestionario=cuestionario,
+                                        pregunta_origen=pregunta,
+                                        opcion_desbloqueadora=opcion
+                                    )
+                                    print(f"Desbloqueos encontrados para esta opción: {desbloqueos.count()}")
+                                    
+                                    for desbloqueo in desbloqueos:
+                                        print(f"Desbloqueando pregunta: {desbloqueo.pregunta_desbloqueada.texto}")
+                                        try:
+                                            resp_desbloqueada, created_desbloqueo = Respuesta.objects.get_or_create(
+                                                usuario=usuario,
+                                                cuestionario=cuestionario,
+                                                pregunta=desbloqueo.pregunta_desbloqueada,
+                                                defaults={'respuesta': None}  # Use None instead of empty string
+                                            )
+                                            print(f"Respuesta de desbloqueo creada: {created_desbloqueo}")
+                                        except IntegrityError as e:
+                                            print(f"Error al crear respuesta de desbloqueo: {e}")
+                                            continue
 
-                else:
-                    print(f"Procesando pregunta tipo: {pregunta.tipo}")
-                    # Para otros tipos de preguntas
-                    if isinstance(respuesta, str) and respuesta.isdigit():
-                        opciones_seleccionadas = Opcion.objects.filter(
-                            pregunta=pregunta,
-                            valor=int(respuesta)
-                        )
-                        print(f"Opciones encontradas para respuesta {respuesta}: {opciones_seleccionadas.count()}")
-
-                        for opcion_seleccionada in opciones_seleccionadas:
-                            print(f"Procesando opción: {opcion_seleccionada.texto}")
-                            desbloqueos = DesbloqueoPregunta.objects.filter(
-                                cuestionario=cuestionario,
-                                pregunta_origen=pregunta,
-                                opcion_desbloqueadora=opcion_seleccionada
-                            )
-                            print(f"Desbloqueos encontrados: {desbloqueos.count()}")
-
-                            for desbloqueo in desbloqueos:
-                                print(f"Desbloqueando pregunta: {desbloqueo.pregunta_desbloqueada.texto}")
-                                # Crear una nueva respuesta vacía para indicar que la pregunta fue desbloqueada
-                                resp_desbloqueada, created_desbloqueo = Respuesta.objects.get_or_create(
-                                    usuario=usuario,
-                                    cuestionario=cuestionario,
-                                    pregunta=desbloqueo.pregunta_desbloqueada,
-                                    defaults={'respuesta': ''}
+                        else:
+                            print(f"Procesando pregunta tipo: {pregunta.tipo}")
+                            if isinstance(respuesta_limpia, (str, int)) and str(respuesta_limpia).isdigit():
+                                opciones_seleccionadas = Opcion.objects.filter(
+                                    pregunta=pregunta,
+                                    valor=int(respuesta_limpia)
                                 )
-                                print(f"Respuesta de desbloqueo creada: {created_desbloqueo}")
-                    else:
-                        print(f"Respuesta no es un número válido: {respuesta}")
+                                print(f"Opciones encontradas para respuesta {respuesta_limpia}: {opciones_seleccionadas.count()}")
 
-            except Exception as e:
-                print(f"Error al procesar desbloqueos: {str(e)}")
-                import traceback
-                traceback.print_exc()
-                pass
+                                for opcion_seleccionada in opciones_seleccionadas:
+                                    print(f"Procesando opción: {opcion_seleccionada.texto}")
+                                    desbloqueos = DesbloqueoPregunta.objects.filter(
+                                        cuestionario=cuestionario,
+                                        pregunta_origen=pregunta,
+                                        opcion_desbloqueadora=opcion_seleccionada
+                                    )
+                                    print(f"Desbloqueos encontrados: {desbloqueos.count()}")
 
-        print("=== FIN PROCESO DE DESBLOQUEO ===")
-        serializer = RespuestaSerializer(respuesta_obj)
-        return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+                                    for desbloqueo in desbloqueos:
+                                        print(f"Desbloqueando pregunta: {desbloqueo.pregunta_desbloqueada.texto}")
+                                        try:
+                                            resp_desbloqueada, created_desbloqueo = Respuesta.objects.get_or_create(
+                                                usuario=usuario,
+                                                cuestionario=cuestionario,
+                                                pregunta=desbloqueo.pregunta_desbloqueada,
+                                                defaults={'respuesta': None}  # Use None instead of empty string
+                                            )
+                                            print(f"Respuesta de desbloqueo creada: {created_desbloqueo}")
+                                        except IntegrityError as e:
+                                            print(f"Error al crear respuesta de desbloqueo: {e}")
+                                            continue
+                            else:
+                                print(f"Respuesta no es un número válido: {respuesta_limpia}")
+
+                    except Exception as e:
+                        print(f"Error al procesar desbloqueos: {str(e)}")
+                        import traceback
+                        traceback.print_exc()
+                        # Don't fail the whole request if unlocking fails
+                        pass
+
+            print("=== FIN PROCESO DE GUARDADO ===")
+            serializer = RespuestaSerializer(respuesta_obj)
+            return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"Error general en el proceso: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response(
+                {"error": "An unexpected error occurred while processing your request"},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
     
 class RespuestaActualizacion(UpdateAPIView):
     """Actualiza una respuesta existente"""
