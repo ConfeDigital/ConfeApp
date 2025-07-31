@@ -1,4 +1,4 @@
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError, transaction, models
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -1481,3 +1481,55 @@ def procesar_respuesta_para_tipo(respuesta, tipo):
                 'valor_original': respuesta,
                 'texto': str(respuesta)
             }
+
+class CuestionariosConRespuestasView(APIView):
+    """
+    Devuelve solo los cuestionarios que tengan más de 1 respuesta del usuario,
+    con el estado de finalización pero sin las preguntas.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, usuario_id):
+        print(f"🔍 Consultando cuestionarios con respuestas para usuario ID: {usuario_id}")
+        
+        # Obtener cuestionarios que tengan más de 1 respuesta del usuario
+        cuestionarios_con_respuestas = Respuesta.objects.filter(
+            usuario_id=usuario_id
+        ).values('cuestionario_id').annotate(
+            respuestas_count=models.Count('id')
+        ).filter(
+            respuestas_count__gt=1
+        ).values_list('cuestionario_id', flat=True)
+        
+        print(f"🧾 Cuestionarios con más de 1 respuesta: {list(cuestionarios_con_respuestas)}")
+        
+        resultado = []
+        
+        for cuestionario_id in cuestionarios_con_respuestas:
+            cuestionario = Cuestionario.objects.get(id=cuestionario_id)
+            
+            # Obtener el estado de finalización
+            estado_obj = EstadoCuestionario.objects.filter(
+                usuario_id=usuario_id, 
+                cuestionario=cuestionario
+            ).first()
+            
+            finalizado = estado_obj.estado == 'finalizado' if estado_obj else False
+            
+            resultado.append({
+                "id": cuestionario.id,
+                "nombre": cuestionario.nombre,
+                "version": cuestionario.version,
+                "activo": cuestionario.activo,
+                "fecha_creacion": cuestionario.fecha_creacion,
+                "base_cuestionario_id": cuestionario.base_cuestionario.id if cuestionario.base_cuestionario else None,
+                "base_cuestionario_nombre": cuestionario.base_cuestionario.nombre if cuestionario.base_cuestionario else None,
+                "estado_desbloqueo": cuestionario.base_cuestionario.estado_desbloqueo if cuestionario.base_cuestionario else None,
+                "responsable": cuestionario.base_cuestionario.responsable if cuestionario.base_cuestionario else None,
+                "inicio": cuestionario.base_cuestionario.inicio if cuestionario.base_cuestionario else None,
+                "finalizado": finalizado,
+                "estado": estado_obj.estado if estado_obj else "inactivo"
+            })
+        
+        print(f"✅ Total cuestionarios con respuestas procesados: {len(resultado)}")
+        return Response(resultado, status=status.HTTP_200_OK)

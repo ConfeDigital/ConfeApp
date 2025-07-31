@@ -58,6 +58,9 @@ urlpatterns = [
 # Para control de versiones de cuestionarios
     path('usuario/<int:usuario_id>/progreso-cuestionarios/', views.CuestionariosPorUsuarioView.as_view(), name='progreso_cuestionarios_usuario'),
 
+    # Nueva URL para cuestionarios con respuestas del usuario
+    path('usuario/<int:usuario_id>/cuestionarios-con-respuestas/', views.CuestionariosConRespuestasView.as_view(), name='cuestionarios_con_respuestas'),
+
     path('ver-imagen-pregunta/<int:pregunta_id>/', views.ver_imagen_pregunta, name='ver_imagen_pregunta'),
     path('precarga-cuestionario/', views.PrecargaCuestionarioView.as_view(), name='precarga_cuestionario'),
 
