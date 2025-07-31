@@ -80,6 +80,7 @@ const Datasheet = () => {
   const { uid } = useParams();
   const navigate = useNavigate();
   const [candidateProfile, setCandidateProfile] = useState(null);
+  const [currentStageIndex, setCurrentStageIndex] = useState(0);
   const [viewMode, setViewMode] = useState("fases");
   const [expandedPhase, setExpandedPhase] = useState(null);
   const [cuestionariosBotonesVisualizar, setCuestionariosBotonesVisualizar] =
@@ -143,6 +144,10 @@ const Datasheet = () => {
           (q) => q.estado_desbloqueo === currentStage && q.activo
         );
 
+        setCurrentStageIndex(stageOrder.findIndex(
+          (stage) => stage.code === currentStage
+        ));
+
         if (!currentStageQuestionnaires.length) return; // 🚨 Si no hay cuestionarios, salir
 
         // 🔍 Validar si TODOS los cuestionarios activos están finalizados
@@ -152,10 +157,8 @@ const Datasheet = () => {
 
         // 📌 Si todos los cuestionarios están finalizados, avanzar de etapa
         if (allFinalized) {
-          const currentStageIndex = stageOrder.findIndex(
-            (stage) => stage.code === currentStage
-          );
           const nextStage = stageOrder[currentStageIndex + 1];
+          setCurrentStageIndex(nextStage);
 
           if (nextStage) {
             console.log("✅ Avanzando a la siguiente etapa:", nextStage.code);
@@ -717,6 +720,9 @@ const Datasheet = () => {
               activeStep={activeStep}
             >
               {stageOrder.map((stage, index) => {
+                const stageIndex = stageOrder.findIndex(
+                  (s) => s.code === stage.code
+                );
                 const btnProps = getButtonProps(index, activeStep);
                 return (
                   <Step key={index} completed={index < activeStep}>
@@ -732,10 +738,11 @@ const Datasheet = () => {
                               : btnProps.color + ".main",
                           color:
                             expandedPhase === stage.code
-                              ? "white"
+                              ? expandedPhase === candidateProfile.stage && "white"
                               : btnProps.color + ".contrastText",
                         }}
                         onClick={() => handleStageClick(stage.code)}
+                        disabled={currentStageIndex < stageIndex}
                       >
                         {`${stage.label.toUpperCase()}`}
                       </Button>
