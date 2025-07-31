@@ -254,7 +254,7 @@ const Datasheet = () => {
 
   const [dynamicStageOrder, setDynamicStageOrder] = useState([]);
 
-  if (!candidateProfile) {
+  if (!candidateProfile || datasheetLoading) {
     return <DatasheetSkeleton />;
   }
 
@@ -890,12 +890,12 @@ const Datasheet = () => {
       </Backdrop>
 
       {/* Loading popup para el datasheet */}
-      {console.log("🔍 Estado datasheetLoading:", datasheetLoading)}
+      {/* {console.log("🔍 Estado datasheetLoading:", datasheetLoading)}
       <LoadingPopup
         open={datasheetLoading}
         message="Cargando expediente del candidato..."
         zIndex={9998}
-      />
+      /> */}
     </Box>
   );
 };
