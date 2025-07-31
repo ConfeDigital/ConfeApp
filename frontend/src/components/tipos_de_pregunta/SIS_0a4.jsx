@@ -429,17 +429,23 @@ const SIS_0a4 = ({
                               control={
                                 <Checkbox
                                   checked={
-                                    respuestas[pregunta.id]?.subitems?.some(
-                                      (subitemSeleccionado) => {
-                                        // Manejar tanto objetos como IDs directos (para compatibilidad)
-                                        const subitemIdToCheck =
-                                          typeof subitemSeleccionado ===
-                                          "object"
-                                            ? subitemSeleccionado.id
-                                            : subitemSeleccionado;
-                                        return subitemIdToCheck === subitem.id;
+                                    (() => {
+                                      const subitemsArray = respuestas[pregunta.id]?.subitems;
+                                      if (!Array.isArray(subitemsArray)) {
+                                        return false;
                                       }
-                                    ) || false
+                                      return subitemsArray.some(
+                                        (subitemSeleccionado) => {
+                                          // Manejar tanto objetos como IDs directos (para compatibilidad)
+                                          const subitemIdToCheck =
+                                            typeof subitemSeleccionado ===
+                                            "object"
+                                              ? subitemSeleccionado.id
+                                              : subitemSeleccionado;
+                                          return subitemIdToCheck === subitem.id;
+                                        }
+                                      );
+                                    })()
                                   }
                                   onChange={(e) =>
                                     handleSubitemChange(
