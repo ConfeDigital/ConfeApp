@@ -151,8 +151,9 @@ const Preguntas = ({
 
   // Efecto para actualizar preguntas desbloqueadas cuando cambien las respuestas
   useEffect(() => {
-    setUnlockedQuestions(calculateUnlockedQuestions(respuestas));
-  }, [respuestas, calculateUnlockedQuestions]);
+    const unlocked = calculateUnlockedQuestions(respuestas);
+    setUnlockedQuestions(unlocked);
+  }, [respuestas, cuestionario.id]); // Solo depender del ID del cuestionario
 
   // Cargar respuestas existentes
   const fetchRespuestas = async () => {
@@ -240,19 +241,26 @@ const Preguntas = ({
     switch (tipoPregunta) {
       case "abierta":
         // Para preguntas abiertas, el texto no puede estar vacío y debe tener al menos un carácter
-        return typeof respuestaParaValidar === "string" && respuestaParaValidar.trim().length > 0;
+        return (
+          typeof respuestaParaValidar === "string" &&
+          respuestaParaValidar.trim().length > 0
+        );
 
       case "numero":
         // Para preguntas numéricas, debe ser un número válido y no estar vacío
         return (
-          !isNaN(Number(respuestaParaValidar)) && respuestaParaValidar !== "" && respuestaParaValidar !== null
+          !isNaN(Number(respuestaParaValidar)) &&
+          respuestaParaValidar !== "" &&
+          respuestaParaValidar !== null
         );
 
       case "multiple":
       case "dropdown":
         // Para opciones múltiples y dropdown, debe tener un valor seleccionado
         return (
-          respuestaParaValidar !== "" && respuestaParaValidar !== null && respuestaParaValidar !== undefined
+          respuestaParaValidar !== "" &&
+          respuestaParaValidar !== null &&
+          respuestaParaValidar !== undefined
         );
 
       case "checkbox":
@@ -319,7 +327,10 @@ const Preguntas = ({
           return respuestaParaValidar.length > 0;
         }
         if (typeof respuestaParaValidar === "object") {
-          return respuestaParaValidar !== null && Object.keys(respuestaParaValidar).length > 0;
+          return (
+            respuestaParaValidar !== null &&
+            Object.keys(respuestaParaValidar).length > 0
+          );
         }
         return false;
     }
@@ -341,29 +352,77 @@ const Preguntas = ({
       preguntasNoVisibles.length +
       unlockedQuestions.size;
 
-    // Contar todas las respuestas válidas
+    // Contar todas las respuestas válidas (validación inline para evitar dependencias)
     const respondidas = Object.entries(respuestas).filter(
       ([preguntaId, respuesta]) => {
         const pregunta = todasLasPreguntas.find(
           (p) => p.id === parseInt(preguntaId)
         );
-        return pregunta && isRespuestaValida(respuesta, pregunta.tipo);
+        if (!pregunta) return false;
+
+        // Validación inline para evitar dependencias
+        const respuestaParaValidar = respuesta;
+        if (
+          respuestaParaValidar === null ||
+          respuestaParaValidar === undefined
+        ) {
+          return false;
+        }
+
+        if (pregunta.tipo === "abierta") {
+          return (
+            typeof respuestaParaValidar === "string" &&
+            respuestaParaValidar.trim() !== ""
+          );
+        }
+
+        if (pregunta.tipo === "checkbox") {
+          if (Array.isArray(respuestaParaValidar)) {
+            return respuestaParaValidar.length > 0;
+          }
+          if (typeof respuestaParaValidar === "string") {
+            try {
+              const parsed = JSON.parse(respuestaParaValidar);
+              return Array.isArray(parsed) && parsed.length > 0;
+            } catch {
+              return false;
+            }
+          }
+          return false;
+        }
+
+        if (pregunta.tipo === "numero") {
+          return (
+            !isNaN(parseFloat(respuestaParaValidar)) &&
+            parseFloat(respuestaParaValidar) !== 0
+          );
+        }
+
+        if (typeof respuestaParaValidar === "object") {
+          return (
+            respuestaParaValidar !== null &&
+            Object.keys(respuestaParaValidar).length > 0
+          );
+        }
+
+        return (
+          respuestaParaValidar !== "" &&
+          respuestaParaValidar !== null &&
+          respuestaParaValidar !== undefined
+        );
       }
     ).length;
 
-    // Logs detallados
-    console.log("=== ESTADO DE PREGUNTAS ===");
-    console.log("Total de preguntas:", todasLasPreguntas.length);
-    console.log("Preguntas no visibles:", preguntasNoVisibles.length);
-    console.log("Preguntas desbloqueadas:", unlockedQuestions.size);
-    console.log("Total a considerar:", totalPreguntas);
-    console.log("Total de respuestas válidas:", respondidas);
-    console.log(
-      "IDs de preguntas desbloqueadas:",
-      Array.from(unlockedQuestions)
-    );
-    console.log("Respuestas actuales:", respuestas);
-    console.log("========================");
+    // Logs detallados (solo cuando hay cambios significativos)
+    if (process.env.NODE_ENV === "development") {
+      console.log("=== ESTADO DE PREGUNTAS ===");
+      console.log("Total de preguntas:", todasLasPreguntas.length);
+      console.log("Preguntas no visibles:", preguntasNoVisibles.length);
+      console.log("Preguntas desbloqueadas:", unlockedQuestions.size);
+      console.log("Total a considerar:", totalPreguntas);
+      console.log("Total de respuestas válidas:", respondidas);
+      console.log("========================");
+    }
 
     // Notificar al componente padre sobre el cambio en el contador
     if (onQuestionUnlock) {
@@ -372,13 +431,7 @@ const Preguntas = ({
         answered: respondidas,
       });
     }
-  }, [
-    unlockedQuestions,
-    respuestas,
-    groupedQuestions,
-    onQuestionUnlock,
-    isRespuestaValida,
-  ]);
+  }, [unlockedQuestions, respuestas, groupedQuestions, onQuestionUnlock]);
 
   // Función para procesar respuestas y agregar información adicional
   const procesarRespuesta = (respuesta, pregunta) => {

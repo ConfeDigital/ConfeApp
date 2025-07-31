@@ -18,10 +18,14 @@ const Canalizacion = ({
   const [email, setEmail] = useState(null);
 
   useEffect(() => {
-    setSeleccionOpcion({ stage, explicacion });
-  }, [stage, explicacion]);
+    // Solo actualizar si hay cambios reales para evitar re-renders innecesarios
+    const newValue = { stage, explicacion };
+    if (JSON.stringify(newValue) !== JSON.stringify(seleccionOpcion)) {
+      setSeleccionOpcion(newValue);
+    }
+  }, [stage, explicacion, setSeleccionOpcion]);
 
-  // Obtener el email al montar el componente
+  // Obtener el email al montar el componente (solo una vez)
   useEffect(() => {
     const fetchEmail = async () => {
       try {
@@ -32,10 +36,10 @@ const Canalizacion = ({
       }
     };
 
-    if (usuarioId) {
+    if (usuarioId && !email) {
       fetchEmail();
     }
-  }, [usuarioId]);
+  }, [usuarioId, email]);
 
   const handleStageChange = async (e) => {
     const nuevoStage = e.target.value;
