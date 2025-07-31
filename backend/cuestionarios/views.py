@@ -240,6 +240,17 @@ class RespuestasGuardadas(APIView):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
+            # Process response according to type for Azure SQL compatibility
+            try:
+                respuesta_procesada = procesar_respuesta_para_tipo(respuesta_limpia, pregunta.tipo)
+                print(f"Respuesta procesada para guardar: {respuesta_procesada}")
+            except Exception as e:
+                print(f"Error procesando respuesta: {e}")
+                return Response(
+                    {"error": f"Error processing response: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
             # Use transaction to ensure atomicity
             with transaction.atomic():
                 try:
@@ -247,7 +258,7 @@ class RespuestasGuardadas(APIView):
                         usuario=usuario,
                         cuestionario=cuestionario,
                         pregunta=pregunta,
-                        defaults={'respuesta': respuesta_limpia}
+                        defaults={'respuesta': respuesta_procesada}
                     )
                     print(f"Respuesta guardada: {created}")
                     
