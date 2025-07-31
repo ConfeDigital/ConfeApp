@@ -30,13 +30,13 @@ import Edit from "@mui/icons-material/Edit";
 import AssistWalkerIcon from "@mui/icons-material/AssistWalker";
 import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
-import FileDownloadIcon from '@mui/icons-material/FileDownload';
-import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
+import FileDownloadIcon from "@mui/icons-material/FileDownload";
+import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
 
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../../api";
 import dayjs from "dayjs";
-import 'dayjs/locale/es';
+import "dayjs/locale/es";
 import DatasheetSkeleton from "../../components/datasheet/DatasheetSkeleton";
 import { formatCanonicalPhoneNumber } from "../../components/phone_number/phoneUtils";
 import ContactList from "../../components/candidate_create/ContactList";
@@ -90,13 +90,13 @@ const Datasheet = () => {
   const [interviewAppointment, setInterviewAppointment] = useState(null);
   const [openInterviewDialog, setOpenInterviewDialog] = useState(false);
 
-  const [ downloadLoading, setDownloadLoading ] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
   const handleChange = (event, newValue) => setSelectedTab(newValue);
 
-  dayjs.locale('es');
+  dayjs.locale("es");
 
   const fetchInterviewAppointment = async () => {
     if (!candidateProfile) return;
@@ -124,30 +124,28 @@ const Datasheet = () => {
         );
         setCandidateProfile(profileResponse.data);
 
-        const questionnairesResponse = await axios.get(`/api/cuestionarios/`);
+        // Obtener solo los cuestionarios que tengan respuestas del usuario
+        const questionnairesResponse = await axios.get(
+          `/api/cuestionarios/usuario/${profileResponse.data.user.id}/cuestionarios-con-respuestas/`
+        );
         setQuestionnaires(questionnairesResponse.data);
 
-        const progresoCuestionariosResponse = await axios.get(
-          `/api/cuestionarios/usuario/${profileResponse.data.user.id}/progreso-cuestionarios/`
-        );
-        setQuestionnaireStatus(progresoCuestionariosResponse.data);
+        // Usar los mismos datos para el estado de cuestionarios
+        setQuestionnaireStatus(questionnairesResponse.data);
 
         // 🔍 Obtener la etapa actual del usuario
         const currentStage = profileResponse.data.stage;
 
         // 🔍 Filtrar los cuestionarios de la etapa actual
-        const currentStageQuestionnaires = questionnairesResponse.data
-          .filter((q) => q.estado_desbloqueo === currentStage)
-          .flatMap((q) => q.cuestionarios || []) // Obtener los subcuestionarios
-          .filter((q) => q.activo); // Solo los cuestionarios activos
+        const currentStageQuestionnaires = questionnairesResponse.data.filter(
+          (q) => q.estado_desbloqueo === currentStage && q.activo
+        );
 
         if (!currentStageQuestionnaires.length) return; // 🚨 Si no hay cuestionarios, salir
 
         // 🔍 Validar si TODOS los cuestionarios activos están finalizados
-        const allFinalized = currentStageQuestionnaires.every((q) =>
-          progresoCuestionariosResponse.data.some(
-            (s) => s.cuestionario_id === q.id && s.finalizado === true
-          )
+        const allFinalized = currentStageQuestionnaires.every(
+          (q) => q.finalizado === true
         );
 
         // 📌 Si todos los cuestionarios están finalizados, avanzar de etapa
@@ -245,18 +243,11 @@ const Datasheet = () => {
     (stage) => stage.code === candidateProfile.stage
   );
 
-
   const handleStageClick = (stageCode) => {
-    // 🔍 Filtrar solo los cuestionarios de la etapa actual,
-    // mapeando subcuestionarios con base_cuestionario_id
-    const filteredQuestionnaires = questionnaires
-      .filter((q) => q.estado_desbloqueo === stageCode)
-      .flatMap((q) =>
-        (q.cuestionarios || [])
-          .filter((sub) => sub.activo)
-          .map((sub) => ({ ...sub, base_cuestionario_id: q.id }))
-      )
-      .filter(Boolean);
+    // 🔍 Filtrar solo los cuestionarios de la etapa actual
+    const filteredQuestionnaires = questionnaires.filter(
+      (q) => q.estado_desbloqueo === stageCode && q.activo
+    );
 
     console.log(
       "🔍 Cuestionarios activos encontrados:",
@@ -277,25 +268,19 @@ const Datasheet = () => {
       // Nueva lógica: construir subfases visuales usando questionnaireStatus
       console.log("🧩 Subfases visuales:");
       const subfasesVisuales = filteredQuestionnaires.map((q) => {
-        const progreso = questionnaireStatus.find(
-          (s) => s.base_cuestionario_id === q.base_cuestionario_id
-        );
         let colorFinal = "primary";
         let targetId = q.id;
 
-        if (!progreso) {
-          colorFinal = undefined;
-          targetId = q.id;
-        } else if (progreso.finalizado) {
+        if (q.finalizado) {
           colorFinal = "success";
-          targetId = progreso.cuestionario_id;
+          targetId = q.id;
         } else {
           colorFinal = "info";
-          targetId = progreso.cuestionario_id;
+          targetId = q.id;
         }
 
         console.log(
-          `🟦 Subfase: ${q.nombre}, base_id: ${q.base_cuestionario_id}, color: ${colorFinal}`
+          `🟦 Subfase: ${q.nombre}, id: ${q.id}, color: ${colorFinal}`
         );
 
         return {
@@ -443,14 +428,18 @@ const Datasheet = () => {
                   {candidateProfile.user.email}
                 </Link>
               </Typography>
-              { candidateProfile.cycle ? ( 
-                <Tooltip title={`De ${dayjs(candidateProfile.cycle.start_date).format('LL')} a ${dayjs(candidateProfile.cycle.end_date).format('LL')}`}>
-                  <Typography variant='subtitle1' color="textSecondary">
+              {candidateProfile.cycle ? (
+                <Tooltip
+                  title={`De ${dayjs(candidateProfile.cycle.start_date).format(
+                    "LL"
+                  )} a ${dayjs(candidateProfile.cycle.end_date).format("LL")}`}
+                >
+                  <Typography variant="subtitle1" color="textSecondary">
                     {candidateProfile.cycle.name}
                   </Typography>
                 </Tooltip>
-              ):(
-                <Typography variant='subtitle1' color="textSecondary">
+              ) : (
+                <Typography variant="subtitle1" color="textSecondary">
                   Sin ciclo
                 </Typography>
               )}
@@ -501,7 +490,10 @@ const Datasheet = () => {
                   minWidth: "120px",
                   // fontSize: { xs: "0.75rem", sm: "0.875rem" },
                 }}
-                disabled={ candidateProfile.stage != 'Agn' && candidateProfile.stage != 'Cap' }
+                disabled={
+                  candidateProfile.stage != "Agn" &&
+                  candidateProfile.stage != "Cap"
+                }
               >
                 Apoyos
               </Button>
@@ -514,7 +506,7 @@ const Datasheet = () => {
                   minWidth: "120px",
                   // fontSize: { xs: "0.75rem", sm: "0.875rem" },
                 }}
-                disabled={ candidateProfile.stage != 'Agn' }
+                disabled={candidateProfile.stage != "Agn"}
               >
                 Empleo
               </Button>
@@ -535,7 +527,10 @@ const Datasheet = () => {
                 sx={{
                   minWidth: "120px",
                 }}
-                disabled={ candidateProfile.stage != 'Agn' && candidateProfile.stage != 'Cap' }
+                disabled={
+                  candidateProfile.stage != "Agn" &&
+                  candidateProfile.stage != "Cap"
+                }
               >
                 Proyecto de Vida
               </Button>
@@ -591,18 +586,13 @@ const Datasheet = () => {
               }}
             >
               {stageOrder.map((stage, index) => {
-                const stageQuestionnaires = questionnaires
-                  .filter((q) => q.estado_desbloqueo === stage.code)
-                  .flatMap((q) => q.cuestionarios || [])
-                  .filter((q) => q.activo);
+                const stageQuestionnaires = questionnaires.filter(
+                  (q) => q.estado_desbloqueo === stage.code && q.activo
+                );
 
                 const isStageCompleted =
                   stageQuestionnaires.length > 0 &&
-                  stageQuestionnaires.every((q) =>
-                    questionnaireStatus.some(
-                      (s) => s.cuestionario_id === q.id && s.finalizado === true
-                    )
-                  );
+                  stageQuestionnaires.every((q) => q.finalizado === true);
 
                 // Mobile: use same color logic as desktop
                 // Previous steps: green, current: blue, next: outlined
@@ -730,7 +720,16 @@ const Datasheet = () => {
                         variant={btnProps.variant}
                         // color={btnProps.color}
                         size={expandedPhase === stage.code ? "medium" : "small"}
-                        sx={{ backgroundColor: expandedPhase === stage.code ? btnProps.color + ".dark": btnProps.color + ".main", color: expandedPhase === stage.code ? "white" : btnProps.color + ".contrastText" }}
+                        sx={{
+                          backgroundColor:
+                            expandedPhase === stage.code
+                              ? btnProps.color + ".dark"
+                              : btnProps.color + ".main",
+                          color:
+                            expandedPhase === stage.code
+                              ? "white"
+                              : btnProps.color + ".contrastText",
+                        }}
                         onClick={() => handleStageClick(stage.code)}
                       >
                         {`${stage.label.toUpperCase()}`}
@@ -739,7 +738,9 @@ const Datasheet = () => {
                         <Box mt={1}>
                           {stage.code === "Ent" && (
                             <Button
-                              variant={interviewAppointment ? "contained" : "outlined"}
+                              variant={
+                                interviewAppointment ? "contained" : "outlined"
+                              }
                               size="small"
                               onClick={handleOpenInterviewDialog}
                               sx={{ my: 0.5 }}
@@ -805,7 +806,7 @@ const Datasheet = () => {
                 variant={selectedTab === 0 ? "contained" : "outlined"}
                 color="primary"
                 onClick={() => setSelectedTab(0)}
-                endIcon={<PictureAsPdfIcon/>}
+                endIcon={<PictureAsPdfIcon />}
               >
                 Ficha Técnica
               </Button>
@@ -813,7 +814,7 @@ const Datasheet = () => {
                 variant={selectedTab === 1 ? "contained" : "outlined"}
                 color="primary"
                 onClick={() => setSelectedTab(1)}
-                endIcon={<PictureAsPdfIcon/>}
+                endIcon={<PictureAsPdfIcon />}
               >
                 Habilidades
               </Button>
@@ -850,7 +851,7 @@ const Datasheet = () => {
         candidateProfile={candidateProfile}
       />
       <Backdrop
-        sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 2 }}
+        sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.modal + 2 }}
         open={downloadLoading}
       >
         <CircularProgress color="inherit" />
