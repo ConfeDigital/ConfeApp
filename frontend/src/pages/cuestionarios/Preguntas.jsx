@@ -226,63 +226,64 @@ const Preguntas = ({
       return false;
     }
 
-    // Si es una respuesta procesada (nuevo formato), validar el valor_original
+    // Si es una respuesta procesada (nuevo formato), extraer el valor_original
+    let respuestaParaValidar = respuesta;
     if (
       respuesta &&
       typeof respuesta === "object" &&
       respuesta.valor_original !== undefined
     ) {
-      return isRespuestaValida(respuesta.valor_original, tipoPregunta);
+      respuestaParaValidar = respuesta.valor_original;
     }
 
     // Validaciones específicas por tipo de pregunta
     switch (tipoPregunta) {
       case "abierta":
         // Para preguntas abiertas, el texto no puede estar vacío y debe tener al menos un carácter
-        return typeof respuesta === "string" && respuesta.trim().length > 0;
+        return typeof respuestaParaValidar === "string" && respuestaParaValidar.trim().length > 0;
 
       case "numero":
         // Para preguntas numéricas, debe ser un número válido y no estar vacío
         return (
-          !isNaN(Number(respuesta)) && respuesta !== "" && respuesta !== null
+          !isNaN(Number(respuestaParaValidar)) && respuestaParaValidar !== "" && respuestaParaValidar !== null
         );
 
       case "multiple":
       case "dropdown":
         // Para opciones múltiples y dropdown, debe tener un valor seleccionado
         return (
-          respuesta !== "" && respuesta !== null && respuesta !== undefined
+          respuestaParaValidar !== "" && respuestaParaValidar !== null && respuestaParaValidar !== undefined
         );
 
       case "checkbox":
         // Para checkbox, debe tener al menos una opción seleccionada
-        if (Array.isArray(respuesta)) {
-          return respuesta.length > 0;
+        if (Array.isArray(respuestaParaValidar)) {
+          return respuestaParaValidar.length > 0;
         }
         // Si es un string (JSON), intentar parsearlo
-        if (typeof respuesta === "string") {
+        if (typeof respuestaParaValidar === "string") {
           try {
-            const parsed = JSON.parse(respuesta);
+            const parsed = JSON.parse(respuestaParaValidar);
             return Array.isArray(parsed) && parsed.length > 0;
           } catch {
             return false;
           }
         }
         // Si es un objeto, verificar que tenga al menos una propiedad
-        if (typeof respuesta === "object") {
-          return Object.keys(respuesta).length > 0;
+        if (typeof respuestaParaValidar === "object") {
+          return Object.keys(respuestaParaValidar).length > 0;
         }
         return false;
 
       case "fecha":
       case "fecha_hora":
         // Para fechas, debe ser una fecha válida
-        if (respuesta instanceof Date) {
-          return !isNaN(respuesta.getTime());
+        if (respuestaParaValidar instanceof Date) {
+          return !isNaN(respuestaParaValidar.getTime());
         }
         // Si es un string, intentar convertirlo a fecha
-        if (typeof respuesta === "string") {
-          const date = new Date(respuesta);
+        if (typeof respuestaParaValidar === "string") {
+          const date = new Date(respuestaParaValidar);
           return !isNaN(date.getTime());
         }
         return false;
@@ -291,34 +292,34 @@ const Preguntas = ({
       case "sis2":
         // Para preguntas SIS, debe tener al menos un valor seleccionado
         return (
-          typeof respuesta === "object" &&
-          respuesta !== null &&
-          Object.keys(respuesta).length > 0
+          typeof respuestaParaValidar === "object" &&
+          respuestaParaValidar !== null &&
+          Object.keys(respuestaParaValidar).length > 0
         );
 
       case "ed":
       case "ch":
         // Para preguntas especiales, debe tener al menos un valor seleccionado
         return (
-          typeof respuesta === "object" &&
-          respuesta !== null &&
-          Object.keys(respuesta).length > 0
+          typeof respuestaParaValidar === "object" &&
+          respuestaParaValidar !== null &&
+          Object.keys(respuestaParaValidar).length > 0
         );
 
       case "binaria":
         // Para preguntas binarias, debe tener un valor seleccionado
-        return respuesta === true || respuesta === false;
+        return respuestaParaValidar === true || respuestaParaValidar === false;
 
       default:
         // Para otros tipos, validación genérica
-        if (typeof respuesta === "string") {
-          return respuesta.trim().length > 0;
+        if (typeof respuestaParaValidar === "string") {
+          return respuestaParaValidar.trim().length > 0;
         }
-        if (Array.isArray(respuesta)) {
-          return respuesta.length > 0;
+        if (Array.isArray(respuestaParaValidar)) {
+          return respuestaParaValidar.length > 0;
         }
-        if (typeof respuesta === "object") {
-          return respuesta !== null && Object.keys(respuesta).length > 0;
+        if (typeof respuestaParaValidar === "object") {
+          return respuestaParaValidar !== null && Object.keys(respuestaParaValidar).length > 0;
         }
         return false;
     }
