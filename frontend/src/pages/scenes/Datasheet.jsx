@@ -168,7 +168,7 @@ const Datasheet = () => {
         // 📌 Si todos los cuestionarios están finalizados, avanzar de etapa
         if (allFinalized) {
           const nextStage = stageOrder[currentStageIndex + 1];
-          setCurrentStageIndex(nextStage);
+          setCurrentStageIndex(currentStageIndex + 1);
 
           if (nextStage) {
             console.log("✅ Avanzando a la siguiente etapa:", nextStage.code);
