@@ -386,12 +386,91 @@ const Preguntas = ({
     console.log("Tipo de pregunta:", pregunta.tipo);
     console.log("Opciones disponibles:", pregunta.opciones);
 
-    // Para preguntas que no son checkbox, dropdown o multiple, devolver la respuesta tal como está
-    if (!["checkbox", "dropdown", "multiple"].includes(pregunta.tipo)) {
-      console.log(
-        "No es checkbox/dropdown/multiple, devolviendo respuesta original"
-      );
-      return respuesta;
+    // Procesar según el tipo de pregunta para asegurar compatibilidad con Azure SQL
+    switch (pregunta.tipo) {
+      case "abierta":
+        console.log("Es pregunta abierta, devolviendo como objeto JSON");
+        return {
+          texto: respuesta,
+          valor_original: respuesta,
+        };
+
+      case "numero":
+        console.log("Es pregunta numérica, procesando valor");
+        const valorNumerico = parseFloat(respuesta) || 0;
+        return {
+          valor: valorNumerico,
+          valor_original: respuesta,
+        };
+
+      case "binaria":
+        console.log("Es pregunta binaria, procesando valor booleano");
+        const valorBooleano =
+          respuesta === true ||
+          respuesta === "true" ||
+          respuesta === "1" ||
+          respuesta === "sí" ||
+          respuesta === "si";
+        return {
+          valor: valorBooleano,
+          valor_original: respuesta,
+          texto: valorBooleano ? "Sí" : "No",
+        };
+
+      case "fecha":
+        console.log("Es pregunta de fecha, procesando formato");
+        return {
+          fecha: respuesta,
+          valor_original: respuesta,
+          formato: "YYYY-MM-DD",
+        };
+
+      case "fecha_hora":
+        console.log("Es pregunta de fecha y hora, procesando formato ISO");
+        return {
+          fecha_hora: respuesta,
+          valor_original: respuesta,
+          formato: "ISO",
+        };
+
+      case "sis":
+      case "sis2":
+        console.log("Es pregunta SIS/SIS2, manteniendo estructura original");
+        return respuesta; // Mantener la estructura original para SIS
+
+      case "canalizacion":
+      case "canalizacion_centro":
+        console.log(
+          "Es pregunta de canalización, manteniendo estructura original"
+        );
+        return respuesta; // Mantener la estructura original para canalización
+
+      case "ch":
+        console.log("Es pregunta CH, manteniendo estructura original");
+        return respuesta; // Mantener la estructura original para CH
+
+      case "ed":
+        console.log("Es pregunta ED, manteniendo estructura original");
+        return respuesta; // Mantener la estructura original para ED
+
+      case "meta":
+        console.log("Es pregunta de meta, manteniendo estructura original");
+        return respuesta; // Mantener la estructura original para meta
+
+      case "datos_personales":
+      case "datos_domicilio":
+      case "datos_medicos":
+      case "contactos":
+      case "tipo_discapacidad":
+      case "imagen":
+        console.log(
+          "Es pregunta de datos especializados, manteniendo estructura original"
+        );
+        return respuesta; // Mantener la estructura original para datos especializados
+
+      default:
+        console.log("Tipo no específico, devolviendo respuesta original");
+        return respuesta;
     }
 
     let respuestaProcesada = {

@@ -16,7 +16,7 @@ from rest_framework.generics import UpdateAPIView
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from api.models import CustomUser
-from datetime import datetime
+from datetime import datetime, date
 import json
 from django.http import FileResponse, FileResponse, Http404
 import unicodedata
@@ -1285,3 +1285,188 @@ class ReporteCuestionariosView(APIView):
         serializer = ReporteCuestionariosSerializer(respuestas, many=True)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+def procesar_respuesta_para_tipo(respuesta, tipo):
+    """Procesa la respuesta según el tipo para asegurar compatibilidad con Azure SQL"""
+    
+    if tipo == 'abierta':
+        if isinstance(respuesta, str):
+            return {
+                'texto': respuesta,
+                'valor_original': respuesta
+            }
+        elif isinstance(respuesta, dict):
+            return {
+                'texto': respuesta.get('texto', respuesta.get('valor_original', str(respuesta))),
+                'valor_original': respuesta.get('valor_original', respuesta.get('texto', str(respuesta)))
+            }
+        else:
+            return {
+                'texto': str(respuesta),
+                'valor_original': str(respuesta)
+            }
+    
+    elif tipo == 'numero':
+        if isinstance(respuesta, (int, float)):
+            return {
+                'valor': respuesta,
+                'valor_original': respuesta
+            }
+        else:
+            try:
+                valor = float(respuesta)
+                return {
+                    'valor': valor,
+                    'valor_original': respuesta
+                }
+            except:
+                return {
+                    'valor': 0,
+                    'valor_original': respuesta
+                }
+    
+    elif tipo == 'checkbox':
+        if isinstance(respuesta, list):
+            return {
+                'opciones': respuesta,
+                'valor_original': respuesta,
+                'texto': f"Opciones seleccionadas: {len(respuesta)}"
+            }
+        elif isinstance(respuesta, dict):
+            return {
+                'opciones': respuesta.get('opciones', []),
+                'texto': respuesta.get('texto', ''),
+                'valor_original': respuesta
+            }
+        else:
+            return {
+                'opciones': [],
+                'valor_original': respuesta,
+                'texto': 'Sin opciones'
+            }
+    
+    elif tipo in ['multiple', 'dropdown']:
+        if isinstance(respuesta, (int, str)):
+            try:
+                indice = int(respuesta)
+                return {
+                    'indice': indice,
+                    'valor_original': respuesta,
+                    'texto': f"Opción {indice}"
+                }
+            except:
+                return {
+                    'indice': 0,
+                    'valor_original': respuesta,
+                    'texto': 'Opción por defecto'
+                }
+        elif isinstance(respuesta, dict):
+            return {
+                'indice': respuesta.get('indice', 0),
+                'texto': respuesta.get('texto', ''),
+                'id': respuesta.get('id', 0),
+                'valor_original': respuesta
+            }
+        else:
+            return {
+                'indice': 0,
+                'valor_original': respuesta,
+                'texto': 'Opción por defecto'
+            }
+    
+    elif tipo == 'binaria':
+        if isinstance(respuesta, bool):
+            return {
+                'valor': respuesta,
+                'valor_original': respuesta,
+                'texto': 'Sí' if respuesta else 'No'
+            }
+        elif isinstance(respuesta, str):
+            valor = respuesta.lower() in ['true', '1', 'sí', 'si', 'yes']
+            return {
+                'valor': valor,
+                'valor_original': respuesta,
+                'texto': 'Sí' if valor else 'No'
+            }
+        else:
+            valor = bool(respuesta)
+            return {
+                'valor': valor,
+                'valor_original': respuesta,
+                'texto': 'Sí' if valor else 'No'
+            }
+    
+    elif tipo == 'fecha':
+        if isinstance(respuesta, str):
+            return {
+                'fecha': respuesta,
+                'valor_original': respuesta,
+                'formato': 'YYYY-MM-DD'
+            }
+        elif isinstance(respuesta, date):
+            return {
+                'fecha': respuesta.isoformat(),
+                'valor_original': str(respuesta),
+                'formato': 'YYYY-MM-DD'
+            }
+        elif isinstance(respuesta, dict):
+            return {
+                'fecha': respuesta.get('fecha', ''),
+                'formato': respuesta.get('formato', 'YYYY-MM-DD'),
+                'valor_original': respuesta
+            }
+        else:
+            return {
+                'fecha': str(respuesta),
+                'valor_original': respuesta,
+                'formato': 'YYYY-MM-DD'
+            }
+    
+    elif tipo == 'fecha_hora':
+        if isinstance(respuesta, str):
+            return {
+                'fecha_hora': respuesta,
+                'valor_original': respuesta,
+                'formato': 'ISO'
+            }
+        elif isinstance(respuesta, datetime):
+            return {
+                'fecha_hora': respuesta.isoformat(),
+                'valor_original': str(respuesta),
+                'formato': 'ISO'
+            }
+        elif isinstance(respuesta, dict):
+            return {
+                'fecha_hora': respuesta.get('fecha_hora', ''),
+                'formato': respuesta.get('formato', 'ISO'),
+                'valor_original': respuesta
+            }
+        else:
+            return {
+                'fecha_hora': str(respuesta),
+                'valor_original': respuesta,
+                'formato': 'ISO'
+            }
+    
+    # Para tipos complejos (sis, sis2, canalizacion, etc.), mantener la estructura original
+    elif tipo in ['sis', 'sis2', 'canalizacion', 'canalizacion_centro', 'ch', 'ed', 'meta', 
+                  'datos_personales', 'datos_domicilio', 'datos_medicos', 'contactos', 
+                  'tipo_discapacidad', 'imagen']:
+        if isinstance(respuesta, dict):
+            return respuesta
+        else:
+            return {
+                'valor_original': respuesta,
+                'texto': str(respuesta)
+            }
+    
+    # Para cualquier otro tipo, devolver como está
+    else:
+        if isinstance(respuesta, (dict, list)):
+            return respuesta
+        else:
+            return {
+                'valor_original': respuesta,
+                'texto': str(respuesta)
+            }
