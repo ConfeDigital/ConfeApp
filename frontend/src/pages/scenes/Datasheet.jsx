@@ -125,10 +125,10 @@ const Datasheet = () => {
     const fetchCandidateData = async () => {
       console.log("🚀 Iniciando carga del datasheet...");
       setDatasheetLoading(true);
-      
+
       // Delay mínimo para que se vea el loading
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       try {
         console.log("📡 Obteniendo perfil del candidato...");
         const profileResponse = await axios.get(
@@ -189,7 +189,7 @@ const Datasheet = () => {
             }
           }
         }
-        
+
         console.log("✅ Datasheet cargado exitosamente");
       } catch (error) {
         console.error("❌ Error obteniendo datos del candidato:", error);
