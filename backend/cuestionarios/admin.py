@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Cuestionario, Pregunta, Opcion, Respuesta, DesbloqueoPregunta, BaseCuestionarios, ImagenOpcion
+from .models import Cuestionario, Pregunta, Opcion, Respuesta, DesbloqueoPregunta, BaseCuestionarios, ImagenOpcion, EstadoCuestionario
 from .forms import DesbloqueoPreguntaForm
 # from .models import (
 #     PercentilesPorCuestionario,
@@ -65,6 +65,8 @@ admin.site.register(ImagenOpcion, ImagenOpcionAdmin)
 admin.site.register(Respuesta, RespuestaAdmin)
 admin.site.register(DesbloqueoPregunta, DesbloqueoPreguntaAdmin)
 admin.site.register(BaseCuestionarios, BaseCuestionariosAdmin)
+
+admin.site.register(EstadoCuestionario)
 
 
 
