@@ -274,13 +274,16 @@ const Datasheet = () => {
         if (q.finalizado) {
           colorFinal = "success";
           targetId = q.id;
-        } else {
+        } else if (q.tiene_respuestas) {
           colorFinal = "info";
+          targetId = q.id;
+        } else {
+          colorFinal = undefined; // outlined (gris)
           targetId = q.id;
         }
 
         console.log(
-          `🟦 Subfase: ${q.nombre}, id: ${q.id}, color: ${colorFinal}`
+          `🟦 Subfase: ${q.nombre}, id: ${q.id}, color: ${colorFinal}, tiene_respuestas: ${q.tiene_respuestas}`
         );
 
         return {

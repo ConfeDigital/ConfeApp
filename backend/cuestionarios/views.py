@@ -1484,27 +1484,34 @@ def procesar_respuesta_para_tipo(respuesta, tipo):
 
 class CuestionariosConRespuestasView(APIView):
     """
-    Devuelve solo los cuestionarios que tengan más de 1 respuesta del usuario,
-    con el estado de finalización pero sin las preguntas.
+    Devuelve los cuestionarios activos del usuario:
+    - Cuestionarios con respuestas del usuario (prioridad)
+    - Cuestionarios activos sin respuestas del usuario
+    Con el estado de finalización pero sin las preguntas.
     """
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, usuario_id):
-        print(f"🔍 Consultando cuestionarios con respuestas para usuario ID: {usuario_id}")
+        print(f"🔍 Consultando cuestionarios para usuario ID: {usuario_id}")
         
-        # Obtener cuestionarios que tengan más de 1 respuesta del usuario
+        # Obtener cuestionarios que tengan respuestas del usuario
         cuestionarios_con_respuestas = Respuesta.objects.filter(
             usuario_id=usuario_id
         ).values('cuestionario_id').annotate(
             respuestas_count=models.Count('id')
         ).filter(
-            respuestas_count__gt=1
+            respuestas_count__gt=0
         ).values_list('cuestionario_id', flat=True)
         
-        print(f"🧾 Cuestionarios con más de 1 respuesta: {list(cuestionarios_con_respuestas)}")
+        print(f"🧾 Cuestionarios con respuestas: {list(cuestionarios_con_respuestas)}")
+        
+        # Obtener todos los cuestionarios activos
+        cuestionarios_activos = Cuestionario.objects.filter(activo=True)
         
         resultado = []
+        cuestionarios_procesados = set()
         
+        # Primero procesar los cuestionarios con respuestas
         for cuestionario_id in cuestionarios_con_respuestas:
             cuestionario = Cuestionario.objects.get(id=cuestionario_id)
             
@@ -1528,8 +1535,41 @@ class CuestionariosConRespuestasView(APIView):
                 "responsable": cuestionario.base_cuestionario.responsable if cuestionario.base_cuestionario else None,
                 "inicio": cuestionario.base_cuestionario.inicio if cuestionario.base_cuestionario else None,
                 "finalizado": finalizado,
-                "estado": estado_obj.estado if estado_obj else "inactivo"
+                "estado": estado_obj.estado if estado_obj else "inactivo",
+                "tiene_respuestas": True
             })
+            
+            cuestionarios_procesados.add(cuestionario.base_cuestionario.id if cuestionario.base_cuestionario else None)
         
-        print(f"✅ Total cuestionarios con respuestas procesados: {len(resultado)}")
+        # Luego agregar los cuestionarios activos sin respuestas
+        for cuestionario in cuestionarios_activos:
+            base_cuestionario_id = cuestionario.base_cuestionario.id if cuestionario.base_cuestionario else None
+            
+            # Solo agregar si no se procesó ya (no tiene respuestas)
+            if base_cuestionario_id not in cuestionarios_procesados:
+                # Obtener el estado de finalización
+                estado_obj = EstadoCuestionario.objects.filter(
+                    usuario_id=usuario_id, 
+                    cuestionario=cuestionario
+                ).first()
+                
+                finalizado = estado_obj.estado == 'finalizado' if estado_obj else False
+                
+                resultado.append({
+                    "id": cuestionario.id,
+                    "nombre": cuestionario.nombre,
+                    "version": cuestionario.version,
+                    "activo": cuestionario.activo,
+                    "fecha_creacion": cuestionario.fecha_creacion,
+                    "base_cuestionario_id": base_cuestionario_id,
+                    "base_cuestionario_nombre": cuestionario.base_cuestionario.nombre if cuestionario.base_cuestionario else None,
+                    "estado_desbloqueo": cuestionario.base_cuestionario.estado_desbloqueo if cuestionario.base_cuestionario else None,
+                    "responsable": cuestionario.base_cuestionario.responsable if cuestionario.base_cuestionario else None,
+                    "inicio": cuestionario.base_cuestionario.inicio if cuestionario.base_cuestionario else None,
+                    "finalizado": finalizado,
+                    "estado": estado_obj.estado if estado_obj else "inactivo",
+                    "tiene_respuestas": False
+                })
+        
+        print(f"✅ Total cuestionarios procesados: {len(resultado)}")
         return Response(resultado, status=status.HTTP_200_OK)
