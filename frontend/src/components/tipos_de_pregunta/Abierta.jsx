@@ -11,7 +11,7 @@ const Abierta = ({ seleccionOpcion, setSeleccionOpcion, disabled }) => {
 
   const handleChange = (event) => {
     setSeleccionOpcion(event.target.value);
-    console.log(event.target.value);
+    // console.log(event.target.value);
   };
 
   return (

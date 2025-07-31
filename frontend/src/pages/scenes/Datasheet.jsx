@@ -81,7 +81,7 @@ const Datasheet = () => {
   const { uid } = useParams();
   const navigate = useNavigate();
   const [candidateProfile, setCandidateProfile] = useState(null);
-  const [currentStageIndex, setCurrentStageIndex] = useState(0);
+  const [currentStageIndex, setCurrentStageIndex] = useState(null);
   const [viewMode, setViewMode] = useState("fases");
   const [expandedPhase, setExpandedPhase] = useState(null);
   const [cuestionariosBotonesVisualizar, setCuestionariosBotonesVisualizar] =
@@ -123,20 +123,20 @@ const Datasheet = () => {
 
   useEffect(() => {
     const fetchCandidateData = async () => {
-      console.log("🚀 Iniciando carga del datasheet...");
+      // console.log("🚀 Iniciando carga del datasheet...");
       setDatasheetLoading(true);
 
       // Delay mínimo para que se vea el loading
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       try {
-        console.log("📡 Obteniendo perfil del candidato...");
+        // console.log("📡 Obteniendo perfil del candidato...");
         const profileResponse = await axios.get(
           `/api/candidatos/profiles/${uid}/`
         );
         setCandidateProfile(profileResponse.data);
 
-        console.log("📡 Obteniendo cuestionarios del usuario...");
+        // console.log("📡 Obteniendo cuestionarios del usuario...");
         // Obtener solo los cuestionarios que tengan respuestas del usuario
         const questionnairesResponse = await axios.get(
           `/api/cuestionarios/usuario/${profileResponse.data.user.id}/cuestionarios-con-respuestas/`
@@ -154,9 +154,8 @@ const Datasheet = () => {
           (q) => q.estado_desbloqueo === currentStage && q.activo
         );
 
-        setCurrentStageIndex(
-          stageOrder.findIndex((stage) => stage.code === currentStage)
-        );
+        const stageIdx = stageOrder.findIndex((stage) => stage.code === currentStage);
+        setCurrentStageIndex(stageIdx);
 
         if (!currentStageQuestionnaires.length) return; // 🚨 Si no hay cuestionarios, salir
 
@@ -166,10 +165,9 @@ const Datasheet = () => {
         );
 
         // 📌 Si todos los cuestionarios están finalizados, avanzar de etapa
-        if (allFinalized) {
-          const nextStage = stageOrder[currentStageIndex + 1];
-          setCurrentStageIndex(currentStageIndex + 1);
-
+        if (allFinalized && stageIdx >= 0) {
+          const nextStage = stageOrder[stageIdx + 1];
+        
           if (nextStage) {
             console.log("✅ Avanzando a la siguiente etapa:", nextStage.code);
             try {
@@ -177,24 +175,24 @@ const Datasheet = () => {
                 stage: nextStage.code,
                 email: profileResponse.data.user.email,
               });
+        
               setCandidateProfile({
                 ...profileResponse.data,
                 stage: nextStage.code,
               });
+        
+              setCurrentStageIndex(stageIdx + 1);
             } catch (error) {
-              console.error(
-                "❌ Error al actualizar la etapa del candidato:",
-                error
-              );
+              console.error("❌ Error al actualizar la etapa del candidato:", error);
             }
           }
         }
 
-        console.log("✅ Datasheet cargado exitosamente");
+        // console.log("✅ Datasheet cargado exitosamente");
       } catch (error) {
         console.error("❌ Error obteniendo datos del candidato:", error);
       } finally {
-        console.log("🏁 Finalizando loading del datasheet");
+        // console.log("🏁 Finalizando loading del datasheet");
         setDatasheetLoading(false);
       }
     };
@@ -269,10 +267,10 @@ const Datasheet = () => {
       (q) => q.estado_desbloqueo === stageCode && q.activo
     );
 
-    console.log(
-      "🔍 Cuestionarios activos encontrados:",
-      filteredQuestionnaires
-    );
+    // console.log(
+    //   "🔍 Cuestionarios activos encontrados:",
+    //   filteredQuestionnaires
+    // );
 
     if (filteredQuestionnaires.length === 0) {
       console.log("❌ No hay cuestionarios activos en esta etapa.");
@@ -286,7 +284,7 @@ const Datasheet = () => {
       // 📌 Si hay más de un cuestionario, expandir la lista para mostrar botones
       setExpandedPhase(expandedPhase === stageCode ? null : stageCode);
       // Nueva lógica: construir subfases visuales usando questionnaireStatus
-      console.log("🧩 Subfases visuales:");
+      // console.log("🧩 Subfases visuales:");
       const subfasesVisuales = filteredQuestionnaires.map((q) => {
         let colorFinal = "primary";
         let targetId = q.id;
@@ -302,9 +300,9 @@ const Datasheet = () => {
           targetId = q.id;
         }
 
-        console.log(
-          `🟦 Subfase: ${q.nombre}, id: ${q.id}, color: ${colorFinal}, tiene_respuestas: ${q.tiene_respuestas}`
-        );
+        // console.log(
+        //   `🟦 Subfase: ${q.nombre}, id: ${q.id}, color: ${colorFinal}, tiene_respuestas: ${q.tiene_respuestas}`
+        // );
 
         return {
           ...q,

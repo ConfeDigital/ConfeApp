@@ -18,10 +18,10 @@ const DropDownPregunta = ({
 }) => {
   const seleccionRespuesta = (event) => {
     setSeleccionOpcion(event.target.value);
-    console.log("index: ", event.target.value);
+    // console.log("index: ", event.target.value);
   };
 
-  console.log("seleccionOpcion: ", seleccionOpcion);
+  // console.log("seleccionOpcion: ", seleccionOpcion);
 
   return (
     <Box
