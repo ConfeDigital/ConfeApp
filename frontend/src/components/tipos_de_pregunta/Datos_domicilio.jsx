@@ -26,6 +26,8 @@ const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) =>
       address_col: "",
       address_state: "",
       address_city: "",
+      address_lat: "",
+      address_lng: "",
       residence_type: "",
     },
     mode: "onChange",
@@ -52,6 +54,8 @@ const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) =>
             address_col: data.address_col || "",
             address_state: data.address_state || "",
             address_city: data.address_city || "",
+            address_lat: data.address_lat || "",
+            address_lng: data.address_lng || "",
             residence_type: data.residence_type || "",
           });
         } else {
