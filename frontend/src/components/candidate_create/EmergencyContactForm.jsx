@@ -215,6 +215,7 @@ const EmergencyContactsForm = () => {
             <AddressAutocompleteForm 
               prefix={`emergency_contacts.${index}.domicile`}
               setDomicileFormLoaded={() => {}}
+              domicile={true}
             />
           </Box>
         )}

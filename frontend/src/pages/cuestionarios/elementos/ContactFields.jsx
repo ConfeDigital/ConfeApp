@@ -227,7 +227,7 @@ const ContactFields = () => {
             <Typography variant="h4" mb={ 1 }>
               Ingresa su domicilio
             </Typography>
-            <AddressAutocompleteForm prefix={`emergency_contacts.${index}.domicile`} />
+            <AddressAutocompleteForm prefix={`emergency_contacts.${index}.domicile`} domicile={true}/>
           </Box>
         )}
 

@@ -7,6 +7,7 @@ const DomicileForm = ({ setDomicileFormLoaded }) => {
     <AddressAutoCompleteForm 
       prefix="" 
       setDomicileFormLoaded={setDomicileFormLoaded} 
+      domicile={true}
     />
   );
 };
