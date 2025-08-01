@@ -840,8 +840,8 @@ class EmergencyContactSerializer(serializers.ModelSerializer):
 #         ]
 
 class DatosMedicosSerializer(serializers.ModelSerializer):
-    # Sobrescribe el campo para que use MedicationSerializer
     medications = MedicationSerializer(many=True)
+    disability = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
 
     class Meta:
         model = UserProfile
@@ -852,38 +852,29 @@ class DatosMedicosSerializer(serializers.ModelSerializer):
             "receives_psychological_care",
             "receives_psychiatric_care",
             "has_seizures",
-            "medications",                  # <-- array de objetos
+            "medications",
             "allergies",
             "dietary_restrictions",
             "physical_restrictions",
             "blood_type",
             "disability"
         ]
-        # Ojo: "disability" también es ManyToMany. 
-        # Si lo manejas con pks, conviene un PrimaryKeyRelatedField(many=True) o
-        # mantén la forma en que ya lo manejas.
 
     def update(self, instance, validated_data):
-        # 1) Extraemos la lista de medicamentos (diccionarios)
         meds_data = validated_data.pop('medications', None)
 
-        # 2) Actualizamos los demás campos del perfil
+        # Optional: handle disability like in CandidateUpdateSerializer
+        if 'disability' in validated_data:
+            instance.disability.set(validated_data.pop('disability'))
+
         instance = super().update(instance, validated_data)
-        # O bien, si quieres un control más fino, asigna campo a campo:
-        # instance.has_disability_certificate = validated_data.get('has_disability_certificate', instance.has_disability_certificate)
-        # instance.save()
 
         if meds_data is not None:
-            # Limpiar la relación actual
             instance.medications.clear()
-
-            # Crear objetos "Medication" y agregarlos a la relación ManyToMany
             new_meds = []
             for med in meds_data:
-                # Por defecto, "create(**med)" crea un nuevo objeto
                 medication = Medication.objects.create(**med)
                 new_meds.append(medication)
-
             instance.medications.set(new_meds)
 
         return instance

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import {
   Grid,
   TextField,
@@ -12,8 +12,11 @@ import {
   MenuItem,
   FormHelperText,
   Box,
+  OutlinedInput,
+  Chip,
 } from "@mui/material";
 import { useFormContext, Controller } from "react-hook-form";
+import axios from "../../../api";
 import MedicationsForm from "./medications";
 
 const yesNoOptions = [
@@ -23,15 +26,166 @@ const yesNoOptions = [
 
 const MedicalInfoForm = () => {
   const { control, formState: { errors }, watch } = useFormContext();
+  const [disabilities, setDisabilities] = useState([]);
+  const [disabilityGroups, setDisabilityGroups] = useState([]);
+  const [selectedDisabilityGroups, setSelectedDisabilityGroups] = useState([]);
+  const [filteredDisabilities, setFilteredDisabilities] = useState([]);
 
   const hasSeizuresValue = watch("has_seizures");
   const hasPsychologicalDetailsValue = watch("receives_psychological_care");
   const hasPsychiatricCareValue = watch("receives_psychiatric_care");
   const hasDisabilityCertificate = watch("has_disability_certificate");
   const hasDisabilityHistory = watch("has_disability_history");
+  const selectedDisabilities = watch("disability") || [];
+
+  useEffect(() => {
+    // Fetch disabilities and disability groups
+    axios
+      .get("/api/discapacidad/disabilities/")
+      .then((res) => {
+        setDisabilities(res.data);
+        // Extract unique groups from disabilities
+        const groups = res.data.reduce((acc, disability) => {
+          if (disability.group && !acc.find(g => g.id === disability.group.id)) {
+            acc.push(disability.group);
+          }
+          return acc;
+        }, []);
+        setDisabilityGroups(groups);
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+  // Auto-select disability groups based on selected disabilities
+  useEffect(() => {
+    if (selectedDisabilities.length > 0 && disabilities.length > 0) {
+      // Find all unique groups from selected disabilities
+      const selectedGroups = selectedDisabilities
+        .map(disabilityId => {
+          const disability = disabilities.find(d => d.id === disabilityId);
+          return disability?.group?.id;
+        })
+        .filter((groupId, index, self) => groupId && self.indexOf(groupId) === index);
+      
+      setSelectedDisabilityGroups(selectedGroups);
+    } else if (selectedDisabilities.length === 0) {
+      setSelectedDisabilityGroups([]);
+    }
+  }, [selectedDisabilities, disabilities]);
+
+  // Filter disabilities based on selected groups
+  useEffect(() => {
+    if (selectedDisabilityGroups.length > 0) {
+      const filtered = disabilities.filter(d => 
+        d.group && selectedDisabilityGroups.includes(d.group.id)
+      );
+      setFilteredDisabilities(filtered);
+    } else {
+      setFilteredDisabilities([]);
+    }
+  }, [selectedDisabilityGroups, disabilities]);
+
+  const handleDisabilityGroupsChange = (groupIds) => {
+    setSelectedDisabilityGroups(groupIds);
+    // Remove disabilities that don't belong to the selected groups
+    if (selectedDisabilities.length > 0) {
+      const validDisabilities = selectedDisabilities.filter(disabilityId => {
+        const disability = disabilities.find(d => d.id === disabilityId);
+        return disability?.group && groupIds.includes(disability.group.id);
+      });
+      // You might want to update the form field here if needed
+      // This would require access to the form's setValue function
+    }
+  };
 
   return (
     <Box sx={{ p: { xs: 0, s: 2 } }}>
+      {/* Disability Groups Selection */}
+      <FormControl fullWidth sx={{ mb: 3 }}>
+        <InputLabel id="disability-groups-label" sx={{ fontSize: "1rem" }}>
+          ¿A que grupo de discapacidad pertenece?
+        </InputLabel>
+        <Select
+          labelId="disability-groups-label"
+          label="¿A que grupo de discapacidad pertenece?"
+          multiple
+          value={selectedDisabilityGroups}
+          onChange={(e) => handleDisabilityGroupsChange(e.target.value)}
+          input={<OutlinedInput label="¿A que grupo de discapacidad pertenece?" />}
+          renderValue={(selected) => (
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+              {selected.map((groupId) => {
+                const groupObj = disabilityGroups.find((g) => g.id === groupId);
+                return (
+                  <Chip
+                    key={groupId}
+                    label={groupObj ? groupObj.name : groupId}
+                    size="small"
+                  />
+                );
+              })}
+            </Box>
+          )}
+          sx={{ fontSize: "1rem" }}
+        >
+          {disabilityGroups.map((group) => (
+            <MenuItem key={group.id} value={group.id}>
+              {group.name}
+            </MenuItem>
+          ))}
+        </Select>
+        <FormHelperText>
+          Selecciona uno o más grupos para filtrar las discapacidades disponibles
+        </FormHelperText>
+      </FormControl>
+
+      {/* Disability Selection */}
+      {selectedDisabilityGroups.length > 0 && (
+        <FormControl fullWidth sx={{ mb: 3 }}>
+          <Controller
+            name="disability"
+            control={control}
+            defaultValue={[]}
+            render={({ field, fieldState: { error } }) => (
+              <FormControl fullWidth error={!!error}>
+                <InputLabel id="disability-label" sx={{ fontSize: "1rem" }}>
+                  ¿Qué discapacidad tiene?
+                </InputLabel>
+                <Select
+                  labelId="disability-label"
+                  multiple
+                  {...field}
+                  input={<OutlinedInput label="¿Qué discapacidad tieneeee?   " />}
+                  renderValue={(selected) => (
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
+                      {selected.map((value) => {
+                        const disObj = disabilities.find((d) => d.id === value);
+                        return (
+                          <Chip
+                            key={value}
+                            label={disObj ? disObj.name : value}
+                            size="small"
+                          />
+                        );
+                      })}
+                    </Box>
+                  )}
+                >
+                  {filteredDisabilities.map((dis) => (
+                    <MenuItem key={dis.id} value={dis.id}>
+                      {dis.name}
+                    </MenuItem>
+                  ))}
+                </Select>
+                <FormHelperText>
+                  {error?.message || "Puedes seleccionar múltiples discapacidades de diferentes grupos"}
+                </FormHelperText>
+              </FormControl>
+            )}
+          />
+        </FormControl>
+      )}
+
       <FormControl
         component="fieldset"
         fullWidth
@@ -77,7 +231,6 @@ const MedicalInfoForm = () => {
               fullWidth
               label="Escribe el diagnóstico exacto que dice el certificado de discapacidad"
               placeholder="Escribe el diagnóstico"
-              // helperText="Si no tiene, déjalo en blanco."
               sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
               slotProps={{
                 htmlInput: {
@@ -241,7 +394,6 @@ const MedicalInfoForm = () => {
               fullWidth
               label="Especifica el motivo de su terapia psicológica"
               placeholder="Escribe el motivo"
-              // helperText="Si no tiene, déjalo en blanco."
               sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
               slotProps={{
                 htmlInput: {
@@ -293,7 +445,6 @@ const MedicalInfoForm = () => {
               fullWidth
               label="Especifica el motivo de su terapia psiquiátrica"
               placeholder="Escribe el motivo"
-              // helperText="Si no tiene, déjalo en blanco."
               sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
               slotProps={{
                 htmlInput: {
