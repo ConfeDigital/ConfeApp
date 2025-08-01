@@ -10,6 +10,7 @@ on:
       - stg
     paths:
       - 'backend/**'
+      - '.github/workflows/stg_confe-lin-webapp.yml'
   workflow_dispatch:
 
 jobs:
