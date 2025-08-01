@@ -24,7 +24,7 @@ import axios from '../api';
 const libraries = ['places'];
 const round6 = n => Math.round(n * 1e6) / 1e6;
 
-export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded }) {
+export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded, domicile=false }) {
   const { control, setValue, watch } = useFormContext();
   const ref = useRef(null);
   const postal = watch(`${prefix}.address_PC`);
@@ -41,7 +41,6 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded 
     language: 'es'
   });
 
-  const residenceType = watch("residence_type");
   const addressLat = watch("address_lat");
   const addressLng = watch("address_lng");
 
@@ -151,7 +150,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded 
             )}
           />
         </Grid>
-        {residenceType && (
+        {domicile && (
           <Grid xs={12} sm={8} sx={{ width: 223.667 }}>
             <FormControl fullWidth margin="dense">
               <InputLabel>Tipo de Residencia</InputLabel>
