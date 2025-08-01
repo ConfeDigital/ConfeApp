@@ -41,8 +41,8 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
     language: 'es'
   });
 
-  const addressLat = watch("address_lat");
-  const addressLng = watch("address_lng");
+  const addressLat = watch(`${prefix}.address_lat`);
+  const addressLng = watch(`${prefix}.address_lng`);
 
   const onPlaceChanged = () => {
     const place = ref.current.getPlace();
