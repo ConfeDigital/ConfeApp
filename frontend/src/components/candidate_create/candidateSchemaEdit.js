@@ -8,7 +8,7 @@ const medicationSchema = yup.object().shape({
 });
 
 const candidateSchema = yup.object().shape({
-  email: yup.string().email().required('El correo es obligatorio'),
+  email: yup.string().email('Debe ser un correo válido').required('El correo es obligatorio'),
   first_name: yup.string().required('El nombre es obligatorio'),
   last_name: yup.string().required('Los apellidos son obligatorios'),
   second_last_name: yup.string().required('Los apellidos son obligatorios'),
@@ -25,6 +25,7 @@ const candidateSchema = yup.object().shape({
   address_municip: yup.string().nullable(),
   address_state: yup.string().nullable(),
   address_col: yup.string().nullable(),
+  residence_type: yup.string().nullable(),
   has_disability_certificate: yup.boolean(),
   has_interdiction_judgment: yup.boolean(),
   receives_pension: yup.string().nullable(),
@@ -34,6 +35,7 @@ const candidateSchema = yup.object().shape({
   medications: yup.array().of(medicationSchema).nullable(),
   allergies: yup.string().nullable(),
   dietary_restrictions: yup.string().nullable(),
+  physical_restrictions: yup.string().nullable(),
   disability: yup.array().of(yup.number()).nullable(),
   cycle: yup.number().nullable(),
   emergency_contacts: yup.array().of(
@@ -42,6 +44,7 @@ const candidateSchema = yup.object().shape({
       last_name: yup.string().required('Los apellidos del contacto son obligatorios'),
       second_last_name: yup.string().required('Los apellidos del contacto son obligatorios'),
       phone_number: phoneNumberSchema,
+      email: yup.string().email('Debe ser un correo válido').required('El correo del contacto es obligatorio'),
       relationship: yup.string().required('La relación con el contacto es obligatoria')
       //domicile: yup.object().shape({
       //  address_PC: yup.string().required('El código postal del domicilio es obligatorio'),

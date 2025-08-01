@@ -18,6 +18,7 @@ const medicalSchema = yup.object().shape({
     .nullable(),
   allergies: yup.string().nullable(),
   dietary_restrictions: yup.string().nullable(),
+  physical_restrictions: yup.string().nullable(),
   // Validación de 'medications' como array
   medications: yup.array().of(
     yup.object().shape({

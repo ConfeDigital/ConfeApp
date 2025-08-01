@@ -139,6 +139,21 @@ const MedicalInfoForm = () => {
           )}
         />
       </Grid>
+      <Grid item xs={12} sm={4}>
+        <Controller
+          name="physical_restrictions"
+          control={control}
+          render={({ field, fieldState: { error } }) => (
+            <TextField
+              fullWidth
+              label="Restricciones físicas"
+              {...field}
+              error={!!error}
+              helperText={error ? error.message : null}
+            />
+          )}
+        />
+      </Grid>
       {/* Use the MedicationsForm component instead of a single text field */}
       <Grid item xs={12}>
         <MedicationsForm />

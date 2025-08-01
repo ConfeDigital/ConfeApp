@@ -13,8 +13,11 @@ import {
   FormProvider,
   useWatch,
 } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
 import axios from "../../api";
 import ContactFields from "../../pages/cuestionarios/elementos/ContactFields";
+import domicileSchema from "../../pages/cuestionarios/elementos/domicileSchema";
+import candidateSchema from "../candidate_create/candidateSchemaEdit";
 
 const Datos_contactos = ({
   usuarioId,
@@ -30,6 +33,7 @@ const Datos_contactos = ({
 
   // 1. Setup RHF
   const methods = useForm({
+    resolver: yupResolver(candidateSchema),
     defaultValues: { emergency_contacts: [] },
     mode: "onChange",
   });
