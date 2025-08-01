@@ -217,6 +217,17 @@ const CanalizacionCentro = ({
     return <Typography>Cargando información...</Typography>;
   }
 
+  if ( !candidate.domicile ) {
+    return (
+      <Box display="flex" sx={{ mt: 2 }}>
+        <WarningAmberIcon color="warning" sx={{ alignSelf: "center" }} />
+        <Typography variant="h6" color="warning" sx={{ ml: 1 }}>
+          El candidato no tiene su dirección de residencia almacenada, por favor verifíquela
+        </Typography>
+      </Box>
+    )
+  }
+
   const mapCenter = candidateLocation || defaultCenter;
 
   // Determine the current selection for the dropdown - either the newCenterId (in confirmation state),

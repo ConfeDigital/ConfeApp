@@ -42,6 +42,8 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded 
   });
 
   const residenceType = watch("residence_type");
+  const addressLat = watch("address_lat");
+  const addressLng = watch("address_lng");
 
   const onPlaceChanged = () => {
     const place = ref.current.getPlace();
@@ -127,7 +129,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded 
             name={`${prefix}.address_road`}
             control={control}
             render={({ field }) => (
-              <TextField {...field} fullWidth label="Calle" margin="dense" />
+              <TextField {...field} disabled={!addressLat || !addressLng} fullWidth label="Calle" margin="dense" />
             )}
           />
         </Grid>
@@ -136,7 +138,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded 
             name={`${prefix}.address_number`}
             control={control}
             render={({ field }) => (
-              <TextField {...field} fullWidth label="Número" margin="dense" />
+              <TextField {...field} disabled={!addressLat || !addressLng} fullWidth label="Número" margin="dense" />
             )}
           />
         </Grid>
@@ -145,7 +147,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded 
             name={`${prefix}.address_number_int`}
             control={control}
             render={({ field }) => (
-              <TextField {...field} fullWidth label="Número Interior" margin="dense" />
+              <TextField {...field} disabled={!addressLat || !addressLng} fullWidth label="Número Interior" margin="dense" />
             )}
           />
         </Grid>
@@ -156,6 +158,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded 
               <Controller
                 name={`${prefix}.residence_type`}
                 control={control}
+                disabled={!addressLat || !addressLng}
                 render={({ field }) => (
                   <Select {...field} label="Tipo de Residencia">
                     <MenuItem value="">No sé</MenuItem>
@@ -175,7 +178,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded 
             name={`${prefix}.address_PC`}
             control={control}
             render={({ field }) => (
-              <TextField {...field} fullWidth label="Código Postal" margin="dense" />
+              <TextField {...field} disabled={!addressLat || !addressLng} fullWidth label="Código Postal" margin="dense" />
             )}
           />
         </Grid>
@@ -185,6 +188,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded 
             <Controller
               name={`${prefix}.address_col`}
               control={control}
+              disabled={!addressLat || !addressLng}
               render={({ field }) => (
                 <Select {...field} label="Colonia">
                   {colonias.map((c, i) => (
