@@ -20,6 +20,7 @@ const CandidateMedicalEdit = ({
   const methods = useForm({
     resolver: yupResolver(medicalSchema),
     defaultValues: {
+      disability: [],
       has_disability_history: false,
       disability_history_details: "",
       has_disability_certificate: false,
@@ -95,6 +96,7 @@ const CandidateMedicalEdit = ({
         const parsedSeleccionOpcion = extractDetails(seleccionOpcion);
 
         reset({
+          disability: d.disability || [],
           has_disability_history: parsedSeleccionOpcion.has_disability_history,
           disability_history_details: parsedSeleccionOpcion.disability_history_details,
           has_disability_certificate: d.has_disability_certificate,
