@@ -20,6 +20,14 @@ class Cycle(models.Model):
         return f"Cycle from {self.start_date} to {self.end_date}"
     
 class Domicile(models.Model):
+    RESIDENCE_CHOICES = [
+        ('CASA', 'Casa'),
+        ('DEPARTAMENTO', 'Departamento'),
+        ('ALBERGUE', 'Albergue'),
+        ('INSTITUCION', 'Institución (asilo, centro de atención, etc.)'),
+        ('OTRO', 'Otro'),
+    ]
+
     address_road = models.CharField(max_length=50, null=True, blank=True)
     address_number = models.CharField(max_length=8, null=True, blank=True)
     address_number_int = models.CharField(max_length=8, null=True, blank=True)
@@ -30,6 +38,8 @@ class Domicile(models.Model):
     address_city = models.CharField(max_length=128, null=True, blank=True)
     address_lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     address_lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+
+    residence_type = models.CharField(max_length=50, choices=RESIDENCE_CHOICES, null=True, blank=True)
 
     def __str__(self):
         return f"{self.address_road}, {self.address_number}, {self.address_municip}, {self.address_city}, {self.address_state}"
@@ -59,6 +69,7 @@ class EmergencyContact(models.Model):
         max_length=15, 
         #validators=[RegexValidator(r'^\+?1?\d{9,15}$', 'Enter a valid phone number.')]
     )
+    email = models.EmailField(max_length=100, null=True, blank=True)
     lives_at_same_address = models.BooleanField(default=False)
     domicile = models.ForeignKey(Domicile, on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -142,6 +153,7 @@ class UserProfile(models.Model):
     medications = models.ManyToManyField(Medication, blank=True)
     allergies = models.TextField(blank=True, null=True)
     dietary_restrictions = models.TextField(blank=True, null=True)
+    physical_restrictions = models.TextField(blank=True, null=True)
     
     # Seizure Information
     has_seizures = models.BooleanField(default=False)

@@ -257,6 +257,7 @@ const EditarReporteConPDF = () => {
           ["Convulsiones", perfil.has_seizures ? "Sí" : "No"],
           ["Alergias", perfil.allergies || "Ninguna"],
           ["Restricciones alimenticias", perfil.dietary_restrictions || "Ninguna"],
+          ["Restricciones alimenticias", perfil.physical_restrictions || "Ninguna"],
           ["Tipo de sangre", perfil.blood_type || "No especificado"],
           ["Pensión", perfil.receives_pension ? "Sí" : "No"],
           ["Domicilio", domicilioTexto],

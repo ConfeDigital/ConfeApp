@@ -26,6 +26,7 @@ const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) =>
       address_col: "",
       address_state: "",
       address_city: "",
+      residence_type: "",
     },
     mode: "onChange",
   });
@@ -51,6 +52,7 @@ const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) =>
             address_col: data.address_col || "",
             address_state: data.address_state || "",
             address_city: data.address_city || "",
+            residence_type: data.residence_type || "",
           });
         } else {
           setError("No se encontró información del domicilio.");

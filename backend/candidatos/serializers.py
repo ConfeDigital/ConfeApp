@@ -38,16 +38,18 @@ class DomicileSerializer(serializers.ModelSerializer):
     address_lat = serializers.DecimalField(required=False, allow_null=True, max_digits=9, decimal_places=6)
     address_lng = serializers.DecimalField(required=False, allow_null=True, max_digits=9, decimal_places=6)
 
+    residence_type = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
     class Meta:
         model = Domicile
-        fields = ['id', 'address_road', 'address_number', 'address_number_int', 'address_PC', 'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng']
+        fields = ['id', 'address_road', 'address_number', 'address_number_int', 'address_PC', 'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng', 'residence_type']
 
 class EmergencyContactSerializer(serializers.ModelSerializer):
-    domicile = DomicileSerializer(required=False)  # Add required=False here
+    domicile = DomicileSerializer(required=False, allow_null=True)
 
     class Meta:
         model = EmergencyContact
-        fields = ['id', 'first_name', 'last_name', 'second_last_name', 'relationship', 'phone_number', 'lives_at_same_address', 'domicile']
+        fields = ['id', 'first_name', 'last_name', 'second_last_name', 'relationship', 'phone_number', 'email', 'lives_at_same_address', 'domicile']
         read_only_fields = ['user']
 
 class MedicationSerializer(serializers.ModelSerializer):
@@ -223,6 +225,7 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
     blood_type = serializers.ChoiceField(choices=UserProfile.BLOOD_TYPE_CHOICES, write_only=True, required=False)
     allergies = serializers.CharField(write_only=True, required=False, allow_blank=True)
     dietary_restrictions = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    physical_restrictions = serializers.CharField(write_only=True, required=False, allow_blank=True)
     
     # Domicile fields (optional)
     address_road = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -235,6 +238,8 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
     address_city = serializers.CharField(write_only=True, required=False, allow_blank=True)
     address_lat = serializers.DecimalField(required=False, allow_null=True, max_digits=9, decimal_places=6)
     address_lng = serializers.DecimalField(required=False, allow_null=True, max_digits=9, decimal_places=6)
+
+    residence_type = serializers.CharField(write_only=True, required=False, allow_blank=True, allow_null=True)
     
     # Additional fields for relationships:
     disability = serializers.ListField(
@@ -254,9 +259,9 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
             'birth_date', 'gender', 'blood_type', 'curp', 'phone_number',
             'stage', 'has_disability_certificate', 'has_interdiction_judgment',
             'receives_pension', 'receives_psychological_care', 'receives_psychiatric_care',
-            'has_seizures', 'medications', 'allergies', 'dietary_restrictions',
+            'has_seizures', 'medications', 'allergies', 'dietary_restrictions', 'physical_restrictions',
             'address_road', 'address_number', 'address_number_int', 'address_PC',
-            'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng',
+            'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng', 'residence_type',
             'disability', 'cycle', 'emergency_contacts', 'photo'
         ]
         extra_kwargs = {'password': {'write_only': True}}
@@ -266,7 +271,7 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
     
         # Extract nested domicile data
         domicile_fields = ['address_road', 'address_number', 'address_number_int', 'address_PC', 
-                           'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng']
+                           'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng', 'residence_type']
         domicile_data = {field: validated_data.pop(field, None) for field in domicile_fields}
         emergency_contacts_data = validated_data.pop('emergency_contacts', [])
         # NEW: Extract medications data (expected as a list of medication objects)
@@ -288,7 +293,7 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
             'birth_date', 'gender', 'blood_type', 'curp', 'phone_number', 'stage',
             'has_disability_certificate', 'has_interdiction_judgment', 'receives_pension',
             'receives_psychological_care', 'receives_psychiatric_care', 'has_seizures',
-            'allergies', 'dietary_restrictions'
+            'allergies', 'dietary_restrictions', 'physical_restrictions'
         ]
         profile_data = {field: validated_data.pop(field) for field in profile_fields if field in validated_data}
         profile_data['domicile'] = domicile
@@ -379,6 +384,7 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
     blood_type = serializers.ChoiceField(choices=UserProfile.BLOOD_TYPE_CHOICES, write_only=True, required=False)
     allergies = serializers.CharField(write_only=True, required=False, allow_blank=True)
     dietary_restrictions = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    physical_restrictions = serializers.CharField(write_only=True, required=False, allow_blank=True)
     
     address_road = serializers.CharField(write_only=True, required=False, allow_blank=True)
     address_number = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -391,6 +397,8 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
     address_lat = serializers.DecimalField(required=False, allow_null=True, max_digits=9, decimal_places=6)
     address_lng = serializers.DecimalField(required=False, allow_null=True, max_digits=9, decimal_places=6)
     
+    residence_type = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
     disability = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
     cycle = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     emergency_contacts = EmergencyContactSerializer(many=True, required=False)
@@ -405,9 +413,9 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
             'birth_date', 'gender', 'blood_type', 'curp', 'phone_number',
             'stage', 'has_disability_certificate', 'has_interdiction_judgment',
             'receives_pension', 'receives_psychological_care', 'receives_psychiatric_care',
-            'has_seizures', 'medications', 'allergies', 'dietary_restrictions',
+            'has_seizures', 'medications', 'allergies', 'dietary_restrictions', 'physical_restrictions',
             'address_road', 'address_number', 'address_number_int', 'address_PC',
-            'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng',
+            'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng', 'residence_type',
             'disability', 'cycle', 'emergency_contacts', 'agency_state',
         ]
 
@@ -437,11 +445,12 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
         # Remove the direct assignment of medications here (since it's now a relation)
         profile.allergies = validated_data.get('allergies', profile.allergies)
         profile.dietary_restrictions = validated_data.get('dietary_restrictions', profile.dietary_restrictions)
+        profile.physical_restrictions = validated_data.get('physical_restrictions', profile.physical_restrictions)
         profile.agency_state = validated_data.get('agency_state', profile.agency_state)
 
         # Update domicile fields (as before)
         domicile_fields = ['address_road', 'address_number', 'address_number_int',
-                           'address_PC', 'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng']
+                           'address_PC', 'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng', 'residence_type']
         domicile_data = {field: validated_data.get(field) for field in domicile_fields if field in validated_data}
         if domicile_data:
             if profile.domicile:
@@ -648,6 +657,7 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
                     second_last_name=user.second_last_name,
                     relationship=tutor_relationship.upper(),
                     phone_number=validated_data.get("phone_number", ""),
+                    email=validated_data.get("email", ""),
                     lives_at_same_address=True,
                     domicile=domicile
                 )
@@ -754,7 +764,8 @@ class DomicileUpdateSerializer(serializers.ModelSerializer):
             "address_state",
             "address_city",
             "address_lat",
-            "address_lng"
+            "address_lng",
+            "residence_type"
         ]
 
     def update(self, instance, validated_data):
@@ -779,6 +790,7 @@ class EmergencyContactSerializer(serializers.ModelSerializer):
             "second_last_name",
             "relationship",
             "phone_number",
+            "email",
             "lives_at_same_address",
             "domicile",
         ]
@@ -822,6 +834,7 @@ class EmergencyContactSerializer(serializers.ModelSerializer):
 #             "medications",
 #             "allergies",
 #             "dietary_restrictions",
+#             "physical_restrictions",
 #             "blood_type",
 #             "disability"
 #         ]
@@ -842,6 +855,7 @@ class DatosMedicosSerializer(serializers.ModelSerializer):
             "medications",                  # <-- array de objetos
             "allergies",
             "dietary_restrictions",
+            "physical_restrictions",
             "blood_type",
             "disability"
         ]

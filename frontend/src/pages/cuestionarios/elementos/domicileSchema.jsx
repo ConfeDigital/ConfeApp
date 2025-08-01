@@ -12,6 +12,7 @@ const domicileSchema = yup.object().shape({
   address_col: yup.string().required("La colonia es requerida"),
   address_state: yup.string().required("El estado es requerido"),
   address_city: yup.string().required("La ciudad es requerida"),
+  residence_type: yup.string().required("El tipo de residencia es requerido"),
 });
 
 export default domicileSchema;

@@ -28,6 +28,7 @@ const MedicalInfoForm = () => {
   const hasPsychologicalDetailsValue = watch("receives_psychological_care");
   const hasPsychiatricCareValue = watch("receives_psychiatric_care");
   const hasDisabilityCertificate = watch("has_disability_certificate");
+  const hasDisabilityHistory = watch("has_disability_history");
 
   return (
     <Box sx={{ p: { xs: 0, s: 2 } }}>
@@ -77,6 +78,66 @@ const MedicalInfoForm = () => {
               label="Escribe el diagnóstico exacto que dice el certificado de discapacidad"
               placeholder="Escribe el diagnóstico"
               // helperText="Si no tiene, déjalo en blanco."
+              sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
+              slotProps={{
+                htmlInput: {
+                  style: { fontSize: '1rem' }
+                },
+                inputLabel: {
+                  style: { fontSize: '1rem' }
+                },
+              }}
+            />
+          )}
+        />
+      )}
+
+      <FormControl
+        component="fieldset"
+        fullWidth
+        sx={{ mb: 3 }}
+        error={!!errors.has_disability_history}
+      >
+        <FormLabel component="legend" sx={{ fontSize: "1rem" }}>
+          ¿Tiene algún familiar con discapacidad?
+        </FormLabel>
+        <Controller
+          name="has_disability_history"
+          control={control}
+          defaultValue={false}
+          render={({ field }) => (
+            <RadioGroup 
+              row 
+              {...field}
+              onChange={(event) => field.onChange(event.target.value === "true")}
+            >
+              {yesNoOptions.map((opt) => (
+                <FormControlLabel
+                  key={opt.value.toString()}
+                  value={opt.value}
+                  control={<Radio size="small" />}
+                  label={opt.label}
+                />
+              ))}
+            </RadioGroup>
+          )}
+        />
+        <FormHelperText>
+          {errors.has_disability_history?.message}
+        </FormHelperText>
+      </FormControl>
+
+      {hasDisabilityHistory && (
+        <Controller
+          name="disability_history_details"
+          control={control}
+          render={({ field }) => (
+            <TextField
+              {...field}
+              fullWidth
+              label="Explica quién en su familia y qué tipo de discapacidad"
+              placeholder="Explica"
+              helperText='Si no tiene, responde "No" en la pregunta anterior.'
               sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
               slotProps={{
                 htmlInput: {
@@ -363,6 +424,29 @@ const MedicalInfoForm = () => {
             fullWidth
             label="¿Tiene restricciones alimentarias?"
             placeholder="Escribe tu restricción (p.ej. sin gluten)"
+            helperText="Si no tiene, déjalo en blanco."
+            sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
+            slotProps={{
+              htmlInput: {
+                style: { fontSize: '1rem' }
+              },
+              inputLabel: {
+                style: { fontSize: '1rem' }
+              },
+            }}
+          />
+        )}
+      />
+
+      <Controller
+        name="physical_restrictions"
+        control={control}
+        render={({ field }) => (
+          <TextField
+            {...field}
+            fullWidth
+            label="¿Tiene restricciones físicas?"
+            placeholder="Escribe tu restricción (p.ej. no poder cargar articulos pesados)"
             helperText="Si no tiene, déjalo en blanco."
             sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
             slotProps={{

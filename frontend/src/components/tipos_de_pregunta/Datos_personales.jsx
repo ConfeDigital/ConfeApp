@@ -55,6 +55,7 @@ const Datos_personales = ({
       address_col: "",
       address_state: "",
       address_city: "",
+      residence_type: "",
       emergency_contacts: [],
       has_disability_certificate: false,
       has_interdiction_judgment: false,
@@ -65,6 +66,7 @@ const Datos_personales = ({
       medications: "",
       allergies: "",
       dietary_restrictions: "",
+      physical_restrictions: "",
       disability: [],
       photo: undefined,
     },
@@ -101,6 +103,7 @@ const Datos_personales = ({
           address_col: data.domicile ? data.domicile.address_col : "",
           address_state: data.domicile ? data.domicile.address_state : "",
           address_city: data.domicile ? data.domicile.address_city : "",
+          residence_type: data.domicile ? data.domicile.residence_type : "",
           emergency_contacts: data.emergency_contacts
             ? data.emergency_contacts.map((contact) => ({
                 id: contact.id,
@@ -109,6 +112,7 @@ const Datos_personales = ({
                 second_last_name: contact.second_last_name,
                 relationship: contact.relationship,
                 phone_number: contact.phone_number,
+                email: contact.email,
                 lives_at_same_address: contact.lives_at_same_address,
                 domicile: contact.domicile || {
                   address_PC: "",
@@ -119,6 +123,7 @@ const Datos_personales = ({
                   address_col: "",
                   address_number: "",
                   address_number_int: "",
+                  residence_type: "",
                 },
               }))
             : [],
@@ -131,6 +136,7 @@ const Datos_personales = ({
           medications: data.medications || "",
           allergies: data.allergies || "",
           dietary_restrictions: data.dietary_restrictions || "",
+          physical_restrictions: data.physical_restrictions || "",
           disability: data.disability || [],
           photo: data.photo || null,
         };

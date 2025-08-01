@@ -149,7 +149,7 @@ def generate_ficha_tecnica(uid, profile, respuestas):
             relationship = dict(contact.RELATIONSHIP_CHOICES).get(contact.relationship, "N/A")
             address = contact.domicile.__str__() if contact.domicile else "N/A"
             lives_same = "Sí" if contact.lives_at_same_address else "No"
-            contact_str = f"{name} ({relationship}) - Tel: {contact.phone_number} - Mismo domicilio: {lives_same} - Dirección: {address}"
+            contact_str = f"{name} ({relationship}) - Tel: {contact.phone_number} - Correo Electrónico: {contact.email} - Mismo domicilio: {lives_same} - Dirección: {address}"
             elements.append(Paragraph(contact_str, normal_style))
     else:
         elements.append(Paragraph("N/A", normal_style))

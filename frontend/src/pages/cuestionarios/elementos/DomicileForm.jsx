@@ -190,6 +190,24 @@ const DomicileForm = ({ setDomicileFormLoaded }) => {
           )}
         />
       </Grid>
+      <Grid xs={12} sm={8} sx={{ width: 223.667 }}>
+          <FormControl fullWidth margin="dense">
+            <InputLabel>Tipo de Residencia</InputLabel>
+            <Controller
+              name="residence_type"
+              control={control}
+              render={({ field }) => (
+                <Select {...field} label="Tipo de Residencia">
+                    <MenuItem value="CASA">Casa</MenuItem>
+                    <MenuItem value="DEPARTAMENTO">Departamento</MenuItem>
+                    <MenuItem value="ALBERGUE">Albergue</MenuItem>
+                    <MenuItem value="INSTITUCION">Institución (asilo, centro de atención, etc.)</MenuItem>
+                    <MenuItem value="Otro">Otro</MenuItem>
+                </Select>
+              )}
+            />
+          </FormControl>
+        </Grid>
     </Grid>
   );
 };

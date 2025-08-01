@@ -46,6 +46,7 @@ const DetailSection = ({ candidateProfile }) => {
     ],
     ['Alergias', candidateProfile.allergies || <Typography component="span" color="text.secondary">N/A</Typography>],
     ['Restricciones Dietéticas', candidateProfile.dietary_restrictions || <Typography component="span" color="text.secondary">N/A</Typography>],
+    ['Restricciones Físicas', candidateProfile.physical_restrictions || <Typography component="span" color="text.secondary">N/A</Typography>],
   ];
 
   // Additional info

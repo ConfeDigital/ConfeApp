@@ -58,6 +58,15 @@ const ContactList = ({ emergency_contacts }) => {
                       {formatCanonicalPhoneNumber(contact.phone_number)}
                     </Link>
                   </Typography>
+                  <Typography variant="body2">
+                    Correo Electrónico:{" "}
+                    <Link
+                      href={`email:${contact.phone_number}`}
+                      sx={{ fontWeight: "bold" }}
+                    >
+                      {contact.email}
+                    </Link>
+                  </Typography>
                   {contact.lives_at_same_address ? (
                     <Typography variant="body2">
                       Vive en la misma dirección

@@ -20,6 +20,8 @@ const CandidateMedicalEdit = ({
   const methods = useForm({
     resolver: yupResolver(medicalSchema),
     defaultValues: {
+      has_disability_history: false,
+      disability_history_details: "",
       has_disability_certificate: false,
       disability_certificate_details: "",
       has_interdiction_judgment: false,
@@ -34,6 +36,7 @@ const CandidateMedicalEdit = ({
       medications: [],
       allergies: "",
       dietary_restrictions: "",
+      physical_restrictions: "",
     },
     mode: "onChange",
   });
@@ -55,11 +58,13 @@ const CandidateMedicalEdit = ({
             psychological_care_details: "",
             psychiatric_care_details: "",
             disability_certificate_details: "",
+            has_disability_history: false,
+            disability_history_details: "",
           };
 
           // Use a more comprehensive regex to capture all fields
           const fullRegex =
-            /convulsiones:\s*(.*?)(?:,|$)|psicológico:\s*(.*?)(?:,|$)|psiquiátrico:\s*(.*?)(?:,|$)|certificado:\s*(.*?)(?:,|$)/g;
+            /convulsiones:\s*(.*?)(?:,|$)|psicológico:\s*(.*?)(?:,|$)|psiquiátrico:\s*(.*?)(?:,|$)|certificado:\s*(.*?)(?:,|$)|historial_discapacidad:\s*(.*?)(?:,|$)|historial_discapacidad_explicación:\s*(.*?)(?:,|$)/g;
           let match;
 
           while ((match = fullRegex.exec(inputString)) !== null) {
@@ -75,6 +80,13 @@ const CandidateMedicalEdit = ({
             } else if (match[4]) {
               // certificado
               details.disability_certificate_details = match[4].trim();
+            } else if (match[5]) {
+              // historial discapacidad
+              const val = match[5].trim();
+              details.has_disability_history = val === "true";
+            } else if (match[6]) {
+              // historial discapacidad explicación
+              details.disability_history_details = match[6].trim();
             }
           }
           return details;
@@ -83,6 +95,8 @@ const CandidateMedicalEdit = ({
         const parsedSeleccionOpcion = extractDetails(seleccionOpcion);
 
         reset({
+          has_disability_history: parsedSeleccionOpcion.has_disability_history,
+          disability_history_details: parsedSeleccionOpcion.disability_history_details,
           has_disability_certificate: d.has_disability_certificate,
           disability_certificate_details: parsedSeleccionOpcion.disability_certificate_details,
           has_interdiction_judgment: d.has_interdiction_judgment,
@@ -100,6 +114,7 @@ const CandidateMedicalEdit = ({
           medications: d.medications || [],
           allergies: d.allergies || "",
           dietary_restrictions: d.dietary_restrictions || "",
+          physical_restrictions: d.physical_restrictions || "",
         });
       })
       .catch((e) => {
@@ -117,7 +132,7 @@ const CandidateMedicalEdit = ({
       setAutoSave(true);
       try {
         setSeleccionOpcion(
-          `respondido-> convulsiones:${watchedValues.last_seizure}, psicológico:${watchedValues.psychological_care_details}, psiquiátrico:${watchedValues.psychiatric_care_details}, certificado:${watchedValues.disability_certificate_details}`
+          `respondido-> convulsiones:${watchedValues.last_seizure}, psicológico:${watchedValues.psychological_care_details}, psiquiátrico:${watchedValues.psychiatric_care_details}, certificado:${watchedValues.disability_certificate_details}, historial_discapacidad:${watchedValues.has_disability_history}, historial_discapacidad_explicación:${watchedValues.disability_history_details}`
         );
         await axios.put(
           `/api/candidatos/${usuarioId}/datos-medicos/`,

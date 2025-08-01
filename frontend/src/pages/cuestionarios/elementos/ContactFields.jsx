@@ -192,6 +192,21 @@ const ContactFields = () => {
               size="small"
             />
           </Grid>
+          <Grid xs={12} sm={4}>
+            <Controller
+              name={`emergency_contacts.${index}.email`}
+              control={control}
+              render={({ field, fieldState: { error } }) => (
+                <TextField
+                  fullWidth
+                  label="Correo Electrónico"
+                  {...field}
+                  error={!!error}
+                  helperText={error ? error.message : null}
+                />
+              )}
+            />
+          </Grid>
         </Grid>
 
         <Grid xs={12}>
@@ -250,6 +265,7 @@ const ContactFields = () => {
                 second_last_name: "",
                 relationship: "",
                 phone_number: "",
+                email: "",
                 lives_at_same_address: true,
                 domicile: {
                   address_PC: "",
@@ -260,6 +276,7 @@ const ContactFields = () => {
                   address_col: "",
                   address_number: "",
                   address_number_int: "",
+                  residence_type: "",
                 },
               })
             }
