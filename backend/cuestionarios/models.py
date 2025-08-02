@@ -196,19 +196,53 @@ class Respuesta(models.Model):
     
         # Check for unlocked questions - only for specific question types
         if self.pregunta.tipo in ['multiple', 'checkbox', 'binaria']:
+            print(f"🔍 === PROCESANDO DESBLOQUEOS EN MODELO ===")
+            print(f"🔍 Pregunta ID: {self.pregunta.id}")
+            print(f"🔍 Texto de la pregunta: {self.pregunta.texto}")
+            print(f"🔍 Tipo de pregunta: {self.pregunta.tipo}")
+            print(f"🔍 Respuesta: {self.respuesta}")
+            print(f"🔍 Tipo de respuesta: {type(self.respuesta)}")
+            
             try:
+                # First, remove all existing unlocked questions for this pregunta_origen
+                # to handle changes in responses
+                desbloqueos_existentes = DesbloqueoPregunta.objects.filter(
+                    cuestionario=self.cuestionario,
+                    pregunta_origen=self.pregunta
+                )
+                
+                print(f"🗑️ Desbloqueos existentes encontrados: {desbloqueos_existentes.count()}")
+                
+                # Get all questions that were unlocked by this pregunta_origen
+                preguntas_desbloqueadas = []
+                for desbloqueo in desbloqueos_existentes:
+                    preguntas_desbloqueadas.append(desbloqueo.pregunta_desbloqueada)
+                    print(f"🗑️ Pregunta desbloqueada existente: {desbloqueo.pregunta_desbloqueada.texto}")
+                
+                # Remove responses for questions that were unlocked by this pregunta_origen
+                if preguntas_desbloqueadas:
+                    respuestas_eliminadas = Respuesta.objects.filter(
+                        usuario=self.usuario,
+                        cuestionario=self.cuestionario,
+                        pregunta__in=preguntas_desbloqueadas
+                    ).delete()
+                    print(f"🗑️ Respuestas eliminadas: {respuestas_eliminadas}")
+                
                 # Handle different response formats safely
                 respuesta_valor = None
                 
                 # Handle different types of responses
                 if isinstance(self.respuesta, (int, float)):
                     respuesta_valor = int(self.respuesta)
+                    print(f"🔘 Respuesta es número: {respuesta_valor}")
                 elif isinstance(self.respuesta, str):
                     # Only process if it's a numeric string
                     if self.respuesta.strip().isdigit():
                         respuesta_valor = int(self.respuesta)
+                        print(f"🔘 Respuesta es string numérico: {respuesta_valor}")
                     else:
                         # For non-numeric strings, skip processing
+                        print(f"❌ Respuesta es string no numérico: {self.respuesta}")
                         return
                 elif isinstance(self.respuesta, dict):
                     # For JSON responses, check if there's a 'valor' key
@@ -216,50 +250,86 @@ class Respuesta(models.Model):
                     if respuesta_valor is not None:
                         try:
                             respuesta_valor = int(respuesta_valor)
+                            print(f"🔘 Respuesta es dict con valor: {respuesta_valor}")
                         except (ValueError, TypeError):
+                            print(f"❌ Error convirtiendo valor de dict: {respuesta_valor}")
                             return
+                    else:
+                        print(f"❌ Dict sin clave 'valor': {self.respuesta}")
+                        return
                 elif isinstance(self.respuesta, list) and len(self.respuesta) > 0:
                     # For array responses, try to get the first numeric value
                     try:
                         first_val = self.respuesta[0]
                         if isinstance(first_val, (int, float)):
                             respuesta_valor = int(first_val)
+                            print(f"🔘 Respuesta es array con primer valor numérico: {respuesta_valor}")
                         elif isinstance(first_val, str) and first_val.isdigit():
                             respuesta_valor = int(first_val)
+                            print(f"🔘 Respuesta es array con primer valor string numérico: {respuesta_valor}")
+                        else:
+                            print(f"❌ Array con primer valor no numérico: {first_val}")
+                            return
                     except (IndexError, ValueError, TypeError):
+                        print(f"❌ Error procesando array: {self.respuesta}")
                         return
                 
                 # Skip if we couldn't extract a valid numeric value
                 if respuesta_valor is None:
+                    print("❌ No se pudo extraer un valor numérico válido")
                     return
     
+                print(f"🔘 Valor final de respuesta: {respuesta_valor}")
+                print(f"🔘 Tipo de respuesta_valor: {type(respuesta_valor)}")
+                
                 # Find selected options
                 opciones_seleccionadas = Opcion.objects.filter(
                     pregunta=self.pregunta,
                     valor=respuesta_valor
                 )
+                
+                print(f"🔘 Opciones encontradas para valor {respuesta_valor}: {opciones_seleccionadas.count()}")
+                
+                # Verificar todas las opciones disponibles
+                todas_opciones = Opcion.objects.filter(pregunta=self.pregunta)
+                print(f"🔘 Todas las opciones disponibles:")
+                for op in todas_opciones:
+                    print(f"  - ID: {op.id}, Valor: {op.valor}, Texto: {op.texto}")
+                    print(f"    Comparando: op.valor ({op.valor}) == respuesta_valor ({respuesta_valor}) = {op.valor == respuesta_valor}")
+                
+                for opcion in opciones_seleccionadas:
+                    print(f"🔘 Opción encontrada: {opcion.texto} (ID: {opcion.id}, valor: {opcion.valor})")
     
                 # Unlock questions based on selected options
                 for opcion_seleccionada in opciones_seleccionadas:
+                    print(f"🔘 Procesando opción: {opcion_seleccionada.texto}")
                     desbloqueos = DesbloqueoPregunta.objects.filter(
                         cuestionario=self.cuestionario,
                         pregunta_origen=self.pregunta,
                         opcion_desbloqueadora=opcion_seleccionada
                     )
+                    print(f"🔘 Desbloqueos encontrados para esta opción: {desbloqueos.count()}")
     
                     for desbloqueo in desbloqueos:
-                        print(f"Pregunta desbloqueada: {desbloqueo.pregunta_desbloqueada.texto}")
+                        print(f"🔓 Desbloqueando pregunta: {desbloqueo.pregunta_desbloqueada.texto}")
                         # Create an empty response for the unlocked question
                         # Use None instead of empty string to avoid constraint issues
-                        Respuesta.objects.get_or_create(
-                            usuario=self.usuario,
-                            cuestionario=self.cuestionario,
-                            pregunta=desbloqueo.pregunta_desbloqueada,
-                            defaults={'respuesta': None}
-                        )
+                        try:
+                            resp_desbloqueada, created = Respuesta.objects.get_or_create(
+                                usuario=self.usuario,
+                                cuestionario=self.cuestionario,
+                                pregunta=desbloqueo.pregunta_desbloqueada,
+                                defaults={'respuesta': None}
+                            )
+                            print(f"🔓 Respuesta de desbloqueo creada: {created}")
+                        except Exception as e:
+                            print(f"❌ Error al crear respuesta de desbloqueo: {e}")
+                            continue
+                            
+                print("🔍 === FIN PROCESANDO DESBLOQUEOS EN MODELO ===\n")
             except (ValueError, TypeError, Opcion.DoesNotExist) as e:
                 # Handle any conversion errors gracefully
-                print(f"Error in save method unlock logic: {e}")
+                print(f"❌ Error in save method unlock logic: {e}")
                 pass
 
 class EstadoCuestionario(models.Model):

@@ -283,47 +283,77 @@ class RespuestasGuardadas(APIView):
                 # Process unlocking logic (your existing code with minor improvements)
                 if pregunta.tipo != 'abierta':
                     print("=== PROCESANDO DESBLOQUEOS ===")
+                    print(f"🔍 Pregunta ID: {pregunta.id}")
+                    print(f"🔍 Texto de la pregunta: {pregunta.texto}")
+                    print(f"🔍 Tipo de pregunta: {pregunta.tipo}")
+                    print(f"🔍 Respuesta recibida: {respuesta_limpia}")
+                    print(f"🔍 Tipo de respuesta: {type(respuesta_limpia)}")
+                    
                     try:
+                        # First, remove all existing unlocked questions for this pregunta_origen
+                        # to handle changes in responses
+                        desbloqueos_existentes = DesbloqueoPregunta.objects.filter(
+                            cuestionario=cuestionario,
+                            pregunta_origen=pregunta
+                        )
+                        
+                        print(f"🗑️ Desbloqueos existentes encontrados: {desbloqueos_existentes.count()}")
+                        
+                        # Get all questions that were unlocked by this pregunta_origen
+                        preguntas_desbloqueadas = []
+                        for desbloqueo in desbloqueos_existentes:
+                            preguntas_desbloqueadas.append(desbloqueo.pregunta_desbloqueada)
+                            print(f"🗑️ Pregunta desbloqueada existente: {desbloqueo.pregunta_desbloqueada.texto}")
+                        
+                        # Remove responses for questions that were unlocked by this pregunta_origen
+                        if preguntas_desbloqueadas:
+                            respuestas_eliminadas = Respuesta.objects.filter(
+                                usuario=usuario,
+                                cuestionario=cuestionario,
+                                pregunta__in=preguntas_desbloqueadas
+                            ).delete()
+                            print(f"🗑️ Respuestas eliminadas: {respuestas_eliminadas}")
+                        
                         if pregunta.tipo == 'checkbox':
-                            print("Procesando pregunta tipo CHECKBOX")
+                            print("🔘 Procesando pregunta tipo CHECKBOX")
                             
                             todas_opciones = Opcion.objects.filter(pregunta=pregunta)
-                            print(f"Todas las opciones disponibles para la pregunta {pregunta.id}:")
+                            print(f"🔘 Todas las opciones disponibles para la pregunta {pregunta.id}:")
                             for op in todas_opciones:
                                 print(f"  - ID: {op.id}, Valor: {op.valor}, Texto: {op.texto}")
                             
                             if isinstance(respuesta_limpia, str):
                                 try:
                                     opciones_seleccionadas = json.loads(respuesta_limpia)
-                                    print(f"Opciones seleccionadas (JSON parseado): {opciones_seleccionadas}")
+                                    print(f"🔘 Opciones seleccionadas (JSON parseado): {opciones_seleccionadas}")
                                 except json.JSONDecodeError:
                                     opciones_seleccionadas = []
-                                    print("Error al parsear JSON, opciones_seleccionadas = []")
+                                    print("❌ Error al parsear JSON, opciones_seleccionadas = []")
                             else:
                                 opciones_seleccionadas = respuesta_limpia if isinstance(respuesta_limpia, list) else []
-                                print(f"Opciones seleccionadas (directo): {opciones_seleccionadas}")
+                                print(f"🔘 Opciones seleccionadas (directo): {opciones_seleccionadas}")
 
-                            print(f"Total de opciones seleccionadas: {len(opciones_seleccionadas)}")
+                            print(f"🔘 Total de opciones seleccionadas: {len(opciones_seleccionadas)}")
 
                             for valor in opciones_seleccionadas:
-                                print(f"Procesando valor: {valor}")
+                                print(f"🔘 Procesando valor: {valor}")
                                 opciones = Opcion.objects.filter(
                                     pregunta=pregunta,
                                     id=valor
                                 )
-                                print(f"Opciones encontradas para ID {valor}: {opciones.count()}")
+                                print(f"🔘 Opciones encontradas para ID {valor}: {opciones.count()}")
                                 
                                 for opcion in opciones:
-                                    print(f"Procesando opción: {opcion.texto} (ID: {opcion.id}, valor: {opcion.valor})")
+                                    print(f"🔘 Procesando opción: {opcion.texto} (ID: {opcion.id}, valor: {opcion.valor})")
                                     desbloqueos = DesbloqueoPregunta.objects.filter(
                                         cuestionario=cuestionario,
                                         pregunta_origen=pregunta,
                                         opcion_desbloqueadora=opcion
                                     )
-                                    print(f"Desbloqueos encontrados para esta opción: {desbloqueos.count()}")
+                                    print(f"🔘 Desbloqueos encontrados para esta opción: {desbloqueos.count()}")
                                     
                                     for desbloqueo in desbloqueos:
-                                        print(f"Desbloqueando pregunta: {desbloqueo.pregunta_desbloqueada.texto}")
+                                        print(f"🔓 Desbloqueando pregunta: {desbloqueo.pregunta_desbloqueada.texto}")
                                         try:
                                             resp_desbloqueada, created_desbloqueo = Respuesta.objects.get_or_create(
                                                 usuario=usuario,
@@ -331,31 +361,46 @@ class RespuestasGuardadas(APIView):
                                                 pregunta=desbloqueo.pregunta_desbloqueada,
                                                 defaults={'respuesta': None}  # Use None instead of empty string
                                             )
-                                            print(f"Respuesta de desbloqueo creada: {created_desbloqueo}")
+                                            print(f"🔓 Respuesta de desbloqueo creada: {created_desbloqueo}")
                                         except IntegrityError as e:
-                                            print(f"Error al crear respuesta de desbloqueo: {e}")
+                                            print(f"❌ Error al crear respuesta de desbloqueo: {e}")
                                             continue
 
-                        else:
-                            print(f"Procesando pregunta tipo: {pregunta.tipo}")
+                        elif pregunta.tipo in ['multiple', 'dropdown']:
+                            print(f"🔘 Procesando pregunta tipo: {pregunta.tipo}")
+                            
+                            # Mostrar todas las opciones disponibles
+                            todas_opciones = Opcion.objects.filter(pregunta=pregunta)
+                            print(f"🔘 Todas las opciones disponibles:")
+                            for op in todas_opciones:
+                                print(f"  - ID: {op.id}, Valor: {op.valor}, Texto: {op.texto}")
+                            
                             if isinstance(respuesta_limpia, (str, int)) and str(respuesta_limpia).isdigit():
+                                valor_respuesta = int(respuesta_limpia)
+                                print(f"🔘 Buscando opción con valor: {valor_respuesta}")
+                                print(f"🔘 Tipo de valor_respuesta: {type(valor_respuesta)}")
+                                
                                 opciones_seleccionadas = Opcion.objects.filter(
                                     pregunta=pregunta,
-                                    valor=int(respuesta_limpia)
+                                    valor=valor_respuesta
                                 )
-                                print(f"Opciones encontradas para respuesta {respuesta_limpia}: {opciones_seleccionadas.count()}")
+                                print(f"🔘 Opciones encontradas para respuesta {respuesta_limpia}: {opciones_seleccionadas.count()}")
+                                
+                                # Verificar cada opción individualmente
+                                for op in todas_opciones:
+                                    print(f"🔘 Comparando: op.valor ({op.valor}) == valor_respuesta ({valor_respuesta}) = {op.valor == valor_respuesta}")
 
                                 for opcion_seleccionada in opciones_seleccionadas:
-                                    print(f"Procesando opción: {opcion_seleccionada.texto}")
+                                    print(f"🔘 Procesando opción: {opcion_seleccionada.texto} (ID: {opcion_seleccionada.id}, valor: {opcion_seleccionada.valor})")
                                     desbloqueos = DesbloqueoPregunta.objects.filter(
                                         cuestionario=cuestionario,
                                         pregunta_origen=pregunta,
                                         opcion_desbloqueadora=opcion_seleccionada
                                     )
-                                    print(f"Desbloqueos encontrados: {desbloqueos.count()}")
+                                    print(f"🔘 Desbloqueos encontrados: {desbloqueos.count()}")
 
                                     for desbloqueo in desbloqueos:
-                                        print(f"Desbloqueando pregunta: {desbloqueo.pregunta_desbloqueada.texto}")
+                                        print(f"🔓 Desbloqueando pregunta: {desbloqueo.pregunta_desbloqueada.texto}")
                                         try:
                                             resp_desbloqueada, created_desbloqueo = Respuesta.objects.get_or_create(
                                                 usuario=usuario,
@@ -363,15 +408,60 @@ class RespuestasGuardadas(APIView):
                                                 pregunta=desbloqueo.pregunta_desbloqueada,
                                                 defaults={'respuesta': None}  # Use None instead of empty string
                                             )
-                                            print(f"Respuesta de desbloqueo creada: {created_desbloqueo}")
+                                            print(f"🔓 Respuesta de desbloqueo creada: {created_desbloqueo}")
                                         except IntegrityError as e:
-                                            print(f"Error al crear respuesta de desbloqueo: {e}")
+                                            print(f"❌ Error al crear respuesta de desbloqueo: {e}")
                                             continue
                             else:
-                                print(f"Respuesta no es un número válido: {respuesta_limpia}")
+                                print(f"❌ Respuesta no es un número válido: {respuesta_limpia}")
+                                print(f"❌ Tipo de respuesta_limpia: {type(respuesta_limpia)}")
+
+                        else:
+                            print(f"🔘 Procesando pregunta tipo: {pregunta.tipo}")
+                            
+                            # Mostrar todas las opciones disponibles
+                            todas_opciones = Opcion.objects.filter(pregunta=pregunta)
+                            print(f"🔘 Todas las opciones disponibles:")
+                            for op in todas_opciones:
+                                print(f"  - ID: {op.id}, Valor: {op.valor}, Texto: {op.texto}")
+                            
+                            if isinstance(respuesta_limpia, (str, int)) and str(respuesta_limpia).isdigit():
+                                valor_respuesta = int(respuesta_limpia)
+                                print(f"🔘 Buscando opción con valor: {valor_respuesta}")
+                                
+                                opciones_seleccionadas = Opcion.objects.filter(
+                                    pregunta=pregunta,
+                                    valor=valor_respuesta
+                                )
+                                print(f"🔘 Opciones encontradas para respuesta {respuesta_limpia}: {opciones_seleccionadas.count()}")
+
+                                for opcion_seleccionada in opciones_seleccionadas:
+                                    print(f"🔘 Procesando opción: {opcion_seleccionada.texto} (ID: {opcion_seleccionada.id}, valor: {opcion_seleccionada.valor})")
+                                    desbloqueos = DesbloqueoPregunta.objects.filter(
+                                        cuestionario=cuestionario,
+                                        pregunta_origen=pregunta,
+                                        opcion_desbloqueadora=opcion_seleccionada
+                                    )
+                                    print(f"🔘 Desbloqueos encontrados: {desbloqueos.count()}")
+
+                                    for desbloqueo in desbloqueos:
+                                        print(f"🔓 Desbloqueando pregunta: {desbloqueo.pregunta_desbloqueada.texto}")
+                                        try:
+                                            resp_desbloqueada, created_desbloqueo = Respuesta.objects.get_or_create(
+                                                usuario=usuario,
+                                                cuestionario=cuestionario,
+                                                pregunta=desbloqueo.pregunta_desbloqueada,
+                                                defaults={'respuesta': None}  # Use None instead of empty string
+                                            )
+                                            print(f"🔓 Respuesta de desbloqueo creada: {created_desbloqueo}")
+                                        except IntegrityError as e:
+                                            print(f"❌ Error al crear respuesta de desbloqueo: {e}")
+                                            continue
+                            else:
+                                print(f"❌ Respuesta no es un número válido: {respuesta_limpia}")
 
                     except Exception as e:
-                        print(f"Error al procesar desbloqueos: {str(e)}")
+                        print(f"❌ Error al procesar desbloqueos: {str(e)}")
                         import traceback
                         traceback.print_exc()
                         # Don't fail the whole request if unlocking fails

@@ -92,51 +92,144 @@ const Preguntas = ({
   // Calcular preguntas desbloqueadas
   const calculateUnlockedQuestions = useCallback(
     (respuestas) => {
+      console.log("🔍 === INICIO CALCULO DESBLOQUEOS ===");
+      console.log("📊 Respuestas recibidas:", respuestas);
+
       const unlocked = new Set();
       Object.entries(respuestas).forEach(([preguntaId, respuesta]) => {
         const pregunta = cuestionario.preguntas.find(
           (p) => p.id === parseInt(preguntaId, 10)
         );
 
+        console.log(`\n📝 Procesando pregunta ID: ${preguntaId}`);
+        console.log(`📝 Texto de la pregunta: ${pregunta?.texto}`);
+        console.log(`📝 Tipo de pregunta: ${pregunta?.tipo}`);
+        console.log(`📝 Respuesta: ${respuesta} (tipo: ${typeof respuesta})`);
+
         if (pregunta?.opciones) {
+          console.log(
+            `📝 Opciones disponibles:`,
+            pregunta.opciones.map((op) => ({
+              id: op.id,
+              valor: op.valor,
+              texto: op.texto,
+            }))
+          );
+
           if (pregunta.tipo === "checkbox") {
+            console.log("🔘 Procesando CHECKBOX");
             // Para checkbox, la respuesta es un array de IDs de opciones
             let opcionesSeleccionadas = [];
             // Manejar tanto strings JSON como arrays nativos (para compatibilidad)
             if (typeof respuesta === "string") {
               try {
                 opcionesSeleccionadas = JSON.parse(respuesta);
+                console.log(
+                  "🔘 Opciones seleccionadas (JSON parseado):",
+                  opcionesSeleccionadas
+                );
               } catch (error) {
-                console.error("Error parsing checkbox response:", error);
+                console.error("❌ Error parsing checkbox response:", error);
               }
             } else if (Array.isArray(respuesta)) {
               opcionesSeleccionadas = respuesta;
+              console.log(
+                "🔘 Opciones seleccionadas (array):",
+                opcionesSeleccionadas
+              );
             } else if (respuesta && typeof respuesta === "object") {
               // Si es un objeto, intentar extraer el array de opciones
               opcionesSeleccionadas =
                 respuesta.opciones || respuesta.valor_original || [];
+              console.log(
+                "🔘 Opciones seleccionadas (objeto):",
+                opcionesSeleccionadas
+              );
             }
 
             // Buscar cada opción por ID y procesar sus desbloqueos
             opcionesSeleccionadas.forEach((opcionId) => {
               const opcion = pregunta.opciones.find((op) => op.id === opcionId);
+              console.log(
+                `🔘 Opción seleccionada ID ${opcionId}:`,
+                opcion?.texto
+              );
+              console.log(
+                `🔘 Desbloqueos de esta opción:`,
+                opcion?.desbloqueos
+              );
+
               if (opcion?.desbloqueos) {
                 opcion.desbloqueos.forEach((desbloqueo) => {
+                  console.log(
+                    `🔓 Desbloqueando pregunta: ${desbloqueo.pregunta_desbloqueada}`
+                  );
                   unlocked.add(desbloqueo.pregunta_desbloqueada);
                 });
               }
             });
+          } else if (
+            pregunta.tipo === "multiple" ||
+            pregunta.tipo === "dropdown"
+          ) {
+            console.log("🔘 Procesando MULTIPLE/DROPDOWN");
+            console.log("🔘 Respuesta original:", respuesta);
+            console.log("🔘 Respuesta parseada:", parseInt(respuesta, 10));
+            console.log("🔘 Todas las opciones:", pregunta.opciones);
+
+            // Para preguntas tipo multiple y dropdown
+            const opcionSeleccionada = pregunta.opciones.find(
+              (op) => op.valor === parseInt(respuesta, 10)
+            );
+
+            console.log(
+              `🔘 Opción seleccionada (valor ${respuesta}):`,
+              opcionSeleccionada?.texto
+            );
+            console.log(
+              `🔘 Desbloqueos de esta opción:`,
+              opcionSeleccionada?.desbloqueos
+            );
+
+            if (opcionSeleccionada?.desbloqueos) {
+              opcionSeleccionada.desbloqueos.forEach((desbloqueo) => {
+                console.log(
+                  `🔓 Desbloqueando pregunta: ${desbloqueo.pregunta_desbloqueada}`
+                );
+                unlocked.add(desbloqueo.pregunta_desbloqueada);
+              });
+            } else {
+              console.log("❌ No se encontró la opción o no tiene desbloqueos");
+            }
           } else {
+            console.log("🔘 Procesando OTRO TIPO");
             // Para otros tipos de preguntas, usar la lógica original
             const opcionSeleccionada = pregunta.opciones.find(
               (op) => op.valor === parseInt(respuesta, 10)
             );
+            console.log(
+              `🔘 Opción seleccionada (valor ${respuesta}):`,
+              opcionSeleccionada?.texto
+            );
+            console.log(
+              `🔘 Desbloqueos de esta opción:`,
+              opcionSeleccionada?.desbloqueos
+            );
+
             opcionSeleccionada?.desbloqueos?.forEach((desbloqueo) => {
+              console.log(
+                `🔓 Desbloqueando pregunta: ${desbloqueo.pregunta_desbloqueada}`
+              );
               unlocked.add(desbloqueo.pregunta_desbloqueada);
             });
           }
+        } else {
+          console.log("❌ Pregunta sin opciones");
         }
       });
+
+      console.log("🔓 Preguntas desbloqueadas finales:", Array.from(unlocked));
+      console.log("🔍 === FIN CALCULO DESBLOQUEOS ===\n");
       return unlocked;
     },
     [cuestionario]
@@ -156,6 +249,19 @@ const Preguntas = ({
     const unlocked = calculateUnlockedQuestions(respuestas);
     setUnlockedQuestions(unlocked);
   }, [respuestas, cuestionario.id]); // Solo depender del ID del cuestionario
+
+  // Función para validar que los desbloqueos estén correctos
+  const validateUnlocks = useCallback(() => {
+    const unlocked = calculateUnlockedQuestions(respuestas);
+    setUnlockedQuestions(unlocked);
+  }, [respuestas, calculateUnlockedQuestions]);
+
+  // Efecto para validar desbloqueos cuando se cargan las respuestas
+  useEffect(() => {
+    if (Object.keys(respuestas).length > 0) {
+      validateUnlocks();
+    }
+  }, [respuestas, validateUnlocks]);
 
   // Cargar respuestas existentes
   const fetchRespuestas = async () => {
@@ -653,70 +759,118 @@ const Preguntas = ({
 
         // Actualizar preguntas desbloqueadas
         setUnlockedQuestions((prev) => {
+          console.log("🔄 === ACTUALIZANDO DESBLOQUEOS ===");
+          console.log("🔄 Pregunta ID:", preguntaId);
+
           const nuevos = new Set(prev);
           const pregunta = cuestionario.preguntas.find(
             (p) => p.id === preguntaId
           );
 
-          // Eliminar posibles desbloqueos antiguos
+          console.log("🔄 Tipo de pregunta:", pregunta?.tipo);
+          console.log("🔄 Nueva respuesta:", respuesta);
+          console.log("🔄 Desbloqueos anteriores:", Array.from(prev));
+
+          // Eliminar posibles desbloqueos antiguos de esta pregunta
+          console.log("🗑️ Eliminando desbloqueos antiguos de esta pregunta...");
           pregunta?.opciones?.forEach((op) => {
             op.desbloqueos?.forEach((d) => {
+              console.log(
+                `🗑️ Eliminando desbloqueo: ${d.pregunta_desbloqueada}`
+              );
               nuevos.delete(d.pregunta_desbloqueada);
             });
           });
 
           // Agregar desbloqueos de las opciones seleccionadas
           if (pregunta?.tipo === "checkbox") {
-            // console.log("Procesando desbloqueos para CHECKBOX");
-            // console.log("Respuesta checkbox:", respuesta);
-
-            // Mostrar todas las opciones de la pregunta
-            // console.log("Todas las opciones de la pregunta:");
-            pregunta.opciones?.forEach((op, index) => {
-              // console.log(
-              //   `  - Índice: ${index}, Valor: ${op.valor}, Texto: ${op.texto}`
-              // );
-            });
-
+            console.log("🔘 Procesando CHECKBOX para desbloqueos");
             // Para checkbox, respuesta es un array de opciones seleccionadas
             if (Array.isArray(respuesta)) {
-              // console.log("Respuesta es un array, procesando...");
+              console.log("🔘 Respuesta es un array:", respuesta);
               respuesta.forEach((opcionSeleccionada) => {
-                // console.log(
-                //   "Procesando opción seleccionada:",
-                //   opcionSeleccionada
-                // );
-                // Buscar por ID de la opción en lugar de por valor
                 const opcion = pregunta.opciones?.find(
                   (op) => op.id === opcionSeleccionada
                 );
-                // console.log("Opción encontrada:", opcion?.texto);
-                // console.log("Desbloqueos de esta opción:", opcion?.desbloqueos);
+                console.log(
+                  `🔘 Opción seleccionada ID ${opcionSeleccionada}:`,
+                  opcion?.texto
+                );
+                console.log(
+                  `🔘 Desbloqueos de esta opción:`,
+                  opcion?.desbloqueos
+                );
+
                 if (opcion?.desbloqueos) {
                   opcion.desbloqueos.forEach((d) => {
-                    // console.log(
-                    //   "Agregando desbloqueo:",
-                    //   d.pregunta_desbloqueada
-                    // );
+                    console.log(
+                      `🔓 Agregando desbloqueo: ${d.pregunta_desbloqueada}`
+                    );
                     nuevos.add(d.pregunta_desbloqueada);
                   });
                 }
               });
+            }
+          } else if (
+            pregunta?.tipo === "multiple" ||
+            pregunta?.tipo === "dropdown"
+          ) {
+            console.log("🔘 Procesando MULTIPLE/DROPDOWN para desbloqueos");
+            console.log("🔘 Respuesta original:", respuesta);
+            console.log("🔘 Respuesta parseada:", parseInt(respuesta, 10));
+            console.log("🔘 Todas las opciones:", pregunta?.opciones);
+
+            // Para preguntas tipo multiple y dropdown
+            const opcionSeleccionada = pregunta?.opciones?.find(
+              (op) => op.valor === parseInt(respuesta, 10)
+            );
+
+            console.log(
+              `🔘 Opción seleccionada (valor ${respuesta}):`,
+              opcionSeleccionada?.texto
+            );
+            console.log(
+              `🔘 Desbloqueos de esta opción:`,
+              opcionSeleccionada?.desbloqueos
+            );
+
+            if (opcionSeleccionada?.desbloqueos) {
+              opcionSeleccionada.desbloqueos.forEach((d) => {
+                console.log(
+                  `🔓 Agregando desbloqueo: ${d.pregunta_desbloqueada}`
+                );
+                nuevos.add(d.pregunta_desbloqueada);
+              });
             } else {
-              // console.log("Respuesta no es un array:", respuesta);
+              console.log("❌ No se encontró la opción o no tiene desbloqueos");
             }
           } else {
+            console.log("🔘 Procesando OTRO TIPO para desbloqueos");
             // Para otros tipos de preguntas
             const opcionSeleccionada = pregunta?.opciones?.find(
               (op) => op.valor === respuesta
             );
+            console.log(
+              `🔘 Opción seleccionada (valor ${respuesta}):`,
+              opcionSeleccionada?.texto
+            );
+            console.log(
+              `🔘 Desbloqueos de esta opción:`,
+              opcionSeleccionada?.desbloqueos
+            );
+
             if (opcionSeleccionada?.desbloqueos) {
               opcionSeleccionada.desbloqueos.forEach((d) => {
+                console.log(
+                  `🔓 Agregando desbloqueo: ${d.pregunta_desbloqueada}`
+                );
                 nuevos.add(d.pregunta_desbloqueada);
               });
             }
           }
 
+          console.log("🔓 Desbloqueos finales:", Array.from(nuevos));
+          console.log("🔄 === FIN ACTUALIZACION DESBLOQUEOS ===\n");
           return nuevos;
         });
       } catch (error) {
@@ -966,17 +1120,23 @@ const Preguntas = ({
     }
 
     try {
-      await api.post("/api/cuestionarios/validar-estado-cuestionario/", {
+      await api.post("/api/cuestionarios/finalizar-cuestionario/", {
         usuario: usuario,
         cuestionario: cuestionario.id,
-        estado: "finalizado",
-        fecha_finalizado: new Date().toISOString(),
       });
       setCuestionarioFinalizado(true);
       setNotificacion({
         mensaje: "Cuestionario finalizado con éxito!",
         tipo: "exito",
       });
+
+      // Refrescar los datos del candidato para actualizar el estado
+      try {
+        await api.get(`/api/candidatos/profiles/${usuario}/`);
+      } catch (refreshError) {
+        console.error("Error refrescando datos del candidato:", refreshError);
+      }
+
       navigate(`/candidatos/${usuario}`);
     } catch (error) {
       console.error("Error finalizando cuestionario:", error);

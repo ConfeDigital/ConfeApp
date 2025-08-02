@@ -373,10 +373,17 @@ function DespliegueCuestionario({
       await api.post("/api/cuestionarios/finalizar-cuestionario/", {
         usuario: usuario.id,
         cuestionario: cuestionario.id,
-        finalizado: true,
       });
 
       setCuestionarioFinalizado(true);
+
+      // Refrescar los datos del candidato para actualizar el estado
+      try {
+        await api.get(`/api/candidatos/profiles/${usuario.id}/`);
+      } catch (refreshError) {
+        console.error("Error refrescando datos del candidato:", refreshError);
+      }
+
       if (onClose) onClose();
       navigate(`/candidatos/${usuario.id}`);
     } catch (error) {

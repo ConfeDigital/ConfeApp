@@ -59,17 +59,35 @@ const stageOrder = [
 ];
 
 // Helper: returns button props given a relative index and active group value.
-const getButtonProps = (index, activeGroup) => {
+const getButtonProps = (index, activeGroup, stageCode, questionnaires) => {
   if (activeGroup < 0) {
     return { variant: "outlined", color: undefined };
   }
+
+  // Check if this stage is completed
+  const isCompleted = isStageCompleted(stageCode, questionnaires);
+
   if (index < activeGroup) {
     return { variant: "contained", color: "success" };
   } else if (index === activeGroup) {
     return { variant: "contained", color: "info" };
+  } else if (isCompleted) {
+    return { variant: "contained", color: "success" };
   } else {
     return { variant: "outlined", color: undefined };
   }
+};
+
+// Helper: check if a stage is completed based on questionnaires
+const isStageCompleted = (stageCode, questionnaires) => {
+  const stageQuestionnaires = questionnaires.filter(
+    (q) => q.estado_desbloqueo === stageCode && q.activo
+  );
+
+  return (
+    stageQuestionnaires.length > 0 &&
+    stageQuestionnaires.every((q) => q.finalizado === true)
+  );
 };
 
 const Datasheet = () => {
@@ -165,26 +183,30 @@ const Datasheet = () => {
           );
 
           // 📌 Si todos los cuestionarios están finalizados, avanzar de etapa
-          if (allFinalized) {
-            const nextStage = stageOrder[currentStageIndex + 1];
-            setCurrentStageIndex(currentStageIndex + 1);
+          if (
+            allFinalized &&
+            stageIdx >= 0 &&
+            stageIdx < stageOrder.length - 1
+          ) {
+            const nextStage = stageOrder[stageIdx + 1];
 
-            if (nextStage) {
-              try {
-                await axios.put(`/api/candidatos/editar/${uid}/`, {
-                  stage: nextStage.code,
-                  email: profileResponse.data.user.email,
-                });
-                setCandidateProfile({
-                  ...profileResponse.data,
-                  stage: nextStage.code,
-                });
-              } catch (error) {
-                console.error(
-                  "❌ Error al actualizar la etapa del candidato:",
-                  error
-                );
-              }
+            try {
+              await axios.put(`/api/candidatos/editar/${uid}/`, {
+                stage: nextStage.code,
+                email: profileResponse.data.user.email,
+              });
+
+              // Actualizar el estado local después de la actualización exitosa
+              setCandidateProfile({
+                ...profileResponse.data,
+                stage: nextStage.code,
+              });
+              setCurrentStageIndex(stageIdx + 1);
+            } catch (error) {
+              console.error(
+                "❌ Error al actualizar la etapa del candidato:",
+                error
+              );
             }
           }
         }
@@ -632,6 +654,8 @@ const Datasheet = () => {
                                 ? "success.main"
                                 : index === activeStep
                                 ? "primary.main"
+                                : isStageCompleted
+                                ? "success.main"
                                 : "transparent",
                             color: "#fff",
                             fontSize: 14,
@@ -655,6 +679,8 @@ const Datasheet = () => {
                             ? "contained"
                             : index === activeStep
                             ? "contained"
+                            : isStageCompleted
+                            ? "contained"
                             : "outlined"
                         }
                         color={
@@ -662,6 +688,8 @@ const Datasheet = () => {
                             ? "success"
                             : index === activeStep
                             ? "info"
+                            : isStageCompleted
+                            ? "success"
                             : "primary"
                         }
                         size="small"
@@ -734,7 +762,12 @@ const Datasheet = () => {
                 const stageIndex = stageOrder.findIndex(
                   (s) => s.code === stage.code
                 );
-                const btnProps = getButtonProps(index, activeStep);
+                const btnProps = getButtonProps(
+                  index,
+                  activeStep,
+                  stage.code,
+                  questionnaires
+                );
                 return (
                   <Step key={index} completed={index < activeStep}>
                     <StepLabel>
