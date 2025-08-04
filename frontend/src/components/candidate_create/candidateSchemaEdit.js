@@ -29,6 +29,7 @@ const candidateSchema = yup.object().shape({
   has_disability_certificate: yup.boolean(),
   has_interdiction_judgment: yup.boolean(),
   receives_pension: yup.string().nullable(),
+  social_security: yup.string().nullable(),
   receives_psychological_care: yup.boolean(),
   receives_psychiatric_care: yup.boolean(),
   has_seizures: yup.boolean(),

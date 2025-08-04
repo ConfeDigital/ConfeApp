@@ -62,6 +62,7 @@ const CandidateCreate = () => {
       has_disability_certificate: false,
       has_interdiction_judgment: false,
       receives_pension: "",
+      social_security: "",
       receives_psychological_care: false,
       receives_psychiatric_care: false,
       has_seizures: false,

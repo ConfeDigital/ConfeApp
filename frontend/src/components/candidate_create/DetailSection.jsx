@@ -12,8 +12,19 @@ const PENSION_CHOICES = [
     ['Otr', 'Sí (tipo no incluido en la base de datos)'],
 ];
 
+const SOCIAL_SECURITY_CHOICES = [
+  ['IMSS', 'IMSS'],
+  ['ISSSTE', 'ISSSTE'],
+  ['PEMEX', 'PEMEX'],
+  ['IMSS-BIENESTAR', 'IMSS-Bienestar'],
+  ['PARTICULAR', 'Particular'],
+  ['OTRO', 'Otro'],
+  ['NINGUNO', 'Ninguno'],
+];
+
 // Create a map for easy lookup
 const pensionLabelMap = new Map(PENSION_CHOICES);
+const socialSecurityLabelMap = new Map(SOCIAL_SECURITY_CHOICES);
 
 const DetailSection = ({ candidateProfile }) => {
   const [showDetails, setShowDetails] = useState(false);
@@ -63,6 +74,12 @@ const DetailSection = ({ candidateProfile }) => {
       'Recibe pensión',
       candidateProfile.receives_pension
         ? pensionLabelMap.get(candidateProfile.receives_pension) || candidateProfile.receives_pension
+        : <Typography component="span" color="text.secondary">N/A</Typography>,
+    ],
+    [
+      'Seguridad Social',
+      candidateProfile.social_security
+        ? socialSecurityLabelMap.get(candidateProfile.social_security) || candidateProfile.social_security
         : <Typography component="span" color="text.secondary">N/A</Typography>,
     ],
     [

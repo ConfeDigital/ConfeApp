@@ -27,6 +27,7 @@ const CandidateMedicalEdit = ({
       disability_certificate_details: "",
       has_interdiction_judgment: false,
       receives_pension: "",
+      social_security: "",
       receives_psychological_care: false,
       psychological_care_details: "",
       receives_psychiatric_care: false,
@@ -103,6 +104,7 @@ const CandidateMedicalEdit = ({
           disability_certificate_details: parsedSeleccionOpcion.disability_certificate_details,
           has_interdiction_judgment: d.has_interdiction_judgment,
           receives_pension: d.receives_pension || "",
+          social_security: d.social_security || "",
           receives_psychological_care: d.receives_psychological_care,
           // Use parsed value here
           psychological_care_details:parsedSeleccionOpcion.psychological_care_details,

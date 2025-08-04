@@ -252,7 +252,7 @@ const MedicalInfoForm = () => {
         error={!!errors.has_disability_history}
       >
         <FormLabel component="legend" sx={{ fontSize: "1rem" }}>
-          ¿Tiene algún familiar con discapacidad?
+          ¿Tiene otros familiares con alguna discapacidad?
         </FormLabel>
         <Controller
           name="has_disability_history"
@@ -288,8 +288,8 @@ const MedicalInfoForm = () => {
             <TextField
               {...field}
               fullWidth
-              label="Explica quién en su familia y qué tipo de discapacidad"
-              placeholder="Explica"
+              label="Especifique el parentesco y diagnóstico"
+              placeholder="Especifique el parentesco y diagnóstico"
               helperText='Si no tiene, responde "No" en la pregunta anterior.'
               sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
               slotProps={{
@@ -330,6 +330,38 @@ const MedicalInfoForm = () => {
         />
         <FormHelperText>
           {errors.receives_pension?.message ||
+            'Elige si lo sabes o selecciona "No sé"'}
+        </FormHelperText>
+      </FormControl>
+
+      <FormControl fullWidth error={!!errors.social_security} sx={{ mb: 3 }}>
+        <InputLabel id="receives-pension-label" sx={{ fontSize: "1rem" }}>
+          ¿Cuenta con algún esquema de Seguridad Social?
+        </InputLabel>
+        <Controller
+          name="social_security"
+          control={control}
+          defaultValue=""
+          render={({ field }) => (
+            <Select
+              labelId="receives-pension-label"
+              label="¿Cuenta con algún esquema de Seguridad Social?"
+              sx={{ fontSize: "1rem" }}
+              {...field}
+            >
+              <MenuItem value="">No sé</MenuItem>
+              <MenuItem value="NINGUNO">Ninguno</MenuItem>
+              <MenuItem value="IMSS">IMSS</MenuItem>
+              <MenuItem value="ISSSTE">ISSSTE</MenuItem>
+              <MenuItem value="PEMEX">PEMEX</MenuItem>
+              <MenuItem value="IMSS-BIENESTAR">IMSS-Bienestar</MenuItem>
+              <MenuItem value="PARTICULAR">Particular</MenuItem>
+              <MenuItem value="OTRO">Otro</MenuItem>
+            </Select>
+          )}
+        />
+        <FormHelperText>
+          {errors.social_security?.message ||
             'Elige si lo sabes o selecciona "No sé"'}
         </FormHelperText>
       </FormControl>

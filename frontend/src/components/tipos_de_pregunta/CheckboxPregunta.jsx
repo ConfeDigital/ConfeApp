@@ -44,7 +44,7 @@ const CheckboxPregunta = ({
         alignItems: "center",
         width: "100%",
         px: { xs: 1, sm: 2 },
-        py: { xs: 2, sm: 3 },
+        // py: { xs: 2, sm: 3 },
       }}
     >
       {opciones.map((opcion) => (
@@ -59,8 +59,8 @@ const CheckboxPregunta = ({
             //   selectedOptions.includes(opcion.id) ? "#226260" : "#e0e0e0"
             // }`,
             borderRadius: "8px",
-            margin: "8px 0",
-            padding: "12px",
+            my: 1,
+            padding: 1,
             transition: "all 0.3s ease",
             "&:hover": {
               boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",

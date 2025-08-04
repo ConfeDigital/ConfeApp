@@ -15,54 +15,46 @@ const OpcionMultiple = ({
 
   const seleccionRespuesta = (index) => {
     setSeleccionOpcion(index);
-    // console.log("index: ", index);
   };
-
-  // console.log("seleccionOpcion: ", seleccionOpcion);
 
   return (
     <Box
       sx={{
         display: "flex",
-        flexDirection: "column",
+        flexWrap: "wrap",
         justifyContent: "center",
-        alignItems: "center", // Center buttons horizontally
+        gap: 2,
         width: "100%",
         mt: 2,
         px: { xs: 1, sm: 2 },
-        gap: 2, // Adds consistent spacing between buttons
       }}
     >
       {opciones.map((opcion, index) => (
         <Button
           key={index}
           variant="contained"
-          size="large"
           sx={{
-            width: { xs: "100%", sm: "80%" }, // Responsive width for mobile and larger screens
-            maxWidth: { xs: "100%", sm: "600px" }, // Responsive max width
-            py: 2, // Padding on the y-axis for taller buttons
-            fontSize: { xs: "1rem", sm: "1.2rem" }, // Responsive font size
-            fontWeight: "bold", // Bold text
-            // color: seleccionOpcion === index ? "#050505" : "#fdf6eb", // Text color
+            flex: { xs: "1 1 100%", sm: opciones.length === 2 ? "1 1 45%" : "1 1 100%" }, // responsive size
+            minWidth: "120px",
+            py: 1,
+            fontSize: "1rem",
+            fontWeight: "bold",
             backgroundColor:
-              seleccionOpcion === index ? "success.light" : colors.grey[700], // Background color
+              seleccionOpcion === index ? "success.light" : colors.grey[700],
             color:
-              seleccionOpcion === index ? "success.contrastText" : "grey.contrastText", // Background color
-            // border: seleccionOpcion === index ? "2px solid #226260" : "none", // Border for selected button
-            // borderRadius: "12px", // Rounded corners
-            boxShadow: 3, // Subtle shadow for depth
-            transition: "all 0.3s ease", // Smooth transition for hover effects
+              seleccionOpcion === index
+                ? "success.contrastText"
+                : "grey.contrastText",
+            boxShadow: 3,
+            transition: "all 0.3s ease",
             "&:hover": {
-              // backgroundColor:
-              //   seleccionOpcion === index ? "#fdf6eb" : "#1a4a4a", // Darker background on hover
-              transform: "scale(1.02)", // Slightly enlarge on hover
+              transform: "scale(1.02)",
             },
           }}
           onClick={() => seleccionRespuesta(index)}
           disabled={disabled}
         >
-          {opcion.texto} {/* Display the option text */}
+          {opcion.texto}
         </Button>
       ))}
     </Box>

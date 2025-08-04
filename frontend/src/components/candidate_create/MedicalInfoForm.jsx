@@ -52,6 +52,28 @@ const MedicalInfoForm = () => {
       </Grid>
       <Grid item xs={12}>
         <Controller
+          name="social_security"
+          control={control}
+          defaultValue=""
+          render={({ field, fieldState: { error } }) => (
+            <FormControl fullWidth error={!!error} sx={{ minWidth: 223 }}>
+              <InputLabel id="blood-type-label">Recibe Pensión</InputLabel>
+              <Select labelId="blood-type-label" label="Recibe Pensión" {...field}>
+                <MenuItem value={undefined}>No sé</MenuItem>
+                <MenuItem value="NINGUNO">Ninguno</MenuItem>
+                <MenuItem value="IMSS">IMSS</MenuItem>
+                <MenuItem value="ISSSTE">ISSSTE</MenuItem>
+                <MenuItem value="PEMEX">PEMEX</MenuItem>
+                <MenuItem value="IMSS-BIENESTAR">IMSS-Bienestar</MenuItem>
+                <MenuItem value="PARTICULAR">Particular</MenuItem>
+                <MenuItem value="OTRO">Otro</MenuItem>
+              </Select>
+            </FormControl>
+          )}
+        />
+      </Grid>
+      <Grid item xs={12}>
+        <Controller
           name="receives_psychological_care"
           control={control}
           render={({ field }) => (

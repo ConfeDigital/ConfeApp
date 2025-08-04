@@ -124,6 +124,16 @@ class UserProfile(models.Model):
         ('Otr', 'Otra'),
     ]
 
+    SOCIAL_SECURITY_CHOICES = [
+        ('IMSS', 'IMSS'),
+        ('ISSSTE', 'ISSSTE'),
+        ('PEMEX', 'PEMEX'),
+        ('IMSS-BIENESTAR', 'IMSS-Bienestar'),
+        ('PARTICULAR', 'Particular'),
+        ('OTRO', 'Otro'),
+        ('NINGUNO', 'Ninguno'),
+    ]
+
     # Personal Information
     photo = models.ImageField(upload_to='user_photos/', null=True, blank=True)
     disability = models.ManyToManyField(Disability, blank=True)
@@ -147,6 +157,7 @@ class UserProfile(models.Model):
     receives_pension = models.CharField(max_length=3, choices=PENSION_CHOICES, null=True, blank=True)
     receives_psychological_care = models.BooleanField(default=False)
     receives_psychiatric_care = models.BooleanField(default=False)
+    social_security = models.CharField(max_length=20, choices=SOCIAL_SECURITY_CHOICES, null=True, blank=True)
 
     # Medical Details
     blood_type = models.CharField(default='', max_length=3, choices=BLOOD_TYPE_CHOICES, null=True, blank=True)

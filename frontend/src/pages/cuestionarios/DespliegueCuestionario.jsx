@@ -60,6 +60,8 @@ function DespliegueCuestionario({
   const [questionnaireLoading, setQuestionnaireLoading] = useState(false);
   const [finalizingLoading, setFinalizingLoading] = useState(false);
 
+  const navigate = useNavigate();
+
   const isRespuestaValida = useCallback((respuesta, tipoPregunta) => {
     if (respuesta === undefined || respuesta === null || respuesta === "") {
       return false;
@@ -751,13 +753,21 @@ function DespliegueCuestionario({
               gap: 1,
             }}
           >
-            <Button
-              variant="outlined"
-              onClick={toggleReportView}
-              sx={{ width: { xs: "100%", sm: "auto" } }}
-            >
-              {showReport ? "Ocultar Reporte" : "Visualizar Cuestionario"}
-            </Button>
+            <Box sx={{ width: "100%", display: "flex", justifyContent: "space-between" }}>
+              <Button
+                variant="outlined"
+                onClick={toggleReportView}
+              >
+                {showReport ? "Ocultar Reporte" : "Visualizar Cuestionario"}
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => navigate(`/candidatos/${usuarioId}`)}
+              >
+                Volver al perfil
+              </Button>
+            </Box>
+            
             <Box
               sx={{
                 display: "flex",

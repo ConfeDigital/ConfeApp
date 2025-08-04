@@ -1510,7 +1510,12 @@ const Preguntas = ({
             {Object.entries(otherQuestions).map(([section, preguntas]) =>
               expandedSection === section ? (
                 <Box key={section}>
-                  {preguntas.map((pregunta) => (
+                  {preguntas.filter((pregunta) => {
+                    if (pregunta.desbloqueos_recibidos.length === 0) return true;
+                    return pregunta.desbloqueos_recibidos.some((desbloqueo) =>
+                      unlockedQuestions.has(desbloqueo.pregunta_desbloqueada)
+                    );
+                  }).map((pregunta) => (
                     <Box
                       key={pregunta.id}
                       id={`pregunta-${pregunta.id}`}
@@ -1533,7 +1538,7 @@ const Preguntas = ({
                             pregunta.id
                           )
                             ? "rgba(255, 23, 68, 0.05)"
-                            : "white",
+                            : "background.paper",
                           transition: "all 0.3s ease",
                           "&:hover": {
                             boxShadow: preguntasNoRespondidas.has(pregunta.id)
