@@ -230,19 +230,17 @@ class Respuesta(models.Model):
                 
                 # Handle different response formats safely
                 respuesta_valor = None
+                respuesta_texto = None
                 
                 # Handle different types of responses
                 if isinstance(self.respuesta, (int, float)):
                     respuesta_valor = int(self.respuesta)
-                    print(f"🔘 Respuesta es número: {respuesta_valor}")
                 elif isinstance(self.respuesta, str):
                     # Only process if it's a numeric string
                     if self.respuesta.strip().isdigit():
                         respuesta_valor = int(self.respuesta)
-                        print(f"🔘 Respuesta es string numérico: {respuesta_valor}")
                     else:
                         # For non-numeric strings, skip processing
-                        print(f"❌ Respuesta es string no numérico: {self.respuesta}")
                         return
                 elif isinstance(self.respuesta, dict):
                     # For JSON responses, check if there's a 'valor' key
@@ -250,12 +248,9 @@ class Respuesta(models.Model):
                     if respuesta_valor is not None:
                         try:
                             respuesta_valor = int(respuesta_valor)
-                            print(f"🔘 Respuesta es dict con valor: {respuesta_valor}")
                         except (ValueError, TypeError):
-                            print(f"❌ Error convirtiendo valor de dict: {respuesta_valor}")
                             return
                     else:
-                        print(f"❌ Dict sin clave 'valor': {self.respuesta}")
                         return
                 elif isinstance(self.respuesta, list) and len(self.respuesta) > 0:
                     # For array responses, try to get the first numeric value
@@ -263,30 +258,36 @@ class Respuesta(models.Model):
                         first_val = self.respuesta[0]
                         if isinstance(first_val, (int, float)):
                             respuesta_valor = int(first_val)
-                            print(f"🔘 Respuesta es array con primer valor numérico: {respuesta_valor}")
                         elif isinstance(first_val, str) and first_val.isdigit():
                             respuesta_valor = int(first_val)
-                            print(f"🔘 Respuesta es array con primer valor string numérico: {respuesta_valor}")
                         else:
-                            print(f"❌ Array con primer valor no numérico: {first_val}")
                             return
                     except (IndexError, ValueError, TypeError):
-                        print(f"❌ Error procesando array: {self.respuesta}")
                         return
+                elif isinstance(self.respuesta, bool):
+                    # For boolean responses (binary questions)
+                    respuesta_texto = "Sí" if self.respuesta else "No"
+                elif isinstance(self.respuesta, str) and self.respuesta in ["Sí", "No"]:
+                    # For string responses that are already "Sí" or "No"
+                    respuesta_texto = self.respuesta
                 
-                # Skip if we couldn't extract a valid numeric value
-                if respuesta_valor is None:
-                    print("❌ No se pudo extraer un valor numérico válido")
+                # Skip if we couldn't extract a valid value
+                if respuesta_valor is None and respuesta_texto is None:
                     return
     
-                print(f"🔘 Valor final de respuesta: {respuesta_valor}")
-                print(f"🔘 Tipo de respuesta_valor: {type(respuesta_valor)}")
-                
                 # Find selected options
-                opciones_seleccionadas = Opcion.objects.filter(
-                    pregunta=self.pregunta,
-                    valor=respuesta_valor
-                )
+                if respuesta_texto is not None:
+                    # For binary questions, search by text
+                    opciones_seleccionadas = Opcion.objects.filter(
+                        pregunta=self.pregunta,
+                        texto=respuesta_texto
+                    )
+                else:
+                    # For other questions, search by numeric value
+                    opciones_seleccionadas = Opcion.objects.filter(
+                        pregunta=self.pregunta,
+                        valor=respuesta_valor
+                    )
                 
                 print(f"🔘 Opciones encontradas para valor {respuesta_valor}: {opciones_seleccionadas.count()}")
                 

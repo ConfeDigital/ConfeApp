@@ -83,14 +83,24 @@ const PreguntaCard = ({
     if (tiposConOpciones.includes(pregunta.tipo)) {
       let opcionesActualizadas = [...(pregunta.opciones || [])];
 
-      // Para preguntas binarias, asegurar que siempre tenga "Sí" y "No"
+      // Para preguntas binarias, asegurar que siempre tenga "Sí" y "No" con valores únicos
       if (pregunta.tipo === "binaria") {
-        if (
-          opcionesActualizadas.length !== 2 ||
-          opcionesActualizadas[0] !== "Sí" ||
-          opcionesActualizadas[1] !== "No"
-        ) {
-          opcionesActualizadas = ["Sí", "No"];
+        const opcionSi = opcionesActualizadas.find(
+          (op) =>
+            (typeof op === "string" && op === "Sí") ||
+            (typeof op === "object" && op.texto === "Sí")
+        );
+        const opcionNo = opcionesActualizadas.find(
+          (op) =>
+            (typeof op === "string" && op === "No") ||
+            (typeof op === "object" && op.texto === "No")
+        );
+
+        if (!opcionSi || !opcionNo) {
+          opcionesActualizadas = [
+            { texto: "Sí", valor: 0 },
+            { texto: "No", valor: 1 },
+          ];
         }
       }
 
@@ -103,7 +113,12 @@ const PreguntaCard = ({
         if (preguntaOrigen.tipo === "binaria") {
           return {
             ...d,
-            valor: d.valor === "0" ? "Sí" : d.valor === "1" ? "No" : d.valor,
+            valor:
+              d.valor === "0" || d.valor === "Sí"
+                ? "Sí"
+                : d.valor === "1" || d.valor === "No"
+                ? "No"
+                : d.valor,
           };
         }
 
@@ -308,12 +323,12 @@ const PreguntaCard = ({
                         : e.target.value
                     )
                   }
-                  disabled={deshabilitado}
+                  disabled={deshabilitado || pregunta.tipo === "binaria"}
                 />
                 <IconButton
                   onClick={() => deleteOpcion(i)}
                   color="error"
-                  disabled={deshabilitado}
+                  disabled={deshabilitado || pregunta.tipo === "binaria"}
                 >
                   <DeleteIcon />
                 </IconButton>
@@ -322,7 +337,7 @@ const PreguntaCard = ({
             <Button
               variant="outlined"
               onClick={addOpcion}
-              disabled={deshabilitado}
+              disabled={deshabilitado || pregunta.tipo === "binaria"}
             >
               Agregar opción
             </Button>

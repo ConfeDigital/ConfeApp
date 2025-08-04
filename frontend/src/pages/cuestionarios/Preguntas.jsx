@@ -201,6 +201,40 @@ const Preguntas = ({
             } else {
               console.log("❌ No se encontró la opción o no tiene desbloqueos");
             }
+          } else if (
+            pregunta.tipo === "binaria" ||
+            (pregunta.opciones.length === 2 &&
+              pregunta.opciones.some((op) => op.texto === "Sí") &&
+              pregunta.opciones.some((op) => op.texto === "No"))
+          ) {
+            console.log("🔘 Procesando BINARIA");
+            console.log("🔘 Respuesta original:", respuesta);
+            console.log("🔘 Todas las opciones:", pregunta.opciones);
+
+            // Para preguntas binarias, buscar por texto de la opción
+            const opcionSeleccionada = pregunta.opciones.find(
+              (op) => op.texto === respuesta
+            );
+
+            console.log(
+              `🔘 Opción seleccionada (texto ${respuesta}):`,
+              opcionSeleccionada?.texto
+            );
+            console.log(
+              `🔘 Desbloqueos de esta opción:`,
+              opcionSeleccionada?.desbloqueos
+            );
+
+            if (opcionSeleccionada?.desbloqueos) {
+              opcionSeleccionada.desbloqueos.forEach((desbloqueo) => {
+                console.log(
+                  `🔓 Desbloqueando pregunta: ${desbloqueo.pregunta_desbloqueada}`
+                );
+                unlocked.add(desbloqueo.pregunta_desbloqueada);
+              });
+            } else {
+              console.log("❌ No se encontró la opción o no tiene desbloqueos");
+            }
           } else {
             console.log("🔘 Procesando OTRO TIPO");
             // Para otros tipos de preguntas, usar la lógica original
@@ -729,13 +763,18 @@ const Preguntas = ({
           // Para dropdowns, enviar solo el valor/índice
           respuestaParaEnviar = respuesta;
         } else if (preguntaActual.tipo === "binaria") {
-          // Para binarias, enviar solo el valor booleano
-          respuestaParaEnviar =
+          // Para binarias, enviar la opción seleccionada directamente
+          if (
             respuesta === true ||
             respuesta === "true" ||
             respuesta === "1" ||
             respuesta === "sí" ||
-            respuesta === "si";
+            respuesta === "si"
+          ) {
+            respuestaParaEnviar = "Sí";
+          } else {
+            respuestaParaEnviar = "No";
+          }
         } else if (preguntaActual.tipo === "checkbox") {
           // Para checkbox, enviar el array de IDs
           respuestaParaEnviar = Array.isArray(respuesta) ? respuesta : [];
@@ -827,6 +866,57 @@ const Preguntas = ({
 
             console.log(
               `🔘 Opción seleccionada (valor ${respuesta}):`,
+              opcionSeleccionada?.texto
+            );
+            console.log(
+              `🔘 Desbloqueos de esta opción:`,
+              opcionSeleccionada?.desbloqueos
+            );
+
+            if (opcionSeleccionada?.desbloqueos) {
+              opcionSeleccionada.desbloqueos.forEach((d) => {
+                console.log(
+                  `🔓 Agregando desbloqueo: ${d.pregunta_desbloqueada}`
+                );
+                nuevos.add(d.pregunta_desbloqueada);
+              });
+            } else {
+              console.log("❌ No se encontró la opción o no tiene desbloqueos");
+            }
+          } else if (
+            pregunta?.tipo === "binaria" ||
+            (pregunta?.tipo === "multiple" &&
+              pregunta?.opciones?.length === 2 &&
+              pregunta?.opciones?.some((op) => op.texto === "Sí") &&
+              pregunta?.opciones?.some((op) => op.texto === "No"))
+          ) {
+            console.log("🔘 Procesando BINARIA para desbloqueos");
+            console.log("🔘 Respuesta original:", respuesta);
+
+            // Para preguntas binarias, convertir la respuesta al texto correcto
+            let respuestaTexto;
+            if (
+              respuesta === true ||
+              respuesta === "true" ||
+              respuesta === "1" ||
+              respuesta === "sí" ||
+              respuesta === "si"
+            ) {
+              respuestaTexto = "Sí";
+            } else {
+              respuestaTexto = "No";
+            }
+
+            console.log("🔘 Respuesta convertida a texto:", respuestaTexto);
+            console.log("🔘 Todas las opciones:", pregunta?.opciones);
+
+            // Para preguntas binarias, buscar por texto de la opción
+            const opcionSeleccionada = pregunta?.opciones?.find(
+              (op) => op.texto === respuestaTexto
+            );
+
+            console.log(
+              `🔘 Opción seleccionada (texto ${respuestaTexto}):`,
               opcionSeleccionada?.texto
             );
             console.log(

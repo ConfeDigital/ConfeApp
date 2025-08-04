@@ -416,6 +416,42 @@ class RespuestasGuardadas(APIView):
                                 print(f"❌ Respuesta no es un número válido: {respuesta_limpia}")
                                 print(f"❌ Tipo de respuesta_limpia: {type(respuesta_limpia)}")
 
+                        elif pregunta.tipo == 'binaria':
+                            # Para preguntas binarias, buscar opciones por texto
+                            if isinstance(respuesta_limpia, bool):
+                                # Convertir booleano a texto
+                                texto_buscar = "Sí" if respuesta_limpia else "No"
+                            elif isinstance(respuesta_limpia, str):
+                                # Si ya es un string, usarlo directamente
+                                texto_buscar = respuesta_limpia
+                            else:
+                                # Para otros tipos, convertir a booleano
+                                texto_buscar = "Sí" if bool(respuesta_limpia) else "No"
+                            
+                            # Buscar opciones por texto
+                            opciones_seleccionadas = Opcion.objects.filter(
+                                pregunta=pregunta,
+                                texto=texto_buscar
+                            )
+
+                            for opcion_seleccionada in opciones_seleccionadas:
+                                desbloqueos = DesbloqueoPregunta.objects.filter(
+                                    cuestionario=cuestionario,
+                                    pregunta_origen=pregunta,
+                                    opcion_desbloqueadora=opcion_seleccionada
+                                )
+
+                                for desbloqueo in desbloqueos:
+                                    try:
+                                        resp_desbloqueada, created_desbloqueo = Respuesta.objects.get_or_create(
+                                            usuario=usuario,
+                                            cuestionario=cuestionario,
+                                            pregunta=desbloqueo.pregunta_desbloqueada,
+                                            defaults={'respuesta': None}  # Use None instead of empty string
+                                        )
+                                    except IntegrityError as e:
+                                        continue
+
                         else:
                             print(f"🔘 Procesando pregunta tipo: {pregunta.tipo}")
                             
