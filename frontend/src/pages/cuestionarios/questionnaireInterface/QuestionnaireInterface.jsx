@@ -296,7 +296,7 @@ const EditorCuestionario = () => {
         return {
           ...p,
           tipo: "multiple", // Cambiar a multiple para el backend
-          opciones: ["Sí", "No"], // Asegurar que tenga las opciones correctas
+          opciones: ["Sí", "No"], // Enviar como strings simples
           desbloqueo: p.desbloqueo?.map((d) => ({
             ...d,
             valor: d.valor === "0" ? "Sí" : d.valor === "1" ? "No" : d.valor,

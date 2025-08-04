@@ -213,6 +213,7 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
     photo = serializers.ImageField(write_only=True, required=False)
     
     receives_pension = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    social_security = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     # Booleans (optional)
     has_disability_certificate = serializers.BooleanField(write_only=True, required=False, default=False)
@@ -258,7 +259,7 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
             'email', 'first_name', 'last_name', 'second_last_name', 'password',
             'birth_date', 'gender', 'blood_type', 'curp', 'phone_number',
             'stage', 'has_disability_certificate', 'has_interdiction_judgment',
-            'receives_pension', 'receives_psychological_care', 'receives_psychiatric_care',
+            'receives_pension', 'receives_psychological_care', 'receives_psychiatric_care', 'social_security',
             'has_seizures', 'medications', 'allergies', 'dietary_restrictions', 'physical_restrictions',
             'address_road', 'address_number', 'address_number_int', 'address_PC',
             'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng', 'residence_type',
@@ -291,7 +292,7 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
         # Extract profile data for UserProfile
         profile_fields = [
             'birth_date', 'gender', 'blood_type', 'curp', 'phone_number', 'stage',
-            'has_disability_certificate', 'has_interdiction_judgment', 'receives_pension',
+            'has_disability_certificate', 'has_interdiction_judgment', 'receives_pension', 'social_security',
             'receives_psychological_care', 'receives_psychiatric_care', 'has_seizures',
             'allergies', 'dietary_restrictions', 'physical_restrictions'
         ]
@@ -374,6 +375,7 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
     stage = serializers.CharField(write_only=True, required=False)
     
     receives_pension = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    social_security = serializers.CharField(write_only=True, required=False, allow_blank=True)
 
     has_disability_certificate = serializers.BooleanField(write_only=True, required=False)
     has_interdiction_judgment = serializers.BooleanField(write_only=True, required=False)
@@ -412,7 +414,7 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
             'email', 'first_name', 'last_name', 'second_last_name',
             'birth_date', 'gender', 'blood_type', 'curp', 'phone_number',
             'stage', 'has_disability_certificate', 'has_interdiction_judgment',
-            'receives_pension', 'receives_psychological_care', 'receives_psychiatric_care',
+            'receives_pension', 'receives_psychological_care', 'receives_psychiatric_care', 'social_security',
             'has_seizures', 'medications', 'allergies', 'dietary_restrictions', 'physical_restrictions',
             'address_road', 'address_number', 'address_number_int', 'address_PC',
             'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng', 'residence_type',
@@ -439,6 +441,7 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
         profile.has_disability_certificate = validated_data.get('has_disability_certificate', profile.has_disability_certificate)
         profile.has_interdiction_judgment = validated_data.get('has_interdiction_judgment', profile.has_interdiction_judgment)
         profile.receives_pension = validated_data.get('receives_pension', profile.receives_pension)
+        profile.social_security = validated_data.get('social_security', profile.social_security)
         profile.receives_psychological_care = validated_data.get('receives_psychological_care', profile.receives_psychological_care)
         profile.receives_psychiatric_care = validated_data.get('receives_psychiatric_care', profile.receives_psychiatric_care)
         profile.has_seizures = validated_data.get('has_seizures', profile.has_seizures)
@@ -849,6 +852,7 @@ class DatosMedicosSerializer(serializers.ModelSerializer):
             "has_disability_certificate",
             "has_interdiction_judgment",
             "receives_pension",
+            "social_security",
             "receives_psychological_care",
             "receives_psychiatric_care",
             "has_seizures",

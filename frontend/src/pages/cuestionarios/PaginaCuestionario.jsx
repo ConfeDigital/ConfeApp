@@ -1,6 +1,6 @@
 import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import PopupCuestionario from "./PopupCuestionario"; // usa el componente existente
+import DespliegueCuestionario from "./DespliegueCuestionario"; // usa el componente existente
 
 import useDocumentTitle from "../../components/hooks/useDocumentTitle";
 
@@ -12,7 +12,7 @@ const PaginaCuestionario = () => {
 
   return (
     <div>
-      <PopupCuestionario
+      <DespliegueCuestionario
         usuarioId={uid}
         cuestionarioId={cuestionarioId}
         onClose={() => navigate(-1)} // volver atrás

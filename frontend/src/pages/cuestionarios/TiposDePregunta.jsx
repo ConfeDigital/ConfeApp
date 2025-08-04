@@ -315,11 +315,10 @@ const TiposDePregunta = ({
               textAlign: "center",
               mb: 3,
               fontWeight: "bold",
-              fontSize: { xs: "1.5rem", sm: "2rem", md: "2.5rem" },
-              color: "#1976d2",
-              textShadow: "1px 1px 2px rgba(0, 0, 0, 0.1)",
+              fontSize: { sm: "1.5rem", md: "2rem" },
+              color: "info.main",
+              // textShadow: "1px 1px 2px rgba(0, 0, 0, 0.1)",
               lineHeight: 1.2,
-              fontFamily: "'Roboto', sans-serif",
             }}
           >
             {pregunta.texto}
