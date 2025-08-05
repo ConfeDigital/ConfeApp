@@ -632,6 +632,9 @@ const Datasheet = () => {
                 const stageQuestionnaires = questionnaires.filter(
                   (q) => q.estado_desbloqueo === stage.code && q.activo
                 );
+                const stageIndex = stageOrder.findIndex(
+                  (s) => s.code === stage.code
+                );
 
                 const isStageCompleted =
                   stageQuestionnaires.length > 0 &&
@@ -697,6 +700,7 @@ const Datasheet = () => {
                         size="small"
                         sx={{ my: 0.5 }}
                         onClick={() => handleStageClick(stage.code)}
+                        disabled={currentStageIndex < stageIndex}
                       >
                         {stage.label.toUpperCase()}
                       </Button>

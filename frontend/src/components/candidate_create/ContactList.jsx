@@ -11,13 +11,13 @@ import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import { formatCanonicalPhoneNumber } from "../phone_number/phoneUtils"; // adjust the path as needed
 
-const ContactList = ({ emergency_contacts }) => {
-  const [showContacts, setShowContacts] = useState(false);
+const ContactList = ({ emergency_contacts, show_contacts }) => {
+  const [showContacts, setShowContacts] = useState(show_contacts ? true : false);
 
   return (
     <Box sx={{ mt: 2 }}>
       {/* Toggle button */}
-      <Box display="flex" justifyContent="flex-end">
+      <Box display={show_contacts ? "none" : "flex"} justifyContent="flex-end">
         <Button
           onClick={() => setShowContacts(!showContacts)}
           variant="text"
