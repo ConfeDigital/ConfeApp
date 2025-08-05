@@ -347,7 +347,6 @@ const BaseCuestionarios = () => {
                 {groupedCuestionarios[key].map((baseCuestionario) => (
                   <ListItem
                     key={baseCuestionario.id}
-                    button={true}
                     onClick={() => handleNavigate(baseCuestionario)}
                     sx={{
                       border: "1px solid #ddd",

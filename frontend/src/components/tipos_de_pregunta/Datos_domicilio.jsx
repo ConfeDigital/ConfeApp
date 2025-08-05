@@ -75,7 +75,7 @@ const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) =>
     setAutoSave(true); // Mostrar indicador de guardado automático
 
     try {
-      setSeleccionOpcion("Respondido");
+      setSeleccionOpcion(formData);
       await axios.put(`/api/candidatos/${usuarioId}/editar-domicilio/`, formData, {
         headers: { "Content-Type": "application/json" },
       });

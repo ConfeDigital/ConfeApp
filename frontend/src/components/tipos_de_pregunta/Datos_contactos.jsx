@@ -75,7 +75,7 @@ const Datos_contactos = ({
   const saveContacts = async (contacts) => {
     setError("");
     setAutoSave(true);
-    setSeleccionOpcion("Respondido");
+    setSeleccionOpcion(contacts);
     try {
       await axios.put(
         `/api/candidatos/${usuarioId}/editar-contactos/`,
