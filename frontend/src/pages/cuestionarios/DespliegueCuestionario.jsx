@@ -5,20 +5,14 @@ import {
   Paper,
   Button,
   Divider,
-  Grid,
   List,
   ListItem,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   CircularProgress,
   Snackbar,
   Alert,
 } from "@mui/material";
 import api from "../../api";
 import Preguntas from "./Preguntas";
-import ControlPaginas from "./ControlPaginas";
 import SeleccionCuestionarioVisualizacion from "./seleccionCuestionarioVisualizacion";
 import { useNavigate } from "react-router-dom";
 import LoadingPopup from "../../components/LoadingPopup";
@@ -34,7 +28,6 @@ function DespliegueCuestionario({
   const [usuario, setUsuario] = useState(null);
   const [cuestionario, setCuestionario] = useState(null);
   const [preguntaIndex, setPreguntaIndex] = useState(0);
-  const [selectedQuestion, setSelectedQuestion] = useState("");
   const [lastAnsweredQuestionIndex, setLastAnsweredQuestionIndex] =
     useState(-1);
   const [cuestionarioFinalizado, setCuestionarioFinalizado] = useState(false);
@@ -43,11 +36,7 @@ function DespliegueCuestionario({
   const [showError, setShowError] = useState(false);
   const [showReport, setShowReport] = useState(false);
   const [cuestionariosFinalizados, setCuestionariosFinalizados] = useState([]);
-  const [
-    respuestasCuestionarioFinalizado,
-    setRespuestasCuestionarioFinalizado,
-  ] = useState([]);
-  const [globalQuestionIndex, setGlobalQuestionIndex] = useState(0);
+  const [respuestasCuestionarioFinalizado, setRespuestasCuestionarioFinalizado] = useState([]);
   const [modoEdicionGlobal, setModoEdicionGlobal] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -62,76 +51,12 @@ function DespliegueCuestionario({
 
   const navigate = useNavigate();
 
-  const isRespuestaValida = useCallback((respuesta, tipoPregunta) => {
-    if (respuesta === undefined || respuesta === null || respuesta === "") {
-      return false;
-    }
-    if (Array.isArray(respuesta) && respuesta.length === 0) {
-      return false;
-    }
-    if (typeof respuesta === "object" && Object.keys(respuesta).length === 0) {
-      return false;
-    }
-    switch (tipoPregunta) {
-      case "abierta":
-        // Para preguntas abiertas, el texto no puede estar vacío
-        return typeof respuesta === "string" && respuesta.trim().length > 0;
 
-      case "numero":
-        // Para preguntas numéricas, debe ser un número válido
-        return !isNaN(Number(respuesta)) && respuesta !== "";
-
-      case "multiple":
-      case "dropdown":
-        // Para opciones múltiples y dropdown, debe tener un valor seleccionado
-        return respuesta !== "" && respuesta !== null;
-
-      case "checkbox":
-        // Para checkbox, debe tener al menos una opción seleccionada
-        return Array.isArray(respuesta) && respuesta.length > 0;
-
-      case "sis":
-      case "sis2":
-        // Para preguntas SIS, debe tener al menos un valor seleccionado
-        return (
-          typeof respuesta === "object" && Object.keys(respuesta).length > 0
-        );
-
-      case "ed":
-      case "ch":
-        // Para preguntas especiales, debe tener al menos un valor seleccionado
-        return (
-          typeof respuesta === "object" && Object.keys(respuesta).length > 0
-        );
-
-      case "binaria":
-        // Para preguntas binarias, debe tener un valor seleccionado
-        return respuesta === true || respuesta === false;
-
-      default:
-        return true;
-    }
-  }, []);
-
-  const isQuestionVisible = useCallback(
-    (pregunta) => {
-      // Si la pregunta no tiene desbloqueos recibidos, siempre es visible
-      if (pregunta.desbloqueos_recibidos.length === 0) return true;
-      // Si tiene desbloqueos, solo es visible si está en unlockedQuestions
-      return unlockedQuestions.has(pregunta.id);
-    },
-    [unlockedQuestions]
-  );
 
   useEffect(() => {
     const fetchSISAids = async () => {
       try {
         const response = await api.get("/api/discapacidad/sis-aids-view/");
-
-        // 🔹 Convertimos el objeto en un array de subitems
-        const subitemsList = Object.entries(response.data).flatMap(
-          ([key, value]) => value
-        );
 
         // 🔹 Agrupamos los subitems por item.name
         const subitemsMap = Object.entries(response.data).reduce(
@@ -149,11 +74,7 @@ function DespliegueCuestionario({
           console.error("📥 Backend response error:", error.response.data);
         }
 
-        // Solo si tienes esta función
-        setNotificacion({
-          mensaje: "Error al cargar los subitems de apoyo SIS",
-          tipo: "error",
-        });
+        // Error loading SIS aids
       }
     };
 
@@ -329,71 +250,7 @@ function DespliegueCuestionario({
     }
   };
 
-  const handleQuestionChange = (event) => {
-    setSelectedQuestion(event.target.value);
-    const index = cuestionario.preguntas.findIndex(
-      (q) => q.id === event.target.value
-    );
 
-    if (index !== -1) {
-      setPreguntaIndex(index);
-
-      // 🔹 Hacer scroll al TOPE cuando se cambia de pregunta
-      setTimeout(() => {
-        const modalScrollContainer =
-          document.querySelector(".MuiDialog-scrollPaper") ||
-          document.querySelector(".popup-container") ||
-          document.documentElement;
-
-        if (modalScrollContainer) {
-          modalScrollContainer.scrollTo({
-            top: 0,
-            behavior: "smooth",
-          });
-        }
-      }, 100);
-    }
-  };
-
-  // Función para finalizar el cuestionario
-  const handleFinalizarCuestionario = async () => {
-    const preguntasRespondidas = respuestas
-      .filter((respuesta) => respuesta.cuestionario === cuestionario.id)
-      .map((respuesta) => respuesta.pregunta);
-
-    const todasRespondidas = cuestionario.preguntas.every((pregunta) =>
-      preguntasRespondidas.includes(pregunta.id)
-    );
-
-    if (!todasRespondidas) {
-      setShowError(true);
-      return;
-    }
-
-    setFinalizingLoading(true);
-    try {
-      await api.post("/api/cuestionarios/finalizar-cuestionario/", {
-        usuario: usuario.id,
-        cuestionario: cuestionario.id,
-      });
-
-      setCuestionarioFinalizado(true);
-
-      // Refrescar los datos del candidato para actualizar el estado
-      try {
-        await api.get(`/api/candidatos/profiles/${usuario.id}/`);
-      } catch (refreshError) {
-        console.error("Error refrescando datos del candidato:", refreshError);
-      }
-
-      if (onClose) onClose();
-      navigate(`/candidatos/${usuario.id}`);
-    } catch (error) {
-      console.error("Error al finalizar el cuestionario:", error);
-    } finally {
-      setFinalizingLoading(false);
-    }
-  };
 
   // Función para obtener el texto de la respuesta
   const obtenerRespuestaTexto = (respuesta) => {
@@ -476,7 +333,6 @@ function DespliegueCuestionario({
   // Función para cambiar el cuestionario finalizado seleccionado
   const handleChangeCuestionarioFinalizado = async (event) => {
     const cuestionario_Id = event.target.value;
-
     fetchRespuestasCuestionarioFinalizado(cuestionario_Id);
   };
 
@@ -597,7 +453,6 @@ function DespliegueCuestionario({
                 height: "100%",
                 display: "flex",
                 flexDirection: "column",
-                // bgcolor: "background.paper",
                 boxShadow: 6,
               }}
             >
@@ -746,9 +601,9 @@ function DespliegueCuestionario({
             sx={{
               display: "flex",
               justifyContent: "space-between",
-              alignItems: "center",
+              alignItems: "end",
               mb: 2,
-              flexDirection: { xs: "column", sm: "row" },
+              flexDirection: "column",
               gap: 1,
             }}
           >
@@ -757,7 +612,7 @@ function DespliegueCuestionario({
                 variant="outlined"
                 onClick={toggleReportView}
               >
-                {showReport ? "Ocultar Reporte" : "Visualizar Cuestionario"}
+                {showReport ? "Ocultar Respuestas" : "Ver Respuestas Guardadas"}
               </Button>
               <Button
                 variant="outlined"

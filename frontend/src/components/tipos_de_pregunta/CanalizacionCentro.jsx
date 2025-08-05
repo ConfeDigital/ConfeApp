@@ -70,25 +70,39 @@ const CanalizacionCentro = ({
     language: "es",
   });
 
+  // Helper function to find center by ID
+  const findCenterById = useCallback((centerId) => {
+    return centers.find((center) => center.id === centerId);
+  }, [centers]);
+
   // Initialize response value based on fetched data
   useEffect(() => {
-    if (candidate) {
+    if (candidate && centers.length > 0) {
       // If seleccionOpcion has a center_id, use that - otherwise default to candidate's center
       const centerId = seleccionOpcion?.center_id || candidate.center?.id || "";
       setDisplayCenterId(centerId);
 
-      // Make sure to update seleccionOpcion with the correct center_id (solo si hay cambios reales)
+      // Find the corresponding center and get its name
+      const selectedCenter = findCenterById(centerId) || candidate.center;
+      const centerName = selectedCenter?.name || "";
+
+      // Make sure to update seleccionOpcion with both center_id and center_name
+      const newValue = { 
+        center_id: centerId,
+        center_name: centerName
+      };
+      
       if (
         !seleccionOpcion?.center_id ||
-        seleccionOpcion.center_id !== centerId
+        seleccionOpcion.center_id !== centerId ||
+        seleccionOpcion.center_name !== centerName
       ) {
-        const newValue = { center_id: centerId };
         if (JSON.stringify(newValue) !== JSON.stringify(seleccionOpcion)) {
           setSeleccionOpcion(newValue);
         }
       }
     }
-  }, [candidate, seleccionOpcion, setSeleccionOpcion]);
+  }, [candidate, centers, seleccionOpcion, setSeleccionOpcion, findCenterById]);
 
   const handleCenterChange = (e) => {
     setNewCenterId(e.target.value);
@@ -110,8 +124,15 @@ const CanalizacionCentro = ({
         });
         console.log("Transferencia solicitada:", res.data);
 
-        // Update the seleccionOpcion to reflect the requested change
-        setSeleccionOpcion({ center_id: newCenterId });
+        // Find the selected center and get its name
+        const selectedCenter = findCenterById(newCenterId);
+        const centerName = selectedCenter?.name || "";
+
+        // Update the seleccionOpcion to reflect the requested change with both ID and name
+        setSeleccionOpcion({ 
+          center_id: newCenterId,
+          center_name: centerName
+        });
         setDisplayCenterId(newCenterId);
 
         // After successful request, you might want to fetch updated candidate/center info

@@ -32,6 +32,7 @@ import WorkOutlineIcon from "@mui/icons-material/WorkOutline";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import FileDownloadIcon from "@mui/icons-material/FileDownload";
 import FlagOutlinedIcon from "@mui/icons-material/FlagOutlined";
+import AssignmentIcon from "@mui/icons-material/Assignment";
 
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "../../api";
@@ -47,6 +48,7 @@ const InterviewDialog = lazy(() =>
 import useDocumentTitle from "../../components/hooks/useDocumentTitle";
 import CandidateDetails from "../../components/candidate_create/DetailSection";
 import LoadingPopup from "../../components/LoadingPopup";
+import CuestionarioReportView from "../cuestionarios/CuestionarioReportView";
 
 // Define the ordered stages based on your Django STAGE_CHOICES with subphases for Capacitación.
 const stageOrder = [
@@ -855,8 +857,8 @@ const Datasheet = () => {
 
         {/* PDF Download */}
 
-        <Dialog open={open} onClose={handleClose} maxWidth="md" fullWidth>
-          <DialogTitle>Seleccione el documento</DialogTitle>
+        <Dialog open={open} onClose={handleClose} maxWidth={selectedTab === 3 ? "xl" : "md"} fullWidth>
+          <DialogTitle>{selectedTab === 3 ? "Reporte de Cuestionarios" : "Seleccione el documento"}</DialogTitle>
           <DialogContent>
             <Box display="flex" justifyContent="center" gap={2} mt={1}>
               <Button
@@ -883,19 +885,43 @@ const Datasheet = () => {
               >
                 Proyecto de Vida
               </Button>
+              <Button
+                variant={selectedTab === 3 ? "contained" : "outlined"}
+                color="secondary"
+                onClick={() => setSelectedTab(3)}
+                endIcon={<AssignmentIcon />}
+              >
+                Reporte de Cuestionarios
+              </Button>
             </Box>
+            
+            {/* Questionnaire Report Content */}
+            {selectedTab === 3 && (
+              <Box sx={{ mt: 2, height: "70vh" }}>
+                <CuestionarioReportView
+                  usuarioId={candidateProfile.user.id}
+                  cuestionariosFinalizados={questionnaires.filter(q => q.finalizado).map(q => ({
+                    id: q.id,
+                    nombre: q.nombre
+                  }))}
+                  onClose={() => setSelectedTab(0)}
+                />
+              </Box>
+            )}
           </DialogContent>
           <DialogActions>
             <Button onClick={handleClose} color="secondary">
               Cerrar
             </Button>
-            <Button
-              variant="contained"
-              color="primary"
-              onClick={() => handleDownload()}
-            >
-              Descargar PDF
-            </Button>
+            {selectedTab !== 3 && (
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => handleDownload()}
+              >
+                Descargar PDF
+              </Button>
+            )}
           </DialogActions>
         </Dialog>
       </Paper>

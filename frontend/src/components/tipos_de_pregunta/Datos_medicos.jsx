@@ -46,6 +46,72 @@ const CandidateMedicalEdit = ({
   const { reset, control, formState, setValue } = methods;
   const watchedValues = useWatch({ control });
 
+  // Helper function to handle both string (legacy) and object formats
+  const parseSeleccionOpcion = (seleccionOpcion) => {
+    // If it's already an object, return it directly
+    if (typeof seleccionOpcion === 'object' && seleccionOpcion !== null) {
+      return {
+        last_seizure: seleccionOpcion.last_seizure || "",
+        psychological_care_details: seleccionOpcion.psychological_care_details || "",
+        psychiatric_care_details: seleccionOpcion.psychiatric_care_details || "",
+        disability_certificate_details: seleccionOpcion.disability_certificate_details || "",
+        has_disability_history: seleccionOpcion.has_disability_history || false,
+        disability_history_details: seleccionOpcion.disability_history_details || "",
+      };
+    }
+
+    // If it's a string (legacy format), parse it
+    if (typeof seleccionOpcion === 'string') {
+      const details = {
+        last_seizure: "",
+        psychological_care_details: "",
+        psychiatric_care_details: "",
+        disability_certificate_details: "",
+        has_disability_history: false,
+        disability_history_details: "",
+      };
+
+      // Use a more comprehensive regex to capture all fields
+      const fullRegex =
+        /convulsiones:\s*(.*?)(?:,|$)|psicológico:\s*(.*?)(?:,|$)|psiquiátrico:\s*(.*?)(?:,|$)|certificado:\s*(.*?)(?:,|$)|historial_discapacidad:\s*(.*?)(?:,|$)|historial_discapacidad_explicación:\s*(.*?)(?:,|$)/g;
+      let match;
+
+      while ((match = fullRegex.exec(seleccionOpcion)) !== null) {
+        if (match[1]) {
+          // convulsiones
+          details.last_seizure = match[1].trim();
+        } else if (match[2]) {
+          // psicológico
+          details.psychological_care_details = match[2].trim();
+        } else if (match[3]) {
+          // psiquiátrico
+          details.psychiatric_care_details = match[3].trim();
+        } else if (match[4]) {
+          // certificado
+          details.disability_certificate_details = match[4].trim();
+        } else if (match[5]) {
+          // historial discapacidad
+          const val = match[5].trim();
+          details.has_disability_history = val === "true";
+        } else if (match[6]) {
+          // historial discapacidad explicación
+          details.disability_history_details = match[6].trim();
+        }
+      }
+      return details;
+    }
+
+    // Default empty object if neither string nor object
+    return {
+      last_seizure: "",
+      psychological_care_details: "",
+      psychiatric_care_details: "",
+      disability_certificate_details: "",
+      has_disability_history: false,
+      disability_history_details: "",
+    };
+  };
+
   // 1) Load initial data
   useEffect(() => {
     axios
@@ -53,48 +119,8 @@ const CandidateMedicalEdit = ({
       .then((res) => {
         const d = res.data;
 
-        // --- Refactored: Extract details from seleccionOpcion using a single pass ---
-        const extractDetails = (inputString) => {
-          const details = {
-            last_seizure: "",
-            psychological_care_details: "",
-            psychiatric_care_details: "",
-            disability_certificate_details: "",
-            has_disability_history: false,
-            disability_history_details: "",
-          };
-
-          // Use a more comprehensive regex to capture all fields
-          const fullRegex =
-            /convulsiones:\s*(.*?)(?:,|$)|psicológico:\s*(.*?)(?:,|$)|psiquiátrico:\s*(.*?)(?:,|$)|certificado:\s*(.*?)(?:,|$)|historial_discapacidad:\s*(.*?)(?:,|$)|historial_discapacidad_explicación:\s*(.*?)(?:,|$)/g;
-          let match;
-
-          while ((match = fullRegex.exec(inputString)) !== null) {
-            if (match[1]) {
-              // convulsiones
-              details.last_seizure = match[1].trim();
-            } else if (match[2]) {
-              // psicológico
-              details.psychological_care_details = match[2].trim();
-            } else if (match[3]) {
-              // psiquiátrico
-              details.psychiatric_care_details = match[3].trim();
-            } else if (match[4]) {
-              // certificado
-              details.disability_certificate_details = match[4].trim();
-            } else if (match[5]) {
-              // historial discapacidad
-              const val = match[5].trim();
-              details.has_disability_history = val === "true";
-            } else if (match[6]) {
-              // historial discapacidad explicación
-              details.disability_history_details = match[6].trim();
-            }
-          }
-          return details;
-        };
-
-        const parsedSeleccionOpcion = extractDetails(seleccionOpcion);
+        // Parse seleccionOpcion (handles both string and object formats)
+        const parsedSeleccionOpcion = parseSeleccionOpcion(seleccionOpcion);
 
         reset({
           disability: d.disability || [],
@@ -107,10 +133,10 @@ const CandidateMedicalEdit = ({
           social_security: d.social_security || "",
           receives_psychological_care: d.receives_psychological_care,
           // Use parsed value here
-          psychological_care_details:parsedSeleccionOpcion.psychological_care_details,
+          psychological_care_details: parsedSeleccionOpcion.psychological_care_details,
           receives_psychiatric_care: d.receives_psychiatric_care,
           // Use parsed value here
-          psychiatric_care_details:parsedSeleccionOpcion.psychiatric_care_details,
+          psychiatric_care_details: parsedSeleccionOpcion.psychiatric_care_details,
           has_seizures: d.has_seizures,
           // Use parsed value here
           last_seizure: parsedSeleccionOpcion.last_seizure,
@@ -135,9 +161,20 @@ const CandidateMedicalEdit = ({
     const timeout = setTimeout(async () => {
       setAutoSave(true);
       try {
-        setSeleccionOpcion(
-          `respondido-> convulsiones:${watchedValues.last_seizure}, psicológico:${watchedValues.psychological_care_details}, psiquiátrico:${watchedValues.psychiatric_care_details}, certificado:${watchedValues.disability_certificate_details}, historial_discapacidad:${watchedValues.has_disability_history}, historial_discapacidad_explicación:${watchedValues.disability_history_details}`
-        );
+        // Create the medical data object to send to setSeleccionOpcion
+        const medicalData = {
+          responded: true,
+          last_seizure: watchedValues.last_seizure || "",
+          psychological_care_details: watchedValues.psychological_care_details || "",
+          psychiatric_care_details: watchedValues.psychiatric_care_details || "",
+          disability_certificate_details: watchedValues.disability_certificate_details || "",
+          has_disability_history: watchedValues.has_disability_history || false,
+          disability_history_details: watchedValues.disability_history_details || "",
+        };
+
+        // Set the medical data as an object instead of a string
+        setSeleccionOpcion(medicalData);
+
         await axios.put(
           `/api/candidatos/${usuarioId}/datos-medicos/`,
           watchedValues,
