@@ -7,3 +7,4 @@ Pipfile
 Pipfile.lock
 dump.rdb
 CONFEvenv/
+.vscode/

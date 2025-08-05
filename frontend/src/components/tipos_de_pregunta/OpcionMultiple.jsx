@@ -50,6 +50,14 @@ const OpcionMultiple = ({
             "&:hover": {
               transform: "scale(1.02)",
             },
+            "&.Mui-disabled": {
+              backgroundColor:
+                seleccionOpcion === index ? "success.light" : colors.grey[700],
+              color:
+                seleccionOpcion === index
+                  ? "success.contrastText"
+                  : "grey.contrastText",
+            },
           }}
           onClick={() => seleccionRespuesta(index)}
           disabled={disabled}

@@ -121,7 +121,6 @@ function DespliegueCuestionario({
         setTechnicalAids(processAidsResponse(techRes));
         setCHAids(processAidsResponse(chRes));
 
-        console.log("✅ All Aids data fetched and processed.");
       } catch (error) {
         console.error("🔥 Error fetching Aids data:", error);
         setShowError(true);
@@ -344,17 +343,6 @@ function DespliegueCuestionario({
                     ) : (
                       "Guardar cambios"
                     )}
-                  </Button>
-                )}
-                {!cuestionarioFinalizado && ( // Only show if not finalized
-                  <Button
-                    variant="contained"
-                    color="primary"
-                    onClick={handleFinalizarCuestionario}
-                    disabled={isSaving} // Disable finalize while saving
-                    sx={{ ml: { sm: 1 } }} // Add some margin if side-by-side
-                  >
-                    Finalizar Cuestionario
                   </Button>
                 )}
               </Box>

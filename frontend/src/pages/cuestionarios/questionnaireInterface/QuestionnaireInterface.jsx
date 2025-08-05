@@ -22,11 +22,13 @@ import { FaFileExcel } from "react-icons/fa";
 import PreguntaCard from "./PreguntaCard"; // Asegúrate de que esta ruta sea correcta
 import PopupPrecargaCuestionario from "./PopupPrecargaCuestionario";
 import api from "../../../api"; // Asegúrate de que esta ruta sea correcta
+import LoadingPopup from "../../../components/LoadingPopup";
 
 const TIPOS_COMPLETOS = [
   "multiple",
   "abierta",
   "numero",
+  "numero_telefono",
   "checkbox",
   "binaria",
   "fecha",
@@ -123,6 +125,8 @@ const EditorCuestionario = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
   const tiposPermitidos = tiposPorCuestionario[tipoCuestionario] || [];
+
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -343,6 +347,7 @@ const EditorCuestionario = () => {
       console.error(err);
       alert(err.message || "Ocurrió un error al guardar.");
     }
+    setIsLoading(false);
   };
 
   const agregarSeccionSiNoExiste = (nombre) => {
@@ -478,6 +483,7 @@ const EditorCuestionario = () => {
           <Button
             onClick={() => {
               setPopupConfirmacionGuardar(false);
+              setIsLoading(true);
               handleGuardar();
             }}
             color="error"
@@ -524,6 +530,10 @@ const EditorCuestionario = () => {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <LoadingPopup
+        open={isLoading}
+      />
     </div>
   );
 };

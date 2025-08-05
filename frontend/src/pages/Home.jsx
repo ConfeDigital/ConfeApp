@@ -9,7 +9,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import NavBar from "../components/NavBar";
 import { useSelector } from "react-redux";
-// import ilustracionDisc from "../../assets/ilustracionDisc.webp"; // Import the image
+import LoadingPopup from "../components/LoadingPopup"
 
 const Home = () => {
   const theme = useTheme();
@@ -29,7 +29,6 @@ const Home = () => {
 
   const handlePreentrevista = () => {
     if (user) {
-      console.log(user.id);
       navigate('/candidato/dashboard/');
     } else {
       console.error("User is not available");
@@ -39,10 +38,6 @@ const Home = () => {
   useEffect(() => {
     document.title = "Confe";
   }, []);
-
-  if (loading) {
-    return <div>Loading...</div>;
-  }
 
   return (
     <Box
@@ -162,6 +157,9 @@ const Home = () => {
           }}
         />
       </Box>
+      <LoadingPopup
+        open={loading}
+      />
     </Box>
   );
 };

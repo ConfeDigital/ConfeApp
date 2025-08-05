@@ -296,7 +296,7 @@ const TiposDePregunta = ({
       <Box
         sx={{
           width: "100%",
-          my: 3,
+          // my: 1,
           position: "relative",
           px: { xs: 1, sm: 2, md: 3 },
         }}
@@ -313,7 +313,7 @@ const TiposDePregunta = ({
             variant="h4"
             sx={{
               textAlign: "center",
-              mb: 3,
+              mb: 2,
               fontWeight: "bold",
               fontSize: { sm: "1.5rem", md: "2rem" },
               color: "info.main",

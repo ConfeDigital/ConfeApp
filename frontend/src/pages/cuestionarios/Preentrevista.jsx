@@ -99,7 +99,7 @@ function Preentrevista() {
 
           if (activeCuestionarioInstance) {
             setCuestionario(activeCuestionarioInstance);
-            console.log("Active Preentrevista Cuestionario found:", activeCuestionarioInstance);
+            // console.log("Active Preentrevista Cuestionario found:", activeCuestionarioInstance);
 
             // 3. Fetch existing responses and questionnaire status for the found questionnaire
             await fetchExistingResponses(uid, activeCuestionarioInstance.id);

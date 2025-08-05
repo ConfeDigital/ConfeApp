@@ -533,9 +533,9 @@ const MedicalInfoForm = () => {
               sx={{ fontSize: "1rem" }}
               {...field}
             >
-              <MenuItem value="">No sé</MenuItem>
-              <MenuItem value="1">Hace menos de un año</MenuItem>
-              <MenuItem value="2">Hace mas de un año</MenuItem>
+              <MenuItem value="No sé">No sé</MenuItem>
+              <MenuItem value="Hace menos de un año">Hace menos de un año</MenuItem>
+              <MenuItem value="Hace mas de un año">Hace mas de un año</MenuItem>
             </Select>
           )}
         />

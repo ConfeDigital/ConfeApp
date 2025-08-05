@@ -21,7 +21,6 @@ function SeleccionCuestionarioVisualizacion({
         // ml: 4,
         alignContent: "center",
         justifyContent: "center",
-        bgcolor: "background.paper",
       }}
     >
       {/* Selector de cuestionarios finalizados */}
