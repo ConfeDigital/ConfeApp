@@ -401,7 +401,7 @@ const PopupPrecargaCuestionario = ({
         <DialogContent>
           <Typography>
             ¿Deseas precargar este archivo? ¡Cualquier pregunta que se haya
-            creado, será eliminada.!
+            creado, será eliminada!
           </Typography>
         </DialogContent>
         <DialogActions>

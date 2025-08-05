@@ -8,8 +8,6 @@ const BotonFinCuestionario = ({ handleFinalizarCuestionario }) => {
       sx={{
         display: "flex",
         justifyContent: "center",
-        marginTop: 4,
-        marginBottom: 4,
       }}
     >
       <Button

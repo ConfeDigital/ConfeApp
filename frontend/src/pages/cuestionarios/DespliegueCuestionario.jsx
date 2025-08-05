@@ -584,8 +584,8 @@ function DespliegueCuestionario({
               maxWidth: { md: 400 },
               flexShrink: 0,
               mb: { xs: 2, md: 0 },
-              mr: { md: 2 },
-              height: { xs: "auto", md: "calc(80vh - 64px)" },
+              mx: { md: 2 },
+              height: "85vh",
               overflowY: "auto",
             }}
           >
@@ -597,7 +597,7 @@ function DespliegueCuestionario({
                 height: "100%",
                 display: "flex",
                 flexDirection: "column",
-                bgcolor: "#f8fafc",
+                // bgcolor: "background.paper",
                 boxShadow: 6,
               }}
             >
@@ -738,7 +738,6 @@ function DespliegueCuestionario({
             flex: 1,
             width: "100%",
             minWidth: 0,
-            height: { xs: "auto", md: "calc(90vh - 64px)" },
             margin: 2,
             overflowY: "auto",
           }}
