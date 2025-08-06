@@ -304,7 +304,6 @@ const CuestionarioDetail = () => {
             {filteredCuestionarios.map((cuestionario) => (
               <ListItem
                 key={cuestionario.id}
-                button={true}
                 sx={{
                   display: "flex",
                   justifyContent: "space-between",

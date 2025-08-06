@@ -25,6 +25,7 @@ const candidateSchema = yup.object().shape({
   address_number_int: yup.string().nullable(),
   address_municip: yup.string().nullable(),
   address_state: yup.string().nullable(),
+  address_city: yup.string().nullable(),
   address_col: yup.string().nullable(),
   residence_type: yup.string().nullable(),
   has_disability_certificate: yup.boolean(),
@@ -40,6 +41,7 @@ const candidateSchema = yup.object().shape({
   physical_restrictions: yup.string().nullable(),
   disability: yup.array().of(yup.number()).nullable(),
   cycle: yup.number().nullable(),
+
   emergency_contacts: yup.array().of(
     yup.object().shape({
       first_name: yup.string().required('El nombre del contacto es obligatorio'),
@@ -47,18 +49,24 @@ const candidateSchema = yup.object().shape({
       second_last_name: yup.string().required('Los apellidos del contacto son obligatorios'),
       phone_number: phoneNumberSchema,
       email: yup.string().email('Debe ser un correo válido').required('El correo del contacto es obligatorio'),
-      relationship: yup.string().required('La relación con el contacto es obligatoria')
-      //domicile: yup.object().shape({
-      //  address_PC: yup.string().required('El código postal del domicilio es obligatorio'),
-      //  address_road: yup.string().required('La calle del domicilio es obligatorio'),
-      //  address_number: yup.string().required('El número del domicilio es obligatorio'),
-      //  address_number_int: yup.string().nullable(),
-      //  address_municip: yup.string().nullable(),
-      //  address_state: yup.string().nullable(),
-      //  address_col: yup.string().required('La colonia del domicilio es obligatorio'),
-      //}).required('El domicilio del contacto es obligatorio'),
-    // Add other fields for emergency contacts as needed
-  })
+      relationship: yup.string().required('La relación con el contacto es obligatoria'),
+      lives_at_same_address: yup.boolean(),
+      // Conditionally validate the domicile field
+      domicile: yup.object().when('lives_at_same_address', {
+        is: false, // Condition: lives_at_same_address is false
+        then: (schema) => schema.shape({ // If the condition is met, apply this schema
+          address_PC: yup.string().required('El código postal del domicilio es obligatorio'),
+          address_road: yup.string().required('La calle del domicilio es obligatorio'),
+          address_number: yup.string().required('El número del domicilio es obligatorio'),
+          address_number_int: yup.string().nullable(),
+          address_municip: yup.string().nullable(),
+          address_state: yup.string().nullable(),
+          address_city: yup.string().nullable(),
+          address_col: yup.string().nullable(),// required('La colonia del domicilio es obligatoria'),
+        }).required('El domicilio del contacto es obligatorio'), // Ensure the entire object is required
+        otherwise: (schema) => schema.notRequired(), // If the condition is NOT met, don't require the domicile object
+      }),
+    })
   ).required('Se requiere al menos un contacto de emergencia')
 });
 

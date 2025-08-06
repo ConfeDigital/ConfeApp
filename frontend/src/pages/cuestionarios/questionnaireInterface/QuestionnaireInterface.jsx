@@ -515,7 +515,7 @@ const EditorCuestionario = () => {
 
       <Dialog
         open={dialogoExito}
-        onClose={() => navigate(`/baseCuestionarios/`)}
+        onClose={() => navigate(`/baseCuestionarios/${idBase}`)}
       >
         <DialogTitle>Éxito</DialogTitle>
         <DialogContent>
@@ -523,7 +523,7 @@ const EditorCuestionario = () => {
         </DialogContent>
         <DialogActions>
           <Button
-            onClick={() => navigate(`/baseCuestionarios/`)}
+            onClick={() => navigate(`/baseCuestionarios/${idBase}`)}
             color="primary"
           >
             Aceptar

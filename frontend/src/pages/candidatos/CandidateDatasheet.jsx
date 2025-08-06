@@ -12,8 +12,6 @@ import {
   useTheme,
   useMediaQuery,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import Header from "../../components/Header";
 import axios from "../../api";
 import dayjs from "dayjs";

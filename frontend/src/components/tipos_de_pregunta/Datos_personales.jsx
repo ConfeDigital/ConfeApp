@@ -5,23 +5,15 @@ import {
   Paper,
   Button,
   Divider,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
 } from "@mui/material";
 import dayjs from "dayjs";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "../../api";
-import Header from "../../components/Header";
 import { useForm, FormProvider } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import candidateSchema from "../../components/candidate_create/candidateSchemaEdit";
 
 import PersonalInfoForm from "../../components/candidate_create/PersonalInfoForm";
-import DomicileForm from "../../components/candidate_create/DomicileFormGoogle";
-import MedicalInfoForm from "../../components/candidate_create/MedicalInfoForm";
-import EmergencyContactsForm from "../../components/candidate_create/EmergencyContactForm";
 
 const Datos_personales = ({
   usuarioId,
@@ -199,35 +191,6 @@ const Datos_personales = ({
               ciclo={false}
               disabled={disabled}
             />
-            {/* <Divider sx={{ my: 2 }} />
-            <Accordion>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">Domicilio</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <DomicileForm />
-              </AccordionDetails>
-            </Accordion> */}
-            {/* <Divider sx={{ my: 2 }} />
-            <Accordion>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">Contactos</Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <EmergencyContactsForm />
-              </AccordionDetails>
-            </Accordion> */}
-            {/* <Divider sx={{ my: 2 }} />
-            <Accordion>
-              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">
-                  Detalles Médicos y Emergencia
-                </Typography>
-              </AccordionSummary>
-              <AccordionDetails>
-                <MedicalInfoForm />
-              </AccordionDetails>
-            </Accordion> */}
             <Divider sx={{ my: 2 }} />
             <Box mt={3}>
               <Button

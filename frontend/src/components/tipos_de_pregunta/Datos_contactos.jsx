@@ -3,12 +3,10 @@ import {
   Grid,
   Button,
   CircularProgress,
-  Alert,
   Box,
   Typography,
 } from "@mui/material";
 import {
-  useFieldArray,
   useForm,
   FormProvider,
   useWatch,
@@ -16,43 +14,107 @@ import {
 import { yupResolver } from "@hookform/resolvers/yup";
 import axios from "../../api";
 import ContactFields from "../../pages/cuestionarios/elementos/ContactFields";
-import domicileSchema from "../../pages/cuestionarios/elementos/domicileSchema";
-import candidateSchema from "../candidate_create/candidateSchemaEdit";
+import contactsSchema from "../candidate_create/contactsSchema";
+import HighlightOffIcon from "@mui/icons-material/HighlightOff";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline"; // Import for success icon
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
 
 const Datos_contactos = ({
   usuarioId,
+  seleccionOpcion,
   setSeleccionOpcion,
   disabled = false,
 }) => {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [autoSave, setAutoSave] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
 
-  // Track when initial fetch/reset is done
   const initialLoaded = useRef(false);
 
-  // 1. Setup RHF
   const methods = useForm({
-    resolver: yupResolver(candidateSchema),
-    defaultValues: { emergency_contacts: [] },
+    resolver: yupResolver(contactsSchema),
+    // Initialize with a simple empty object. The real data will be set by `reset()`
+    defaultValues: {
+      emergency_contacts: [
+        {
+          first_name: '',
+          last_name: '',
+          second_last_name: '',
+          phone_number: '',
+          email: '',
+          relationship: '',
+          lives_at_same_address: false,
+          domicile: {
+            address_PC: '',
+            address_road: '',
+            address_number: '',
+            address_number_int: '',
+            address_municip: '',
+            address_state: '',
+            address_col: '',
+            address_lat: '',
+            address_lng: '',
+            residence_type: '',
+          },
+        },
+      ],
+    },
     mode: "onChange",
   });
-  const { control, setValue, reset, formState } = methods;
-  const { fields, append, remove } = useFieldArray({
-    name: "emergency_contacts",
-    control,
-  });
 
-  // 2. Load from API once
+  const { control, setValue, reset, formState, handleSubmit } = methods;
+  const { isDirty, isValid, errors } = formState;
+
   useEffect(() => {
     axios
       .get(`/api/candidatos/${usuarioId}/editar-contactos/`)
       .then((res) => {
         const data = Array.isArray(res.data) ? res.data : [];
-        // set the form values...
-        setValue("emergency_contacts", data);
-        // ...then reset so formState.isDirty is false
-        reset({ emergency_contacts: data });
+        const formattedData = data.length > 0
+          ? data.map(contact => ({
+            ...contact,
+            domicile: contact.domicile
+              ? { ...contact.domicile, address_col: contact.domicile.address_col || '' }
+              : {
+                address_PC: '',
+                address_road: '',
+                address_number: '',
+                address_number_int: '',
+                address_municip: '',
+                address_state: '',
+                address_col: '',
+                address_lat: '',
+                address_lng: '',
+                residence_type: '',
+              }
+          }))
+          : [
+            {
+              first_name: '',
+              last_name: '',
+              second_last_name: '',
+              phone_number: '',
+              email: '',
+              relationship: '',
+              lives_at_same_address: false,
+              domicile: {
+                address_PC: '',
+                address_road: '',
+                address_number: '',
+                address_number_int: '',
+                address_municip: '',
+                address_state: '',
+                address_col: '',
+                address_lat: '',
+                address_lng: '',
+                residence_type: '',
+              },
+            },
+          ];
+        // Use reset to set the default values after fetching
+        reset({ emergency_contacts: formattedData });
       })
       .catch((err) => {
         console.error(err);
@@ -62,26 +124,22 @@ const Datos_contactos = ({
         setLoading(false);
         initialLoaded.current = true;
       });
-  }, [usuarioId, setValue, reset]);
+  }, [usuarioId, reset]);
 
-  // 3. Watch all contacts
-  const watchedValues = useWatch({
-    control,
-    name: "emergency_contacts",
-    defaultValue: [],
-  });
-
-  // 4. Save helper (no reset here!)
-  const saveContacts = async (contacts) => {
+  const onValidSubmit = async (data) => {
     setError("");
     setAutoSave(true);
-    setSeleccionOpcion(contacts);
+    setSaveSuccess(false);
+    setSeleccionOpcion(data.emergency_contacts);
+
     try {
       await axios.put(
         `/api/candidatos/${usuarioId}/editar-contactos/`,
-        { emergency_contacts: contacts },
+        { emergency_contacts: data.emergency_contacts },
         { headers: { "Content-Type": "application/json" } }
       );
+      methods.reset(data);
+      setSaveSuccess(true);
     } catch (err) {
       console.error(err);
       setError("Error actualizando contactos");
@@ -89,15 +147,30 @@ const Datos_contactos = ({
     setAutoSave(false);
   };
 
-  // 5. Debounced auto-save, but only after initial load
+  const onInvalidSubmit = (formErrors) => {
+    const arrayError = formErrors.emergency_contacts?.message;
+    if (arrayError) {
+      setError(arrayError);
+    } else {
+      setError('');
+    }
+    setAutoSave(false);
+    setSaveSuccess(false);
+  };
+
+  const watchedValues = useWatch({ control, name: "emergency_contacts" });
   useEffect(() => {
-    if (!initialLoaded.current || !formState.isDirty || !formState.isValid)
-      return;
+    if (!initialLoaded.current || !isDirty || !isValid) return;
+
+    setError("");
+    setSaveSuccess(false);
+
     const timer = setTimeout(() => {
-      saveContacts(watchedValues);
-    }, 1000);
+      handleSubmit(onValidSubmit)();
+    }, 2000);
+
     return () => clearTimeout(timer);
-  }, [watchedValues, formState.isDirty]);
+  }, [watchedValues, isDirty, isValid, handleSubmit, onValidSubmit]);
 
   if (loading) {
     return (
@@ -107,41 +180,99 @@ const Datos_contactos = ({
     );
   }
 
+  const contactCountError = errors.emergency_contacts?.message;
+
   return (
     <FormProvider {...methods}>
-      {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {error}
-        </Alert>
-      )}
+      <form onSubmit={handleSubmit(onValidSubmit, onInvalidSubmit)}>
+        {/* Validation message for the contact count */}
+        {!contactCountError && !seleccionOpcion && (
+          <Box display="flex" alignItems="center" sx={{ mb: 2 }}>
+            <InfoOutlinedIcon color="info" sx={{ mr: 1 }} />
+            <Typography color="info" variant="subtitle1">
+              Se necesitan al menos dos contactos 
+            </Typography>
+          </Box>
+        )}
 
-      {/* Manual Save Button */}
-      <Box sx={{ mb: 2 }}>
-        <Button
-          variant="contained"
-          color="primary"
-          disabled={!formState.isDirty || autoSave || disabled}
-          onClick={() => saveContacts(watchedValues)}
-        >
-          {autoSave ? "Guardando..." : "Guardar contactos"}
-        </Button>
-      </Box>
+        {/* Validation message for the contact count */}
+        {contactCountError && (
+          <Box display="flex" alignItems="center" sx={{ mb: 2 }}>
+            <HighlightOffIcon color="error" sx={{ mr: 1 }} />
+            <Typography color="error" variant="subtitle1">
+              {contactCountError}
+            </Typography>
+          </Box>
+        )}
 
-      {/* Auto-save indicator */}
-      {autoSave && (
-        <Box display="flex" alignItems="center" sx={{ mb: 2 }}>
-          <CircularProgress size={20} sx={{ mr: 1 }} />
-          <Typography variant="body2">Guardando cambios…</Typography>
+        {/* General API error */}
+        {error && (
+          <Typography color="error" variant="subtitle1" sx={{ mb: 2 }}>
+            {error}
+          </Typography>
+        )}
+
+        {/* Success message */}
+        {saveSuccess && (
+          <Box display="flex" alignItems="center" sx={{ mb: 2 }}>
+            <CheckCircleOutlineIcon color="success" sx={{ mr: 1 }} />
+            <Typography color="success.main" variant="subtitle1">
+              ¡Contactos guardados correctamente!
+            </Typography>
+          </Box>
+        )}
+
+        <Box sx={{ mb: 2 }}>
+          <Button
+            type="submit"
+            variant="contained"
+            color="primary"
+            disabled={autoSave || disabled || !isValid}
+            startIcon={<SaveOutlinedIcon />}
+          >
+            {autoSave ? "Guardando..." : "Guardar contactos"}
+          </Button>
         </Box>
-      )}
 
-      {/* Your actual contact fields */}
-      <ContactFields
-        fields={fields}
-        append={append}
-        remove={remove}
-        disabled={disabled}
-      />
+        {autoSave && (
+          <Box display="flex" alignItems="center" sx={{ mb: 2 }}>
+            <CircularProgress size={20} sx={{ mr: 1 }} />
+            <Typography variant="body2">Guardando cambios…</Typography>
+          </Box>
+        )}
+
+        <ContactFields />
+
+        {/* Validation message for the contact count */}
+        {!contactCountError && !seleccionOpcion && (
+          <Box display="flex" alignItems="center" sx={{ my: 2 }}>
+            <InfoOutlinedIcon color="info" sx={{ mr: 1 }} />
+            <Typography color="info" variant="subtitle1">
+              Se necesitan al menos dos contactos 
+            </Typography>
+          </Box>
+        )}
+
+        {/* Validation message for the contact count (footer) */}
+        {contactCountError && (
+          <Box display="flex" alignItems="center" my={2}>
+            <HighlightOffIcon color="error" sx={{ mr: 1 }} />
+            <Typography color="error" variant="subtitle1">
+              {contactCountError}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Success message (footer) */}
+        {saveSuccess && (
+          <Box display="flex" alignItems="center" my={2}>
+            <CheckCircleOutlineIcon color="success" sx={{ mr: 1 }} />
+            <Typography color="success.main" variant="subtitle1">
+              ¡Contactos guardados correctamente!
+            </Typography>
+          </Box>
+        )}
+      </form>
     </FormProvider>
   );
 };
