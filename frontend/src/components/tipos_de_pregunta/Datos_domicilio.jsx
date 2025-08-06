@@ -6,13 +6,18 @@ import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
 import AddressAutoCompleteForm from '../../components/AddressAutoCompleteForm';
 import domicileSchema from "../candidate_create/domicileSchema";
+import { useSelector } from "react-redux";
 
 const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) => {
-  const { uid } = useParams();
-  const navigate = useNavigate();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [autoSave, setAutoSave] = useState(false);
+  const usuarioActualId = useSelector((state) => state.auth.user.id);
+
+  const endpoint =
+    usuarioId === usuarioActualId
+      ? "/api/candidatos/me/editar-domicilio/"
+      : `/api/candidatos/${usuarioId}/editar-domicilio/`;
 
   const methods = useForm({
     resolver: yupResolver(domicileSchema),
@@ -40,8 +45,9 @@ const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) =>
   useEffect(() => {
     const fetchDomicile = async () => {
       try {
-        const response = await axios.get(`/api/candidatos/profiles/${usuarioId}/`);
-        const data = response.data.domicile;
+
+        const response = await axios.get(endpoint);
+        const data = response.data;
 
         if (data) {
           reset({
@@ -59,7 +65,7 @@ const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) =>
           });
         }
       } catch (err) {
-        setError("Error al obtener la información del domicilio.");
+        // setError("Error al obtener la información del domicilio.");
         console.error(err);
       }
     };
@@ -73,7 +79,8 @@ const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) =>
 
     try {
       setSeleccionOpcion(formData);
-      await axios.put(`/api/candidatos/${usuarioId}/editar-domicilio/`, formData, {
+
+      await axios.put(endpoint, formData, {
         headers: { "Content-Type": "application/json" },
       });
       setAutoSave(false);

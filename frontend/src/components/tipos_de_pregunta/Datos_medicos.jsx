@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Box, Typography, Divider, CircularProgress } from "@mui/material";
-import { useParams } from "react-router-dom";
-import axios from "../../api";
+import { useSelector } from "react-redux";
 import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
+import axios from "../../api";
 import medicalSchema from "../candidate_create/medicalSchema";
 import MedicalInfoForm from "../../pages/cuestionarios/elementos/medicalField";
 
@@ -13,9 +13,14 @@ const CandidateMedicalEdit = ({
   setSeleccionOpcion,
   disabled = false,
 }) => {
-  const { uid } = useParams();
   const [error, setError] = useState("");
   const [autoSave, setAutoSave] = useState(false);
+  const usuarioActualId = useSelector((state) => state.auth.user.id);
+
+  const endpoint =
+    usuarioId === usuarioActualId
+      ? "/api/candidatos/me/datos-medicos/"
+      : `/api/candidatos/${usuarioId}/datos-medicos/`;
 
   const methods = useForm({
     resolver: yupResolver(medicalSchema),
@@ -35,7 +40,7 @@ const CandidateMedicalEdit = ({
       has_seizures: false,
       last_seizure: "",
       blood_type: "",
-      medications: [],
+      medications: [{ name: "", dose: "", reason: "" }],
       allergies: "",
       dietary_restrictions: "",
       physical_restrictions: "",
@@ -43,105 +48,45 @@ const CandidateMedicalEdit = ({
     mode: "onChange",
   });
 
-  const { reset, control, formState, setValue } = methods;
+  const { reset, control, formState } = methods;
   const watchedValues = useWatch({ control });
 
-  // Helper function to handle both string (legacy) and object formats
-  const parseSeleccionOpcion = (seleccionOpcion) => {
-    // If it's already an object, return it directly
-    if (typeof seleccionOpcion === 'object' && seleccionOpcion !== null) {
-      return {
-        last_seizure: seleccionOpcion.last_seizure || "",
-        psychological_care_details: seleccionOpcion.psychological_care_details || "",
-        psychiatric_care_details: seleccionOpcion.psychiatric_care_details || "",
-        disability_certificate_details: seleccionOpcion.disability_certificate_details || "",
-        has_disability_history: seleccionOpcion.has_disability_history || false,
-        disability_history_details: seleccionOpcion.disability_history_details || "",
-      };
+  // Debug logs (optional)
+  useEffect(() => {
+    console.log("Dirty?", formState.isDirty);
+    if (formState.isDirty) {
+      console.log("Dirty Values", formState.dirtyFields);
     }
-
-    // If it's a string (legacy format), parse it
-    if (typeof seleccionOpcion === 'string') {
-      const details = {
-        last_seizure: "",
-        psychological_care_details: "",
-        psychiatric_care_details: "",
-        disability_certificate_details: "",
-        has_disability_history: false,
-        disability_history_details: "",
-      };
-
-      // Use a more comprehensive regex to capture all fields
-      const fullRegex =
-        /convulsiones:\s*(.*?)(?:,|$)|psicológico:\s*(.*?)(?:,|$)|psiquiátrico:\s*(.*?)(?:,|$)|certificado:\s*(.*?)(?:,|$)|historial_discapacidad:\s*(.*?)(?:,|$)|historial_discapacidad_explicación:\s*(.*?)(?:,|$)/g;
-      let match;
-
-      while ((match = fullRegex.exec(seleccionOpcion)) !== null) {
-        if (match[1]) {
-          // convulsiones
-          details.last_seizure = match[1].trim();
-        } else if (match[2]) {
-          // psicológico
-          details.psychological_care_details = match[2].trim();
-        } else if (match[3]) {
-          // psiquiátrico
-          details.psychiatric_care_details = match[3].trim();
-        } else if (match[4]) {
-          // certificado
-          details.disability_certificate_details = match[4].trim();
-        } else if (match[5]) {
-          // historial discapacidad
-          const val = match[5].trim();
-          details.has_disability_history = val === "true";
-        } else if (match[6]) {
-          // historial discapacidad explicación
-          details.disability_history_details = match[6].trim();
-        }
-      }
-      return details;
+    console.log("Valid?", formState.isValid);
+    if (!formState.isValid) {
+      console.log("Validation Errors", formState.errors);
     }
-
-    // Default empty object if neither string nor object
-    return {
-      last_seizure: "",
-      psychological_care_details: "",
-      psychiatric_care_details: "",
-      disability_certificate_details: "",
-      has_disability_history: false,
-      disability_history_details: "",
-    };
-  };
+  }, [formState.isDirty, watchedValues, formState.isValid, disabled]);
 
   // 1) Load initial data
   useEffect(() => {
     axios
-      .get(`/api/candidatos/profiles/${usuarioId}/`)
+      .get(endpoint)
       .then((res) => {
         const d = res.data;
 
-        // Parse seleccionOpcion (handles both string and object formats)
-        const parsedSeleccionOpcion = parseSeleccionOpcion(seleccionOpcion);
-
         reset({
           disability: d.disability || [],
-          has_disability_history: parsedSeleccionOpcion.has_disability_history,
-          disability_history_details: parsedSeleccionOpcion.disability_history_details,
+          has_disability_history: seleccionOpcion?.has_disability_history || false,
+          disability_history_details: seleccionOpcion?.disability_history_details || "",
           has_disability_certificate: d.has_disability_certificate,
-          disability_certificate_details: parsedSeleccionOpcion.disability_certificate_details,
+          disability_certificate_details: seleccionOpcion?.disability_certificate_details || "",
           has_interdiction_judgment: d.has_interdiction_judgment,
           receives_pension: d.receives_pension || "",
           social_security: d.social_security || "",
           receives_psychological_care: d.receives_psychological_care,
-          // Use parsed value here
-          psychological_care_details: parsedSeleccionOpcion.psychological_care_details,
+          psychological_care_details: seleccionOpcion?.psychological_care_details || "",
           receives_psychiatric_care: d.receives_psychiatric_care,
-          // Use parsed value here
-          psychiatric_care_details: parsedSeleccionOpcion.psychiatric_care_details,
+          psychiatric_care_details: seleccionOpcion?.psychiatric_care_details || "",
           has_seizures: d.has_seizures,
-          // Use parsed value here
-          last_seizure: parsedSeleccionOpcion.last_seizure,
+          last_seizure: seleccionOpcion?.last_seizure || "",
           blood_type: d.blood_type || "",
-          medications: d.medications || [],
+          medications: d.medications || [{ name: "", dose: "", reason: "" }],
           allergies: d.allergies || "",
           dietary_restrictions: d.dietary_restrictions || "",
           physical_restrictions: d.physical_restrictions || "",
@@ -151,7 +96,7 @@ const CandidateMedicalEdit = ({
         console.error(e);
         setError("Error obteniendo datos médicos.");
       });
-  }, [usuarioId, reset, seleccionOpcion]);
+  }, [usuarioId, reset]);
 
   // 2) Auto-save on change, then reset dirty flag
   useEffect(() => {
@@ -161,7 +106,6 @@ const CandidateMedicalEdit = ({
     const timeout = setTimeout(async () => {
       setAutoSave(true);
       try {
-        // Create the medical data object to send to setSeleccionOpcion
         const medicalData = {
           responded: true,
           last_seizure: watchedValues.last_seizure || "",
@@ -172,32 +116,30 @@ const CandidateMedicalEdit = ({
           disability_history_details: watchedValues.disability_history_details || "",
         };
 
-        // Set the medical data as an object instead of a string
-        setSeleccionOpcion(medicalData);
-
-        await axios.put(
-          `/api/candidatos/${usuarioId}/datos-medicos/`,
-          watchedValues,
-          { headers: { "Content-Type": "application/json" } }
+        const filteredMedications = (watchedValues.medications || []).filter(med =>
+          med.name.trim() !== "" || med.dose.trim() !== "" || med.reason.trim() !== ""
         );
 
-        // **mark current values as pristine**
+        setSeleccionOpcion(medicalData);
+
+        await axios.put(endpoint, { ...watchedValues, medications: filteredMedications }, {
+          headers: { "Content-Type": "application/json" },
+        });
+
         reset(watchedValues, { keepDirty: false });
       } catch (err) {
         console.error(err);
         setError("Error actualizando datos médicos.");
       }
       setAutoSave(false);
-    }, 1000);
+    }, 2000);
 
     return () => clearTimeout(timeout);
   }, [
     disabled,
-    watchedValues,
     formState.isDirty,
     formState.isValid,
     usuarioId,
-    setSeleccionOpcion,
     reset,
   ]);
 

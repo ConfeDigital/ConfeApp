@@ -12,8 +12,11 @@ from .views import (
     SISAidCandidateHistoryViewSet,
     CHAidCandidateHistoryViewSet,
     CandidateDomicileUpdateAPIView,
+    CandidateDomicileMeAPIView,
     EmergencyContactUpdateAPIView,
+    EmergencyContactMeAPIView,
     DatosMedicosAPIView,
+    DatosMedicosMeAPIView,
     JobHistoryViewSet,
     CandidateEmploymentUpdateView,
     CandidateEmploymentRemovalUpdateView,
@@ -68,8 +71,11 @@ urlpatterns = [
     path('appointments/<int:uid>/', CandidateAppointmentsView.as_view(), name='candidate-appointments'),
 
     path("<int:uid>/editar-domicilio/", CandidateDomicileUpdateAPIView.as_view(), name="editar-domicilio"),
-    path('<int:uid>/editar-contactos/', EmergencyContactUpdateAPIView.as_view(), name='editar_contactos'),
+    path("me/editar-domicilio/", CandidateDomicileMeAPIView.as_view(), name="editar-mi-domicilio"),
+    path('<int:uid>/editar-contactos/', EmergencyContactUpdateAPIView.as_view(), name='editar-contactos'),
+    path('me/editar-contactos/', EmergencyContactMeAPIView.as_view(), name='editar-mis-contactos'),
     path('<int:uid>/datos-medicos/', DatosMedicosAPIView.as_view(), name='datos-medicos'),
+    path('me/datos-medicos/', DatosMedicosMeAPIView.as_view(), name='datos-mis-medicos'),
 
     path('<int:uid>/canalizar-centro/', CandidateCentroAPIView.as_view(), name='canalizar-centro'),
 

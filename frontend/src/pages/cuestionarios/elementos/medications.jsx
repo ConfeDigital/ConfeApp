@@ -5,7 +5,7 @@ import AddCircle from "@mui/icons-material/AddCircle";
 import RemoveCircle from "@mui/icons-material/RemoveCircle";
 
 const MedicationsForm = () => {
-  const { control, formState: { errors }} = useFormContext();
+  const { control, formState: { errors }, getValues, setValue, reset} = useFormContext();
   const { fields, append, remove } = useFieldArray({
     name: "medications",
     control,
@@ -30,7 +30,7 @@ const MedicationsForm = () => {
               <Controller
                 name={`medications.${index}.name`}
                 control={control}
-                defaultValue={item.name || ''}
+                // defaultValue={item.name || ""}
                 render={({ field }) => (
                   <TextField
                     {...field}
@@ -47,7 +47,7 @@ const MedicationsForm = () => {
               <Controller
                 name={`medications.${index}.dose`}
                 control={control}
-                defaultValue={item.dose || ''}
+                // defaultValue={item.dose || ""}
                 render={({ field }) => (
                   <TextField
                     {...field}
@@ -64,7 +64,7 @@ const MedicationsForm = () => {
               <Controller
                 name={`medications.${index}.reason`}
                 control={control}
-                defaultValue={item.reason || ''}
+                // defaultValue={item.reason || ""}
                 render={({ field }) => (
                   <TextField
                     {...field}
@@ -80,7 +80,14 @@ const MedicationsForm = () => {
 
               <Box sx={{ textAlign: 'right' }}>
                 <Button
-                  onClick={() => remove(index)}
+                  onClick={() => {
+                    setValue(`medications.${index}.name`, "");
+                    setValue(`medications.${index}.dose`, "");
+                    setValue(`medications.${index}.reason`, "");
+                  
+                    remove(index); // this will mark form dirty because array length changed
+                  }}
+                                               
                   startIcon={<RemoveCircle />}
                   variant="outlined"
                   size="small"
@@ -94,14 +101,20 @@ const MedicationsForm = () => {
           </Box>
         ))}
 
-        <Button
-          variant="contained"
-          startIcon={<AddCircle />}
-          onClick={() => append({ name: '', dose: '', reason: '' })}
-        >
-          Añadir medicamento
-        </Button>
       </Stack>
+      <Button
+        variant="contained"
+        startIcon={<AddCircle />}
+        onClick={() => {
+          append({ name: "", dose: "", reason: "" }, { shouldFocus: false, shouldDirty: false });
+          // Prevent dirty state from being triggered by structure change
+          const currentValues = getValues();
+          reset(currentValues, { keepDirty: false, keepTouched: true });
+        }}
+        sx={{ mt: 2 }}
+      >
+        Añadir medicamento
+      </Button>
     </Box>
   );
 };
