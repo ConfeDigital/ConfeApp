@@ -8,11 +8,11 @@ const domicileSchema = yup.object().shape({
     .string()
     .matches(/^\d{5}$/, "Debe ser un código postal válido de 5 dígitos")
     .required("El código postal es requerido"),
-  address_municip: yup.string().required("El municipio es requerido"),
-  address_col: yup.string().required("La colonia es requerida"),
-  address_state: yup.string().required("El estado es requerido"),
-  address_city: yup.string().required("La ciudad es requerida"),
-  residence_type: yup.string().required("El tipo de residencia es requerido"),
+  address_municip: yup.string().required('Ingresa un código postal válido'),
+  address_col: yup.string().nullable(),
+  address_state: yup.string().required('Ingresa un código postal válido'),
+  address_city: yup.string().required('Ingresa un código postal válido'),
+  residence_type: yup.string().nullable(),
 });
 
 export default domicileSchema;

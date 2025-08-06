@@ -20,7 +20,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import candidateSchema from "../../components/candidate_create/candidateSchema";
 
 import PersonalInfoForm from "../../components/candidate_create/PersonalInfoForm";
-import DomicileForm from "../../components/candidate_create/DomicileFormGoogle";
+import AddressAutoCompleteForm from '../../components/AddressAutoCompleteForm';
 import MedicalInfoForm from "../../components/candidate_create/MedicalInfoForm";
 import EmergencyContactsForm from "../../components/candidate_create/EmergencyContactForm";
 
@@ -140,7 +140,7 @@ const CandidateCreate = () => {
                 <Typography variant="h6">Domicilio</Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <DomicileForm />
+                <AddressAutoCompleteForm prefix="" domicile={true} />
               </AccordionDetails>
             </Accordion>
             <Divider sx={{ my: 2 }} />

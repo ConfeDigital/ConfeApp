@@ -2,11 +2,10 @@ import React, { useState, useEffect } from "react";
 import { Box, Typography, Paper, CircularProgress } from "@mui/material";
 import { useNavigate, useParams } from "react-router-dom";
 import axios from "../../api";
-import Header from "../../components/Header";
 import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import DomicileForm from "../../components/candidate_create/DomicileFormGoogle";
-import domicileSchema from "../../pages/cuestionarios/elementos/domicileSchema";
+import AddressAutoCompleteForm from '../../components/AddressAutoCompleteForm';
+import domicileSchema from "../candidate_create/domicileSchema";
 
 const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) => {
   const { uid } = useParams();
@@ -58,8 +57,6 @@ const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) =>
             address_lng: data.address_lng || "",
             residence_type: data.residence_type || "",
           });
-        } else {
-          setError("No se encontró información del domicilio.");
         }
       } catch (err) {
         setError("Error al obtener la información del domicilio.");
@@ -107,7 +104,7 @@ const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) =>
       )}
 
       <FormProvider {...methods}>
-        <DomicileForm disabled={disabled} />
+        <AddressAutoCompleteForm prefix="" domicile={true} errors={formState.errors} />
         {/* 🔹 Indicador de guardado automático */}
         {autoSave && (
           <Box display="flex" alignItems="center" mt={2}>

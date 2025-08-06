@@ -26,7 +26,7 @@ import MyPhoneField from "../phone_number/MyPhoneField";
 import AddressAutocompleteForm from "../AddressAutoCompleteForm";
 
 const EmergencyContactsForm = () => {
-  const { control, setValue } = useFormContext();
+  const { control, setValue, formState: { errors } } = useFormContext();
   const { fields, append, remove } = useFieldArray({
     name: "emergency_contacts",
     control,
@@ -70,7 +70,6 @@ const EmergencyContactsForm = () => {
             `emergency_contacts.${index}.domicile.address_city`,
             res.data.ciudad
           );
-          setValue(`emergency_contacts.${index}.domicile.address_col`, "");
         } catch (err) {
           console.error(err);
           setPostalDataMap((prev) => ({
@@ -92,6 +91,8 @@ const EmergencyContactsForm = () => {
     const livesAtSame =
       emergencyContactsValues[index]?.lives_at_same_address ?? true;
     const currentPostalData = postalDataMap[index];
+
+    const contactErrors = errors.emergency_contacts?.[index];
 
     return (
       <Grid
@@ -175,7 +176,7 @@ const EmergencyContactsForm = () => {
               />
             </Grid>
             <Grid xs={12} sm={4}>
-              <MyPhoneField label="Teléfono" name={`emergency_contacts.${index}.phone_number`} control={control} fullWidth sx={{ width: 223 }}/>
+              <MyPhoneField label="Teléfono" name={`emergency_contacts.${index}.phone_number`} control={control} fullWidth sx={{ width: 223 }} />
             </Grid>
             <Grid xs={12} sm={4}>
               <Controller
@@ -210,13 +211,26 @@ const EmergencyContactsForm = () => {
         </Grid>
 
         {!livesAtSame && (
-          <Box sx={{ borderLeft: '2px solid #ddd', pl:2, mb:2 }}>
-            <Typography variant="subtitle1" gutterBottom>Domicilio del Contacto</Typography>
-            <AddressAutocompleteForm 
-              prefix={`emergency_contacts.${index}.domicile`}
-              setDomicileFormLoaded={() => {}}
-              domicile={true}
-            />
+          <Box
+            sx={{
+              borderLeft: '2px solid #ddd',
+              pl: 2,
+              mb: 2,
+              width: '100%',
+              boxSizing: 'border-box',
+            }}
+          >
+            <Typography variant="subtitle1" gutterBottom>
+              Domicilio del Contacto
+            </Typography>
+            <Box sx={{ width: '100%' }}>
+              <AddressAutocompleteForm
+                prefix={`emergency_contacts.${index}.domicile`}
+                setDomicileFormLoaded={() => { }}
+                domicile={true}
+                errors={contactErrors?.domicile}
+              />
+            </Box>
           </Box>
         )}
 

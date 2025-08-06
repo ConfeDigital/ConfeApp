@@ -4,7 +4,7 @@ import { useParams } from "react-router-dom";
 import axios from "../../api";
 import { useForm, FormProvider, useWatch } from "react-hook-form";
 import { yupResolver } from "@hookform/resolvers/yup";
-import medicalSchema from "../../pages/cuestionarios/elementos/candidateSchema";
+import medicalSchema from "../candidate_create/medicalSchema";
 import MedicalInfoForm from "../../pages/cuestionarios/elementos/medicalField";
 
 const CandidateMedicalEdit = ({

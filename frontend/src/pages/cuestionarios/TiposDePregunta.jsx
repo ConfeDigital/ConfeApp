@@ -124,6 +124,7 @@ const TiposDePregunta = ({
         return (
           <Datos_contactos
             usuarioId={usuario}
+            seleccionOpcion={respuestaParseada}
             setSeleccionOpcion={onRespuestaChange}
             disabled={!habilitada}
           />

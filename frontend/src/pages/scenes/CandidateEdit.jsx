@@ -10,7 +10,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import candidateSchema from '../../components/candidate_create/candidateSchemaEdit';
 
 import PersonalInfoForm from '../../components/candidate_create/PersonalInfoForm';
-import DomicileForm from '../../components/candidate_create/DomicileFormGoogle';
+import AddressAutoCompleteForm from '../../components/AddressAutoCompleteForm';
 import MedicalInfoForm from '../../components/candidate_create/MedicalInfoForm';
 import EmergencyContactsForm from '../../components/candidate_create/EmergencyContactForm';
 
@@ -49,7 +49,6 @@ const CandidateEdit = () => {
       address_lat: '',
       address_lng: '',
       residence_type: '',
-      emergency_contacts: [],
       has_disability_certificate: false,
       has_interdiction_judgment: false,
       receives_pension: "",
@@ -62,7 +61,31 @@ const CandidateEdit = () => {
       dietary_restrictions: '',
       physical_restrictions: '',
       disability: [],
-      photo: undefined
+      photo: undefined,
+
+      emergency_contacts: [
+        {
+          first_name: '',
+          last_name: '',
+          second_last_name: '',
+          phone_number: '',
+          email: '',
+          relationship: '',
+          lives_at_same_address: false,
+          domicile: {
+            address_PC: '',
+            address_road: '',
+            address_number: '',
+            address_number_int: '',
+            address_municip: '',
+            address_state: '',
+            address_col: '',
+            address_lat: '',
+            address_lng: '',
+            residence_type: '',
+          },
+        },
+      ],
     }
   });
 
@@ -113,7 +136,7 @@ const CandidateEdit = () => {
                   address_municip: '',
                   address_state: '',
                   address_city: '',
-                  address_col: '',
+                  address_col: contact.domicile ? contact.domicile.address_col : '',
                   address_number: '',
                   address_number_int: '',
                   address_lat: '',
@@ -206,7 +229,7 @@ const CandidateEdit = () => {
                 <Typography variant="h6">Domicilio</Typography>
               </AccordionSummary>
               <AccordionDetails>
-                <DomicileForm />
+                <AddressAutoCompleteForm prefix="" domicile={true} />
               </AccordionDetails>
             </Accordion>
             <Divider sx={{ my: 2 }} />

@@ -32,7 +32,7 @@ import MyPhoneField from "../../../components/phone_number/MyPhoneField";
 import AddressAutocompleteForm from "../../../components/AddressAutoCompleteForm";
 
 const ContactFields = () => {
-  const { control, setValue } = useFormContext();
+  const { control, setValue, formState: { errors } } = useFormContext();
   const { fields, append, remove } = useFieldArray({
     name: "emergency_contacts",
     control,
@@ -79,16 +79,12 @@ const ContactFields = () => {
           .then((res) => {
             const data = res.data;
             setPostalDataMap((prev) => ({ ...prev, [index]: data }));
-            ['municipio','estado','ciudad'].forEach((key) => {
+            ['municipio', 'estado', 'ciudad'].forEach((key) => {
               setValue(
                 `emergency_contacts.${index}.domicile.address_${key}`,
                 data[key]
               );
             });
-            setValue(
-              `emergency_contacts.${index}.domicile.address_col`,
-              ''
-            );
           })
           .catch(() => {
             setPostalDataMap((prev) => ({ ...prev, [index]: null }));
@@ -99,6 +95,8 @@ const ContactFields = () => {
 
   const renderContactFields = (field, index) => {
     const livesAtSame = emergencyContactsValues[index]?.lives_at_same_address ?? true;
+    const contactErrors = errors.emergency_contacts?.[index];
+
     return (
       <Grid
         container
@@ -223,11 +221,19 @@ const ContactFields = () => {
         </Grid>
 
         {!livesAtSame && (
-          <Box sx={{ borderLeft: 2, borderColor: '#ddd', pl: 2, mb: 2 }}>
-            <Typography variant="h4" mb={ 1 }>
+          <Box
+            sx={{
+              borderLeft: '2px solid #ddd',
+              pl: 2,
+              mb: 2,
+              width: '100%',
+              boxSizing: 'border-box',
+            }}
+          >
+            <Typography variant="h4" mb={1}>
               Ingresa su domicilio
             </Typography>
-            <AddressAutocompleteForm prefix={`emergency_contacts.${index}.domicile`} domicile={true}/>
+            <AddressAutocompleteForm prefix={`emergency_contacts.${index}.domicile`} domicile={true} errors={contactErrors?.domicile} />
           </Box>
         )}
 
