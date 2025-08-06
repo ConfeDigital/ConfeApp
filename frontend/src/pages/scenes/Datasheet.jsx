@@ -427,6 +427,7 @@ const Datasheet = () => {
           alignItems="center"
           justifyContent="space-between"
           mb={3}
+          gap={2}
         >
           <Box
             display="flex"
@@ -473,9 +474,7 @@ const Datasheet = () => {
               </Typography>
               {candidateProfile.cycle ? (
                 <Tooltip
-                  title={`De ${dayjs(candidateProfile.cycle.start_date).format(
-                    "LL"
-                  )} a ${dayjs(candidateProfile.cycle.end_date).format("LL")}`}
+                  title={`De ${dayjs(candidateProfile.cycle.start_date).format("LL")} a ${dayjs(candidateProfile.cycle.end_date).format("LL")}`}
                 >
                   <Typography variant="subtitle1" color="textSecondary">
                     {candidateProfile.cycle.name}

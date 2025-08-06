@@ -754,16 +754,66 @@ const QuestionContentRenderers = {
         </Typography>
     ),
 
-    meta: ({ responseData }) => (
-        <Typography variant="body1" sx={{
-            backgroundColor: "primary.light",
-            p: 1,
-            borderRadius: 1,
-            color: "primary.contrastText"
-        }}>
-            {ResponseDataProcessor.extractValue(responseData)}
-        </Typography>
-    ),
+    meta: ({ responseData }) => {
+        // console.log(responseData);
+        return (
+            <Box sx={{ mt: 1, mb: 2 }}>
+                {/* Title for the meta information */}
+                <Typography 
+                    variant="h6" 
+                    gutterBottom
+                    sx={{ 
+                        fontWeight: 'bold', 
+                        color: 'text.primary',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        pb: 1,
+                        mb: 2,
+                    }}
+                >
+                    {responseData.meta}
+                </Typography>
+    
+                {/* List of steps */}
+                <List dense>
+                    {responseData.pasos.map((paso, index) => (
+                        <ListItem 
+                            key={index} 
+                            disablePadding
+                            sx={{
+                                mb: 1,
+                                p: 1.5,
+                                borderRadius: '8px',
+                                backgroundColor: 'action.hover', // Adds a light background for each step
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'flex-start',
+                            }}
+                        >
+                            {/* Step Description Chip */}
+                            <Chip
+                                label={paso.descripcion}
+                                color="primary"
+                                variant="filled" // Use filled for better visibility
+                                size="medium" // A slightly larger chip looks better
+                                sx={{ mb: 1, fontWeight: 'bold' }}
+                            />
+                            
+                            {/* Responsible Person */}
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                     Encargado:
+                                </Typography>
+                                <Typography variant="body1" sx={{ fontWeight: 'normal' }}>
+                                    {paso.encargado}
+                                </Typography>
+                            </Box>
+                        </ListItem>
+                    ))}
+                </List>
+            </Box>
+        );
+    },
 
     ch: ({ responseData }) => {
         // Get the formatted text value

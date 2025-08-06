@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { Box, Typography, Grid2 as Grid, Collapse, Button, Divider, Paper, useTheme } from '@mui/material';
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
+import MapIcon from '@mui/icons-material/Map';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
+import MapModal from '../MapModal'; // adjust path if needed
 
 const PENSION_CHOICES = [
-    ['No', 'No'],
-    ['Bie', 'Sí, del Bienestar'],
-    ['Orf', 'Sí, de orfandad'],
-    ['Otr', 'Sí (tipo no incluido en la base de datos)'],
+  ['No', 'No'],
+  ['Bie', 'Sí, del Bienestar'],
+  ['Orf', 'Sí, de orfandad'],
+  ['Otr', 'Sí (tipo no incluido en la base de datos)'],
 ];
 
 const SOCIAL_SECURITY_CHOICES = [
@@ -29,6 +31,7 @@ const socialSecurityLabelMap = new Map(SOCIAL_SECURITY_CHOICES);
 const DetailSection = ({ candidateProfile }) => {
   const [showDetails, setShowDetails] = useState(false);
   const theme = useTheme();
+  const [mapOpen, setMapOpen] = useState(false);
 
   dayjs.locale('es');
 
@@ -41,9 +44,8 @@ const DetailSection = ({ candidateProfile }) => {
   // Compute formatted address
   const { domicile } = candidateProfile;
   const address = domicile
-    ? `${domicile.address_road}, ${domicile.address_number}${
-        domicile.address_number_int ? ' - ' + domicile.address_number_int : ''
-      }, ${domicile.address_col}, ${domicile.address_municip}, ${domicile.address_city}, ${domicile.address_state}`
+    ? `${domicile.address_road}, ${domicile.address_number}${domicile.address_number_int ? ' - ' + domicile.address_number_int : ''
+    }, ${domicile.address_col}, ${domicile.address_municip}, ${domicile.address_city}, ${domicile.address_state}`
     : <Typography component="span" color="text.secondary">No disponible</Typography>;
 
   // Medical details
@@ -184,11 +186,40 @@ const DetailSection = ({ candidateProfile }) => {
           {/* Section 4: Address */}
           <Grid item xs={12}>
             <Paper sx={{ backgroundColor: "secondary.light", pl: 1 }}>
-              <Typography variant="h5" gutterBottom color={theme.palette.mode === 'dark' ? theme.palette.common.black : theme.palette.common.white}>
+              <Typography
+                variant="h5"
+                gutterBottom
+                color={
+                  theme.palette.mode === 'dark'
+                    ? theme.palette.common.black
+                    : theme.palette.common.white
+                }
+              >
                 Dirección
               </Typography>
             </Paper>
-            <Typography>{address}</Typography>
+
+            <Box display="flex" alignItems="center" gap={2}>
+              <Typography>{address}</Typography>
+              {domicile?.address_lat && domicile?.address_lng && (
+                <Button
+                  variant="outlined"
+                  size="small"
+                  onClick={() => setMapOpen(true)}
+                  endIcon={<MapIcon />}
+                >
+                  Ver Mapa
+                </Button>
+              )}
+            </Box>
+
+            <MapModal
+              open={mapOpen}
+              onClose={() => setMapOpen(false)}
+              lat={domicile?.address_lat}
+              lng={domicile?.address_lng}
+              label="Ubicación del Candidato"
+            />
           </Grid>
         </Grid>
         <Divider sx={{ mt: 2 }} />

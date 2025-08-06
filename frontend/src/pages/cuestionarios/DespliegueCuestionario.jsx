@@ -425,9 +425,7 @@ function DespliegueCuestionario({
     <div>
       <Box
         sx={{
-          display: { xs: "block", md: "flex" },
-          flexDirection: { xs: "column", md: "row" },
-          width: "100%",
+          display: "flex",
           minHeight: "70vh",
         }}
       >
