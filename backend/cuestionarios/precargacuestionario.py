@@ -88,8 +88,10 @@ def procesar_archivo_precarga(file, tipo_cuestionario, tipos_permitidos):
                         )
                 desbloqueo.append({
                     "pregunta_id": desbloq_num - 1,
-                    "opcion": opcion,
-                    # ++"descripcion": "",  # se actualizará luego en frontend
+                    "valor": opcion,
+                    "descripcion": f"Pregunta {desbloq_num}: {preguntas_dict[desbloq_num]['texto']}",
+                    "preguntaSeleccionadaDesbloqueo": desbloq_num - 1,  # Para pre-seleccionar el dropdown
+                    "opcionSeleccionadaDesbloqueo": opcion,  # Para pre-seleccionar la opción
                 })
 
         pregunta = {
