@@ -45,7 +45,7 @@ const Datos_contactos = ({
           phone_number: '',
           email: '',
           relationship: '',
-          lives_at_same_address: false,
+          lives_at_same_address: true,
           domicile: {
             address_PC: '',
             address_road: '',
@@ -98,7 +98,7 @@ const Datos_contactos = ({
               phone_number: '',
               email: '',
               relationship: '',
-              lives_at_same_address: false,
+              lives_at_same_address: true,
               domicile: {
                 address_PC: '',
                 address_road: '',
