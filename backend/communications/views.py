@@ -27,7 +27,7 @@ class CommunicationPostViewSet(viewsets.ModelViewSet):
             mensaje = f"Nuevo comunicado: {post.title}"
 
             for user in recipients:
-                send_notification_to_user(user.id, mensaje, link='/comunicados')
+                send_notification_to_user(user.id, mensaje, link='/anuncios')
 
         except Group.DoesNotExist:
             pass  # optionally log this

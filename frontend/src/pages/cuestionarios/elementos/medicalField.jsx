@@ -24,7 +24,7 @@ const yesNoOptions = [
   { value: false, label: "No" },
 ];
 
-const MedicalInfoForm = () => {
+const MedicalInfoForm = ({ disabled }) => {
   const { control, formState: { errors }, watch } = useFormContext();
   const [disabilities, setDisabilities] = useState([]);
   const [disabilityGroups, setDisabilityGroups] = useState([]);
@@ -127,6 +127,7 @@ const MedicalInfoForm = () => {
             </Box>
           )}
           sx={{ fontSize: "1rem" }}
+          disabled={disabled}
         >
           {disabilityGroups.map((group) => (
             <MenuItem key={group.id} value={group.id}>
@@ -170,6 +171,7 @@ const MedicalInfoForm = () => {
                       })}
                     </Box>
                   )}
+                  disabled={disabled}
                 >
                   {filteredDisabilities.map((dis) => (
                     <MenuItem key={dis.id} value={dis.id}>
@@ -190,6 +192,7 @@ const MedicalInfoForm = () => {
         component="fieldset"
         fullWidth
         sx={{ mb: 3 }}
+        disabled={disabled}
         error={!!errors.has_disability_certificate}
       >
         <FormLabel component="legend" sx={{ fontSize: "1rem" }}>
@@ -232,6 +235,7 @@ const MedicalInfoForm = () => {
               label="Escribe el diagnóstico exacto que dice el certificado de discapacidad"
               placeholder="Escribe el diagnóstico"
               sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
+              disabled={disabled}
               slotProps={{
                 htmlInput: {
                   style: { fontSize: '1rem' }
@@ -249,6 +253,7 @@ const MedicalInfoForm = () => {
         component="fieldset"
         fullWidth
         sx={{ mb: 3 }}
+        disabled={disabled}
         error={!!errors.has_disability_history}
       >
         <FormLabel component="legend" sx={{ fontSize: "1rem" }}>
@@ -292,6 +297,7 @@ const MedicalInfoForm = () => {
               placeholder="Especifique el parentesco y diagnóstico"
               helperText='Si no tiene, responde "No" en la pregunta anterior.'
               sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
+              disabled={disabled}
               slotProps={{
                 htmlInput: {
                   style: { fontSize: '1rem' }
@@ -318,6 +324,7 @@ const MedicalInfoForm = () => {
               labelId="receives-pension-label"
               label="¿El candidato recibe algún tipo de pensión del gobierno?"
               sx={{ fontSize: "1rem" }}
+              disabled={disabled}
               {...field}
             >
               <MenuItem value="">No sé</MenuItem>
@@ -347,6 +354,7 @@ const MedicalInfoForm = () => {
               labelId="receives-pension-label"
               label="¿Cuenta con algún esquema de Seguridad Social?"
               sx={{ fontSize: "1rem" }}
+              disabled={disabled}
               {...field}
             >
               <MenuItem value="">No sé</MenuItem>
@@ -366,7 +374,7 @@ const MedicalInfoForm = () => {
         </FormHelperText>
       </FormControl>
 
-      <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
+      <FormControl component="fieldset" fullWidth sx={{ mb: 3 }} disabled={disabled}>
         <FormLabel component="legend" sx={{ fontSize: "1rem" }}>
           ¿Tiene juicio de interdicción?
         </FormLabel>
@@ -389,7 +397,7 @@ const MedicalInfoForm = () => {
         />
       </FormControl>
 
-      <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
+      <FormControl component="fieldset" fullWidth sx={{ mb: 3 }} disabled={disabled}>
         <FormLabel component="legend" sx={{ fontSize: "1rem" }}>
           ¿Recibe atención psicológica?
         </FormLabel>
@@ -427,6 +435,7 @@ const MedicalInfoForm = () => {
               label="Especifica el motivo de su terapia psicológica"
               placeholder="Escribe el motivo"
               sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
+              disabled={disabled}
               slotProps={{
                 htmlInput: {
                   style: { fontSize: '1rem' }
@@ -440,7 +449,7 @@ const MedicalInfoForm = () => {
         />
       )}
 
-      <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
+      <FormControl component="fieldset" fullWidth sx={{ mb: 3 }} disabled={disabled}>
         <FormLabel component="legend" sx={{ fontSize: "1rem" }}>
           ¿Recibe atención psiquiátrica?
         </FormLabel>
@@ -478,6 +487,7 @@ const MedicalInfoForm = () => {
               label="Especifica el motivo de su terapia psiquiátrica"
               placeholder="Escribe el motivo"
               sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
+              disabled={disabled}
               slotProps={{
                 htmlInput: {
                   style: { fontSize: '1rem' }
@@ -491,7 +501,7 @@ const MedicalInfoForm = () => {
         />
       )}
 
-      <FormControl component="fieldset" fullWidth sx={{ mb: 3 }}>
+      <FormControl component="fieldset" fullWidth sx={{ mb: 3 }} disabled={disabled}>
         <FormLabel component="legend" sx={{ fontSize: "1rem" }}>
           ¿Presenta convulsiones?
         </FormLabel>
@@ -531,6 +541,7 @@ const MedicalInfoForm = () => {
               labelId="last-seizure-label"
               label="¿Cuándo fue su última convulsión?"
               sx={{ fontSize: "1rem" }}
+              disabled={disabled}
               {...field}
             >
               <MenuItem value="No sé">No sé</MenuItem>
@@ -558,6 +569,7 @@ const MedicalInfoForm = () => {
               labelId="blood-type-label"
               label="¿Cuál es su tipo de sangre?"
               sx={{ fontSize: "1rem" }}
+              disabled={disabled}
               {...field}
             >
               <MenuItem value="">No sé</MenuItem>
@@ -586,6 +598,7 @@ const MedicalInfoForm = () => {
             placeholder="Escribe tu alergia (p.ej. maní)"
             helperText="Si no tiene, déjalo en blanco."
             sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
+            disabled={disabled}
             slotProps={{
               htmlInput: {
                 style: { fontSize: '1rem' }
@@ -609,6 +622,7 @@ const MedicalInfoForm = () => {
             placeholder="Escribe tu restricción (p.ej. sin gluten)"
             helperText="Si no tiene, déjalo en blanco."
             sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
+            disabled={disabled}
             slotProps={{
               htmlInput: {
                 style: { fontSize: '1rem' }
@@ -632,6 +646,7 @@ const MedicalInfoForm = () => {
             placeholder="Escribe tu restricción (p.ej. no poder cargar articulos pesados)"
             helperText="Si no tiene, déjalo en blanco."
             sx={{ mb: 3, '& .MuiOutlinedInput-notchedOutline legend': {fontSize: '0.75rem'} }}
+            disabled={disabled}
             slotProps={{
               htmlInput: {
                 style: { fontSize: '1rem' }
@@ -645,7 +660,7 @@ const MedicalInfoForm = () => {
       />
 
       <Box sx={{ mt: 2 }}>
-        <MedicationsForm />
+        <MedicationsForm disabled={disabled}/>
       </Box>
     </Box>
   );

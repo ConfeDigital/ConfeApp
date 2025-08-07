@@ -263,18 +263,18 @@ const Sidebar = forwardRef((props, ref) => {
               />
             )} */}
             <Item
-              title="Comunicados"
-              to="/comunicados"
+              title="Anuncios"
+              to="/anuncios"
               icon={<SpeakerNotesOutlinedIcon />}
               selected={selected}
             />
 
-            <Item
+            {/* <Item
               title="Comunicación Centros"
               to="/comunicacion-centros"
               icon={<ForumOutlinedIcon />}
               selected={selected}
-            />
+            /> */}
           </Box>
         </Menu>
       </ProSidebar>

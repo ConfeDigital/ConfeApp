@@ -248,7 +248,7 @@ const Datos_contactos = ({
           </Box>
         )}
 
-        <ContactFields />
+        <ContactFields disabled={disabled} />
 
         {/* Validation message for the contact count */}
         {!contactCountError && !seleccionOpcion && (

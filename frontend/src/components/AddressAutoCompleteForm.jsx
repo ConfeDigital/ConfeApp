@@ -26,7 +26,7 @@ import axios from '../api';
 const libraries = ['places'];
 const round6 = n => Math.round(n * 1e6) / 1e6;
 
-export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded, domicile = false, errors }) {
+export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded, domicile = false, errors, disabled = false }) {
   const { control, setValue, watch } = useFormContext();
   const ref = useRef(null);
   const postal = watch(`${prefix}.address_PC`);
@@ -134,6 +134,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
             variant="text"
             onClick={() => setShowSearch(prev => !prev)}
             startIcon={showSearch ? null : <SearchIcon />}
+            disabled={disabled}
           >
             {showSearch ? "Ocultar búsqueda" : "Mostrar búsqueda"}
           </Button>
@@ -152,7 +153,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
               name={`${prefix}.address_road`}
               control={control}
               render={({ field }) => (
-                <TextField {...field} disabled={!addressLat || !addressLng} fullWidth label="Calle" margin="dense" error={!!errors?.address_road} helperText={errors?.address_road?.message} />
+                <TextField {...field} disabled={!addressLat || !addressLng || disabled} fullWidth label="Calle" margin="dense" error={!!errors?.address_road} helperText={errors?.address_road?.message} />
               )}
             />
           </Grid>
@@ -161,7 +162,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
               name={`${prefix}.address_number`}
               control={control}
               render={({ field }) => (
-                <TextField {...field} disabled={!addressLat || !addressLng} fullWidth label="Número" margin="dense" error={!!errors?.address_number} helperText={errors?.address_number?.message} />
+                <TextField {...field} disabled={!addressLat || !addressLng || disabled} fullWidth label="Número" margin="dense" error={!!errors?.address_number} helperText={errors?.address_number?.message} />
               )}
             />
           </Grid>
@@ -170,7 +171,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
               name={`${prefix}.address_number_int`}
               control={control}
               render={({ field }) => (
-                <TextField {...field} disabled={!addressLat || !addressLng} fullWidth label="Número Interior" margin="dense" />
+                <TextField {...field} disabled={!addressLat || !addressLng || disabled} fullWidth label="Número Interior" margin="dense" />
               )}
             />
           </Grid>
@@ -181,7 +182,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
                 <Controller
                   name={`${prefix}.residence_type`}
                   control={control}
-                  disabled={!addressLat || !addressLng}
+                  disabled={!addressLat || !addressLng || disabled}
                   render={({ field }) => (
                     <Select {...field} label="Tipo de Residencia">
                       <MenuItem value="">No sé</MenuItem>
@@ -201,7 +202,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
               name={`${prefix}.address_PC`}
               control={control}
               render={({ field }) => (
-                <TextField {...field} disabled={!addressLat || !addressLng} fullWidth label="Código Postal" margin="dense" error={!!errors?.address_PC} helperText={errors?.address_PC?.message} />
+                <TextField {...field} disabled={!addressLat || !addressLng || disabled} fullWidth label="Código Postal" margin="dense" error={!!errors?.address_PC} helperText={errors?.address_PC?.message} />
               )}
             />
           </Grid>
@@ -211,7 +212,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
               <Controller
                 name={`${prefix}.address_col`}
                 control={control}
-                disabled={!addressLat || !addressLng}
+                disabled={!addressLat || !addressLng || disabled}
                 render={({ field }) => (
                   <Select {...field} label="Colonia">
                     {colonias.map((c, i) => (
@@ -263,6 +264,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
             onClick={() => setShowMap(!showMap)}
             endIcon={<MapIcon />}
             sx={{ mt: 2 }}
+            disabled={disabled}
           >
             {showMap ? 'Ocultar Mapa' : 'Mostrar en Mapa'}
           </Button>

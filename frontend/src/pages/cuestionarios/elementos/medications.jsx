@@ -1,10 +1,10 @@
 import React from "react";
-import { Box, Stack, TextField, IconButton, Button, Typography } from "@mui/material";
+import { Box, Stack, TextField, Button, Typography } from "@mui/material";
 import { useFieldArray, useFormContext, Controller } from "react-hook-form";
 import AddCircle from "@mui/icons-material/AddCircle";
 import RemoveCircle from "@mui/icons-material/RemoveCircle";
 
-const MedicationsForm = () => {
+const MedicationsForm = ({ disabled }) => {
   const { control, formState: { errors }, getValues, setValue, reset} = useFormContext();
   const { fields, append, remove } = useFieldArray({
     name: "medications",
@@ -40,6 +40,7 @@ const MedicationsForm = () => {
                     placeholder="e.g., Ibuprofeno"
                     error={!!errors?.medications?.[index]?.name}
                     helperText={errors?.medications?.[index]?.name?.message}
+                    disabled={disabled}
                   />
                 )}
               />
@@ -57,6 +58,7 @@ const MedicationsForm = () => {
                     placeholder="e.g., 200 mg"
                     error={!!errors?.medications?.[index]?.dose}
                     helperText={errors?.medications?.[index]?.dose?.message}
+                    disabled={disabled}
                   />
                 )}
               />
@@ -74,6 +76,7 @@ const MedicationsForm = () => {
                     placeholder="e.g., Dolor de cabeza"
                     error={!!errors?.medications?.[index]?.reason}
                     helperText={errors?.medications?.[index]?.reason?.message}
+                    disabled={disabled}
                   />
                 )}
               />
@@ -93,8 +96,9 @@ const MedicationsForm = () => {
                   size="small"
                   color='error'
                   aria-label="Eliminar este medicamento"
+                  disabled={disabled}
                 >
-                  Eliminar
+                  Eliminar Medicamento
                 </Button>
               </Box>
             </Stack>
@@ -112,6 +116,7 @@ const MedicationsForm = () => {
           reset(currentValues, { keepDirty: false, keepTouched: true });
         }}
         sx={{ mt: 2 }}
+        disabled={disabled}
       >
         Añadir medicamento
       </Button>

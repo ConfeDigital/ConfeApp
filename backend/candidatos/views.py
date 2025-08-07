@@ -360,7 +360,7 @@ class JobHistoryCommentCreateView(generics.CreateAPIView):
         return context
     
 class CandidateDomicileUpdateAPIView(APIView):
-    permission_classes = [IsAuthenticated, IsInSameCenter]  # Solo usuarios autenticados pueden editar
+    permission_classes = [IsAuthenticated, IsInSameCenter, PersonalPermission]  # Solo usuarios autenticados pueden editar
 
     def get_object(self, uid):
         """
@@ -447,7 +447,7 @@ class CandidateDomicileMeAPIView(APIView):
 
 
 class EmergencyContactUpdateAPIView(APIView):
-    permission_classes = [IsAuthenticated, IsInSameCenter]
+    permission_classes = [IsAuthenticated, IsInSameCenter, PersonalPermission]
 
     def get_object(self, uid):
         """
@@ -528,7 +528,7 @@ class EmergencyContactMeAPIView(APIView):
 
 
 class DatosMedicosAPIView(APIView):
-    permission_classes = [IsAuthenticated, IsInSameCenter]  
+    permission_classes = [IsAuthenticated, IsInSameCenter, PersonalPermission]  
 
     def get(self, request, uid):
         # Obtiene el UserProfile del candidato

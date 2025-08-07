@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef  } from "react";
 import { Box, Typography, Divider, CircularProgress } from "@mui/material";
 import { useSelector } from "react-redux";
 import { useForm, FormProvider, useWatch } from "react-hook-form";
@@ -51,18 +51,6 @@ const CandidateMedicalEdit = ({
   const { reset, control, formState } = methods;
   const watchedValues = useWatch({ control });
 
-  // Debug logs (optional)
-  useEffect(() => {
-    console.log("Dirty?", formState.isDirty);
-    if (formState.isDirty) {
-      console.log("Dirty Values", formState.dirtyFields);
-    }
-    console.log("Valid?", formState.isValid);
-    if (!formState.isValid) {
-      console.log("Validation Errors", formState.errors);
-    }
-  }, [formState.isDirty, watchedValues, formState.isValid, disabled]);
-
   // 1) Load initial data
   useEffect(() => {
     axios
@@ -98,14 +86,21 @@ const CandidateMedicalEdit = ({
       });
   }, [usuarioId, reset]);
 
+  const debounceRef = useRef();
   // 2) Auto-save on change, then reset dirty flag
   useEffect(() => {
     if (disabled || !formState.isDirty || !formState.isValid) return;
-
-    setError("");
-    const timeout = setTimeout(async () => {
+  
+    // Clear previous timeout if any
+    clearTimeout(debounceRef.current);
+  
+    debounceRef.current = setTimeout(async () => {
       setAutoSave(true);
       try {
+        const filteredMedications = (watchedValues.medications || []).filter(
+          med => med.name.trim() !== "" || med.dose.trim() !== "" || med.reason.trim() !== ""
+        );
+  
         const medicalData = {
           responded: true,
           last_seizure: watchedValues.last_seizure || "",
@@ -115,33 +110,28 @@ const CandidateMedicalEdit = ({
           has_disability_history: watchedValues.has_disability_history || false,
           disability_history_details: watchedValues.disability_history_details || "",
         };
-
-        const filteredMedications = (watchedValues.medications || []).filter(med =>
-          med.name.trim() !== "" || med.dose.trim() !== "" || med.reason.trim() !== ""
-        );
-
+  
         setSeleccionOpcion(medicalData);
-
-        await axios.put(endpoint, { ...watchedValues, medications: filteredMedications }, {
+  
+        await axios.put(endpoint, {
+          ...watchedValues,
+          medications: filteredMedications,
+        }, {
           headers: { "Content-Type": "application/json" },
         });
-
-        reset(watchedValues, { keepDirty: false });
+  
+        // Optionally: you can call reset here if needed, but beware of breaking dirty tracking
+        // reset(watchedValues, { keepDirty: false });
       } catch (err) {
         console.error(err);
         setError("Error actualizando datos médicos.");
+      } finally {
+        setAutoSave(false);
       }
-      setAutoSave(false);
     }, 2000);
-
-    return () => clearTimeout(timeout);
-  }, [
-    disabled,
-    formState.isDirty,
-    formState.isValid,
-    usuarioId,
-    reset,
-  ]);
+  
+    return () => clearTimeout(debounceRef.current);
+  }, [watchedValues, formState.isDirty, formState.isValid, disabled, endpoint]);  
 
   return (
     <Box>

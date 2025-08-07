@@ -22,6 +22,7 @@ import CloseIcon from "@mui/icons-material/Close"; // Close icon for drawer
 import { ColorModeContext, tokens } from "../theme";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
+import LogoutConfirmationDialog from "./LogoutConfirmationDialog";
 
 export default function NavBar() {
   const theme = useTheme();
@@ -34,6 +35,11 @@ export default function NavBar() {
   }));
 
   const [drawerOpen, setDrawerOpen] = useState(false); // State for mobile drawer
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleLogout = () => {
+    navigate("/logout");
+  };
 
   // Determine if the user is staff.
   const isStaff = user?.is_staff;
@@ -107,7 +113,7 @@ export default function NavBar() {
         </Button>
       )}
       <Button
-        href="/logout"
+        onClick={() => setDialogOpen(true)}
         variant="contained"
         color="primary"
         sx={{ textTransform: "none", mr: 2, display: { xs: "none", sm: "block" } }} // Hide on small screens
@@ -161,7 +167,7 @@ export default function NavBar() {
               </ListItem>
             )}
             <ListItem disablePadding>
-              <ListItemButton component="a" href="/logout">
+              <ListItemButton component="a" onClick={() => setDialogOpen(true)}>
                 <ListItemText primary="Cerrar Sesión" />
               </ListItemButton>
             </ListItem>
@@ -248,6 +254,12 @@ export default function NavBar() {
         >
           {drawerItems}
         </Drawer>
+
+        <LogoutConfirmationDialog
+          open={dialogOpen}
+          onClose={() => setDialogOpen(false)}
+          onConfirm={handleLogout}
+        />
       </Toolbar>
     </AppBar>
   );

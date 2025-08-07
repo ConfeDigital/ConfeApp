@@ -7,7 +7,7 @@ import {
   getCanonicalNumber,
 } from "./phoneUtils";
 
-const StandalonePhoneInputField = ({ label, fullWidth, value: propValue, onChange: propOnChange, sx }) => {
+const StandalonePhoneInputField = ({ label, fullWidth, value: propValue, onChange: propOnChange, sx, disabled = false }) => {
   const initial = getInitialState(propValue);
   const [selectedCountry, setSelectedCountry] = useState(initial.selectedCountry);
   const [localNumber, setLocalNumber] = useState(
@@ -58,6 +58,7 @@ const StandalonePhoneInputField = ({ label, fullWidth, value: propValue, onChang
       value={localNumber}
       onChange={handleNumberChange}
       sx={sx}
+      disabled={disabled}
       InputProps={{
         startAdornment: (
           <InputAdornment position="start">
@@ -72,6 +73,7 @@ const StandalonePhoneInputField = ({ label, fullWidth, value: propValue, onChang
                 mr: 1,
                 "& .MuiSelect-select": { display: "flex", alignItems: "center" },
               }}
+              disabled={disabled}
             >
               {countries.map((country) => (
                 <MenuItem key={country.code} value={country.code}>

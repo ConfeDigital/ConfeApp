@@ -96,7 +96,7 @@ const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) =>
     if (!disabled && formState.isDirty && formState.isValid) {
       const delayDebounceFn = setTimeout(() => {
         updateDomicile(watchedValues);
-      }, 1000); // Espera 1 segundo antes de hacer el PUT
+      }, 2000); // Espera 1 segundo antes de hacer el PUT
 
       return () => clearTimeout(delayDebounceFn); // Cancela el timeout si el usuario sigue escribiendo
     }
@@ -111,7 +111,7 @@ const Datos_domicilio = ({ usuarioId, setSeleccionOpcion, disabled = false }) =>
       )}
 
       <FormProvider {...methods}>
-        <AddressAutoCompleteForm prefix="" domicile={true} errors={formState.errors} />
+        <AddressAutoCompleteForm prefix="" domicile={true} errors={formState.errors} disabled={disabled} />
         {/* 🔹 Indicador de guardado automático */}
         {autoSave && (
           <Box display="flex" alignItems="center" mt={2}>

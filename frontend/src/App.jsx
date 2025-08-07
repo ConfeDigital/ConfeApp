@@ -366,7 +366,7 @@ function App({ instance }) {
                     element={<CHAids />}
                   />
                   <Route path="/configuracion" element={<Settings />} />
-                  <Route path="/comunicados" element={<CommunicationForum />} />
+                  <Route path="/anuncios" element={<CommunicationForum />} />
                   <Route path="/comunicacion-centros" element={<CenterChat />} />
                 </Route>
                 <Route
