@@ -19,6 +19,7 @@ import HighlightOffIcon from "@mui/icons-material/HighlightOff";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline"; // Import for success icon
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import SaveOutlinedIcon from '@mui/icons-material/SaveOutlined';
+import { useSelector } from "react-redux";
 
 const Datos_contactos = ({
   usuarioId,
@@ -30,6 +31,12 @@ const Datos_contactos = ({
   const [loading, setLoading] = useState(true);
   const [autoSave, setAutoSave] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const usuarioActualId = useSelector((state) => state.auth.user.id);
+
+  const endpoint =
+    usuarioId === usuarioActualId
+      ? "/api/candidatos/me/editar-contactos/"
+      : `/api/candidatos/${usuarioId}/editar-contactos/`;
 
   const initialLoaded = useRef(false);
 
@@ -69,7 +76,7 @@ const Datos_contactos = ({
 
   useEffect(() => {
     axios
-      .get(`/api/candidatos/${usuarioId}/editar-contactos/`)
+      .get(endpoint)
       .then((res) => {
         const data = Array.isArray(res.data) ? res.data : [];
         const formattedData = data.length > 0
@@ -134,7 +141,7 @@ const Datos_contactos = ({
 
     try {
       await axios.put(
-        `/api/candidatos/${usuarioId}/editar-contactos/`,
+        endpoint,
         { emergency_contacts: data.emergency_contacts },
         { headers: { "Content-Type": "application/json" } }
       );
@@ -241,7 +248,7 @@ const Datos_contactos = ({
           </Box>
         )}
 
-        <ContactFields />
+        <ContactFields disabled={disabled} />
 
         {/* Validation message for the contact count */}
         {!contactCountError && !seleccionOpcion && (

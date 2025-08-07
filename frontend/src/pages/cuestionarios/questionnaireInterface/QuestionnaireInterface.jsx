@@ -304,10 +304,23 @@ const EditorCuestionario = () => {
           desbloqueo: p.desbloqueo?.map((d) => ({
             ...d,
             valor: d.valor === "0" ? "Sí" : d.valor === "1" ? "No" : d.valor,
+            // Limpiar información de pre-selección
+            preguntaSeleccionadaDesbloqueo: undefined,
+            opcionSeleccionadaDesbloqueo: undefined,
           })),
         };
       }
-      return p;
+
+      // Para otros tipos, limpiar información de pre-selección
+      return {
+        ...p,
+        desbloqueo: p.desbloqueo?.map((d) => ({
+          ...d,
+          // Limpiar información de pre-selección
+          preguntaSeleccionadaDesbloqueo: undefined,
+          opcionSeleccionadaDesbloqueo: undefined,
+        })),
+      };
     });
 
     const data = {
@@ -531,9 +544,7 @@ const EditorCuestionario = () => {
         </DialogActions>
       </Dialog>
 
-      <LoadingPopup
-        open={isLoading}
-      />
+      <LoadingPopup open={isLoading} />
     </div>
   );
 };

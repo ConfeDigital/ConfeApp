@@ -3,7 +3,6 @@ import { ACCESS_TOKEN, AUTH_TYPE } from "./constants";
 import store from "./store";
 import { checkAndRefreshToken, logout, setUser } from "./features/auth/authSlice";
 import { jwtDecode } from "jwt-decode";
-import { PublicClientApplication } from "@azure/msal-browser";
 import { loginRequest } from "./auth-config";
 
 const isDevelopment = import.meta.env.MODE === 'development';

@@ -824,27 +824,10 @@ class EmergencyContactSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
     
-# class DatosMedicosSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = UserProfile
-#         fields = [
-#             "has_disability_certificate",
-#             "has_interdiction_judgment",
-#             "receives_pension",
-#             "receives_psychological_care",
-#             "receives_psychiatric_care",
-#             "has_seizures",
-#             "medications",
-#             "allergies",
-#             "dietary_restrictions",
-#             "physical_restrictions",
-#             "blood_type",
-#             "disability"
-#         ]
 
 class DatosMedicosSerializer(serializers.ModelSerializer):
     medications = MedicationSerializer(many=True)
-    disability = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
+    # disability = serializers.ListField(child=serializers.IntegerField(), write_only=True, required=False)
 
     class Meta:
         model = UserProfile

@@ -79,7 +79,8 @@ const PreguntaCard = ({
   agregarSeccionSiNoExiste,
 }) => {
   const tiposConOpciones = ["multiple", "checkbox", "dropdown", "binaria"];
-  const [preguntaSeleccionadaDesbloqueo, setPreguntaSeleccionadaDesbloqueo] = React.useState("");
+  const [preguntaSeleccionadaDesbloqueo, setPreguntaSeleccionadaDesbloqueo] =
+    React.useState("");
 
   // Efecto para manejar opciones según el tipo de pregunta
   React.useEffect(() => {
@@ -160,6 +161,19 @@ const PreguntaCard = ({
     updatePregunta,
   ]);
 
+  // Efecto para pre-seleccionar desbloqueos precargados
+  React.useEffect(() => {
+    if (pregunta.desbloqueo && pregunta.desbloqueo.length > 0) {
+      // Buscar el primer desbloqueo para pre-seleccionar
+      const primerDesbloqueo = pregunta.desbloqueo[0];
+      if (primerDesbloqueo.preguntaSeleccionadaDesbloqueo !== undefined) {
+        setPreguntaSeleccionadaDesbloqueo(
+          primerDesbloqueo.preguntaSeleccionadaDesbloqueo.toString()
+        );
+      }
+    }
+  }, [pregunta.desbloqueo]);
+
   const handleOptionChange = (i, value) => {
     if (pregunta.tipo === "binaria") {
       return; // No permitir cambios en preguntas binarias
@@ -211,7 +225,7 @@ const PreguntaCard = ({
   const handlePreguntaDesbloqueoChange = (e) => {
     const preguntaId = e.target.value;
     setPreguntaSeleccionadaDesbloqueo(preguntaId);
-    
+
     // Si se deselecciona, limpiar el desbloqueo
     if (preguntaId === "") {
       const nuevosDesbloqueos = (pregunta.desbloqueo || []).filter(
@@ -229,7 +243,7 @@ const PreguntaCard = ({
     const opcionIndex = parseInt(e.target.value);
     const preguntaId = parseInt(preguntaSeleccionadaDesbloqueo);
     const preguntaOrigen = preguntas[preguntaId];
-    
+
     if (!preguntaOrigen) return;
 
     const nuevosDesbloqueos = [
@@ -251,6 +265,9 @@ const PreguntaCard = ({
         valor,
         pregunta_id: preguntaId,
         descripcion: `Pregunta ${preguntaId + 1}: ${preguntaOrigen.texto}`,
+        // Mantener información de pre-selección si existe
+        preguntaSeleccionadaDesbloqueo: preguntaId,
+        opcionSeleccionadaDesbloqueo: valor,
       });
     }
 
@@ -368,10 +385,10 @@ const PreguntaCard = ({
 
         {tiposConOpciones.includes(pregunta.tipo) && (
           <>
-            <Typography variant="subtitle2" sx={{ mt: 2 }} gutterBottom >
+            <Typography variant="subtitle2" sx={{ mt: 2 }} gutterBottom>
               Opciones:
             </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }} >
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
               {(pregunta.opciones || []).map((op, i) => (
                 <div key={i} style={{ display: "flex" }}>
                   <TextField
@@ -452,7 +469,9 @@ const PreguntaCard = ({
             return (
               <Typography key={idx} sx={{ ml: 2 }} variant="body2">
                 {d.descripcion ||
-                  `Pregunta ${origen + 1}: ${preguntas?.[origen]?.texto} - Opción: ${d.valor || d.opcion_desbloqueadora}`}
+                  `Pregunta ${origen + 1}: ${
+                    preguntas?.[origen]?.texto
+                  } - Opción: ${d.valor || d.opcion_desbloqueadora}`}
               </Typography>
             );
           })
@@ -463,61 +482,81 @@ const PreguntaCard = ({
         )}
 
         {/* Nueva sección para configurar desbloqueos */}
-        {mostrarDesbloqueoDropdown && !deshabilitado && preguntasParaDesbloqueo.length > 0 && (
-          <>
-            <Typography variant="subtitle2" sx={{ mt: 3, mb: 1 }}>
-              Configurar nuevo desbloqueo:
-            </Typography>
-            
-            {/* Selector de pregunta */}
-            <FormControl fullWidth margin="normal">
-              <InputLabel>Seleccionar pregunta que desbloquea</InputLabel>
-              <Select
-                value={preguntaSeleccionadaDesbloqueo}
-                label="Seleccionar pregunta que desbloquea"
-                onChange={handlePreguntaDesbloqueoChange}
-              >
-                <MenuItem value="">Ninguna</MenuItem>
-                {preguntasParaDesbloqueo.map((p) => (
-                  <MenuItem key={p.index} value={p.index}>
-                    Pregunta {p.index + 1}: {p.texto}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+        {mostrarDesbloqueoDropdown &&
+          !deshabilitado &&
+          preguntasParaDesbloqueo.length > 0 && (
+            <>
+              <Typography variant="subtitle2" sx={{ mt: 3, mb: 1 }}>
+                Configurar nuevo desbloqueo:
+              </Typography>
 
-            {/* Selector de opción (solo si hay una pregunta seleccionada) */}
-            {preguntaSeleccionadaDesbloqueo !== "" && (
+              {/* Selector de pregunta */}
               <FormControl fullWidth margin="normal">
-                <InputLabel>Opción que desbloquea</InputLabel>
+                <InputLabel>Seleccionar pregunta que desbloquea</InputLabel>
                 <Select
-                  label="Opción que desbloquea"
-                  value={(() => {
-                    const desbloqueoExistente = pregunta.desbloqueo?.find(
-                      (d) => d.pregunta_id === parseInt(preguntaSeleccionadaDesbloqueo)
-                    );
-                    if (!desbloqueoExistente) return "";
-                    
-                    const preguntaOrigen = preguntas[parseInt(preguntaSeleccionadaDesbloqueo)];
-                    const opciones = preguntaOrigen?.opciones || [];
-                    return opciones.findIndex(
-                      (opt) =>
-                        (typeof opt === "object" ? opt.texto : opt) === desbloqueoExistente.valor
-                    );
-                  })()}
-                  onChange={handleOpcionDesbloqueoChange}
+                  value={preguntaSeleccionadaDesbloqueo}
+                  label="Seleccionar pregunta que desbloquea"
+                  onChange={handlePreguntaDesbloqueoChange}
                 >
                   <MenuItem value="">Ninguna</MenuItem>
-                  {(preguntas[parseInt(preguntaSeleccionadaDesbloqueo)]?.opciones || []).map((opt, j) => (
-                    <MenuItem key={j} value={j}>
-                      {typeof opt === "object" ? opt.texto : opt}
+                  {preguntasParaDesbloqueo.map((p) => (
+                    <MenuItem key={p.index} value={p.index}>
+                      Pregunta {p.index + 1}: {p.texto}
                     </MenuItem>
                   ))}
                 </Select>
               </FormControl>
-            )}
-          </>
-        )}
+
+              {/* Selector de opción (solo si hay una pregunta seleccionada) */}
+              {preguntaSeleccionadaDesbloqueo !== "" && (
+                <FormControl fullWidth margin="normal">
+                  <InputLabel>Opción que desbloquea</InputLabel>
+                  <Select
+                    label="Opción que desbloquea"
+                    value={(() => {
+                      const desbloqueoExistente = pregunta.desbloqueo?.find(
+                        (d) =>
+                          d.pregunta_id ===
+                          parseInt(preguntaSeleccionadaDesbloqueo)
+                      );
+                      if (!desbloqueoExistente) return "";
+
+                      const preguntaOrigen =
+                        preguntas[parseInt(preguntaSeleccionadaDesbloqueo)];
+                      const opciones = preguntaOrigen?.opciones || [];
+
+                      // Si hay información de pre-selección, usarla
+                      if (desbloqueoExistente.opcionSeleccionadaDesbloqueo) {
+                        return opciones.findIndex(
+                          (opt) =>
+                            (typeof opt === "object" ? opt.texto : opt) ===
+                            desbloqueoExistente.opcionSeleccionadaDesbloqueo
+                        );
+                      }
+
+                      // Si no, usar el valor normal
+                      return opciones.findIndex(
+                        (opt) =>
+                          (typeof opt === "object" ? opt.texto : opt) ===
+                          desbloqueoExistente.valor
+                      );
+                    })()}
+                    onChange={handleOpcionDesbloqueoChange}
+                  >
+                    <MenuItem value="">Ninguna</MenuItem>
+                    {(
+                      preguntas[parseInt(preguntaSeleccionadaDesbloqueo)]
+                        ?.opciones || []
+                    ).map((opt, j) => (
+                      <MenuItem key={j} value={j}>
+                        {typeof opt === "object" ? opt.texto : opt}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              )}
+            </>
+          )}
 
         {pregunta.desbloqueos_recibidos?.length > 0 && (
           <>
@@ -528,7 +567,8 @@ const PreguntaCard = ({
               <Typography key={i} sx={{ ml: 2 }} variant="body2">
                 Desde: {d.pregunta_origen + 1} — opción:{" "}
                 {(() => {
-                  const opciones = preguntas?.[d.pregunta_origen]?.opciones || [];
+                  const opciones =
+                    preguntas?.[d.pregunta_origen]?.opciones || [];
                   const match = opciones.find((opt) =>
                     typeof opt === "object"
                       ? opt.texto === d.opcion_desbloqueadora

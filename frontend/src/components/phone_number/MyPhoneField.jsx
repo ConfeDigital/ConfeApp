@@ -8,7 +8,7 @@ import {
   getCanonicalNumber,
 } from "./phoneUtils";
 
-const PhoneInputField = ({ label, fullWidth, error, value, onChange, sx }) => {
+const PhoneInputField = ({ label, fullWidth, error, value, onChange, sx, disabled = false }) => {
   const initial = getInitialState(value);
   const [selectedCountry, setSelectedCountry] = useState(initial.selectedCountry);
   const [localNumber, setLocalNumber] = useState(
@@ -79,6 +79,7 @@ const PhoneInputField = ({ label, fullWidth, error, value, onChange, sx }) => {
       value={localNumber}
       onChange={handleNumberChange}
       sx={sx}
+      disabled={disabled}
       InputProps={{
         startAdornment: (
           <InputAdornment position="start">
@@ -93,6 +94,7 @@ const PhoneInputField = ({ label, fullWidth, error, value, onChange, sx }) => {
                 mr: 1,
                 "& .MuiSelect-select": { display: "flex", alignItems: "center" },
               }}
+              disabled={disabled}
             >
               {countries.map((country) => (
                 <MenuItem key={country.code} value={country.code}>
@@ -108,7 +110,7 @@ const PhoneInputField = ({ label, fullWidth, error, value, onChange, sx }) => {
   );
 };
 
-const MyPhoneField = ({ name, control, label, fullWidth, sx }) => {
+const MyPhoneField = ({ name, control, label, fullWidth, sx, disabled = false }) => {
   return (
     <Controller
       name={name}
@@ -122,6 +124,7 @@ const MyPhoneField = ({ name, control, label, fullWidth, sx }) => {
           error={error}
           onChange={field.onChange}
           sx={sx}
+          disabled={disabled}
         />
       )}
     />

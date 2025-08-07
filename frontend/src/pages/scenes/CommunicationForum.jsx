@@ -31,7 +31,7 @@ const schema = yup.object().shape({
 });
 
 const CommunicationForum = () => {
-  useDocumentTitle('Comunicados');
+  useDocumentTitle('Anuncios');
   const isAdmin = useSelector((state) => state.auth.user?.is_staff);
 
   const [posts, setPosts] = useState([]);

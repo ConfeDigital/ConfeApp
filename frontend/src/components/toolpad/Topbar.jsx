@@ -21,6 +21,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { fetchNotifications, markAsRead } from "../../features/notifications/notificationsSlice";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
+import LogoutConfirmationDialog from "../LogoutConfirmationDialog";
 
 const Topbar = () => {
   const theme = useTheme();
@@ -43,6 +44,12 @@ const Topbar = () => {
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [openNotifications, setOpenNotifications] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState(null);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleLogout = () => {
+    navigate("/logout");
+  };
 
   useEffect(() => {
     dispatch(fetchNotifications());
@@ -262,7 +269,7 @@ const Topbar = () => {
             </>
           )}
           <Divider />
-          <MenuItem onClick={handleMenuClose} component={Link} to="/logout">
+          <MenuItem onClick={() => setDialogOpen(true)} component={Link}>
             <LogoutIcon sx={{ mr: 1 }} />
             Cerrar Sesión
           </MenuItem>
@@ -336,6 +343,11 @@ const Topbar = () => {
           </List>
         </Box>
       </Popover>
+      <LogoutConfirmationDialog
+        open={dialogOpen}
+        onClose={() => setDialogOpen(false)}
+        onConfirm={handleLogout}
+      />
     </Box>
   );
 };

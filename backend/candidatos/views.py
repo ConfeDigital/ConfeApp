@@ -360,7 +360,7 @@ class JobHistoryCommentCreateView(generics.CreateAPIView):
         return context
     
 class CandidateDomicileUpdateAPIView(APIView):
-    permission_classes = [IsAuthenticated, IsInSameCenter]  # Solo usuarios autenticados pueden editar
+    permission_classes = [IsAuthenticated, IsInSameCenter, PersonalPermission]  # Solo usuarios autenticados pueden editar
 
     def get_object(self, uid):
         """
@@ -370,6 +370,18 @@ class CandidateDomicileUpdateAPIView(APIView):
             return UserProfile.objects.get(user__id=uid)
         except UserProfile.DoesNotExist:
             raise NotFound("Candidate profile not found.")
+
+    def get(self, request, uid, *args, **kwargs):
+        """
+        Retrieves the authenticated user's domicile.
+        """
+        candidate_profile = self.get_object(uid)
+
+        if not candidate_profile.domicile:
+            return Response({"message": "Domicile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = DomicileUpdateSerializer(candidate_profile.domicile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def put(self, request, uid, *args, **kwargs):
         """
@@ -391,8 +403,51 @@ class CandidateDomicileUpdateAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+class CandidateDomicileMeAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        """
+        Gets the authenticated user's profile.
+        """
+        try:
+            return UserProfile.objects.get(user=self.request.user)
+        except UserProfile.DoesNotExist:
+            raise NotFound("Candidate profile not found.")
+
+    def get(self, request, *args, **kwargs):
+        """
+        Retrieves the authenticated user's domicile.
+        """
+        candidate_profile = self.get_object()
+
+        if not candidate_profile.domicile:
+            return Response({"message": "Domicile not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = DomicileUpdateSerializer(candidate_profile.domicile)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, *args, **kwargs):
+        """
+        Updates the authenticated user's domicile.
+        """
+        candidate_profile = self.get_object()
+
+        if not candidate_profile.domicile:
+            candidate_profile.domicile = Domicile.objects.create()
+            candidate_profile.save()
+
+        serializer = DomicileUpdateSerializer(candidate_profile.domicile, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message": "Domicile updated successfully"}, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class EmergencyContactUpdateAPIView(APIView):
-    permission_classes = [IsAuthenticated, IsInSameCenter]
+    permission_classes = [IsAuthenticated, IsInSameCenter, PersonalPermission]
 
     def get_object(self, uid):
         """
@@ -431,8 +486,49 @@ class EmergencyContactUpdateAPIView(APIView):
         
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
+class EmergencyContactMeAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        """
+        Obtiene el perfil del usuario basado en el ID.
+        """
+        try:
+            return UserProfile.objects.get(user=self.request.user)
+        except UserProfile.DoesNotExist:
+            raise NotFound("Candidate profile not found.")
+
+    def get(self, request, *args, **kwargs):
+        """
+        Retorna los contactos de emergencia existentes del candidato.
+        """
+        candidate_profile = self.get_object()
+        contacts = candidate_profile.emergency_contacts.all()
+        serializer = EmergencyContactSerializer(contacts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, *args, **kwargs):
+        """
+        Actualiza los contactos de emergencia del candidato automáticamente.
+        """
+        candidate_profile = self.get_object()
+        emergency_contacts_data = request.data.get("emergency_contacts", [])
+
+        # Eliminar contactos anteriores
+        candidate_profile.emergency_contacts.all().delete()
+
+        # Crear nuevos contactos
+        serializer = EmergencyContactSerializer(data=emergency_contacts_data, many=True)
+        if serializer.is_valid():
+            contacts = serializer.save()
+            candidate_profile.emergency_contacts.set(contacts)
+            return Response({"message": "Contactos de emergencia actualizados"}, status=status.HTTP_200_OK)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 class DatosMedicosAPIView(APIView):
-    permission_classes = [IsAuthenticated, IsInSameCenter]  # O ajusta a IsAuthenticated si lo deseas
+    permission_classes = [IsAuthenticated, IsInSameCenter, PersonalPermission]  
 
     def get(self, request, uid):
         # Obtiene el UserProfile del candidato
@@ -444,6 +540,25 @@ class DatosMedicosAPIView(APIView):
     def put(self, request, uid):
         # Obtiene el UserProfile del candidato
         perfil = get_object_or_404(UserProfile, user__id=uid)
+        # Aplicas partial=True para permitir actualizar solo algunos campos
+        serializer = DatosMedicosSerializer(perfil, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+class DatosMedicosMeAPIView(APIView):
+    permission_classes = [IsAuthenticated] 
+
+    def get(self, request):
+        # Obtiene el UserProfile del candidato
+        perfil = get_object_or_404(UserProfile, user=self.request.user)
+        # Serializa usando tu serializer de datos médicos
+        serializer = DatosMedicosSerializer(perfil)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request):
+        # Obtiene el UserProfile del candidato
+        perfil = get_object_or_404(UserProfile, user=self.request.user)
         # Aplicas partial=True para permitir actualizar solo algunos campos
         serializer = DatosMedicosSerializer(perfil, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)

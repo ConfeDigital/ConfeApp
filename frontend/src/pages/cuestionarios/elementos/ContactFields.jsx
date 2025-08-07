@@ -31,7 +31,7 @@ import axios from "../../../api";
 import MyPhoneField from "../../../components/phone_number/MyPhoneField";
 import AddressAutocompleteForm from "../../../components/AddressAutoCompleteForm";
 
-const ContactFields = () => {
+const ContactFields = ({ disabled }) => {
   const { control, setValue, formState: { errors } } = useFormContext();
   const { fields, append, remove } = useFieldArray({
     name: "emergency_contacts",
@@ -116,6 +116,7 @@ const ContactFields = () => {
                   {...field}
                   error={!!error}
                   helperText={error?.message}
+                  disabled={disabled}
                 />
               )}
             />
@@ -131,6 +132,7 @@ const ContactFields = () => {
                   {...field}
                   error={!!error}
                   helperText={error?.message}
+                  disabled={disabled}
                 />
               )}
             />
@@ -146,6 +148,7 @@ const ContactFields = () => {
                   {...field}
                   error={!!error}
                   helperText={error?.message}
+                  disabled={disabled}
                 />
               )}
             />
@@ -157,7 +160,7 @@ const ContactFields = () => {
               render={({ field, fieldState: { error } }) => (
                 <FormControl fullWidth error={!!error} sx={{ minWidth: 223 }}>
                   <InputLabel>Relación</InputLabel>
-                  <Select {...field} label="Relación">
+                  <Select {...field} label="Relación" disabled={disabled}>
                     <MenuItem value={undefined}>Seleccionar</MenuItem>
                     <MenuItem value="PADRE">Padre</MenuItem>
                     <MenuItem value="MADRE">Madre</MenuItem>
@@ -188,6 +191,7 @@ const ContactFields = () => {
               fullWidth
               sx={{ width: 223 }}
               size="small"
+              disabled={disabled}
             />
           </Grid>
           <Grid xs={12} sm={4}>
@@ -201,6 +205,7 @@ const ContactFields = () => {
                   {...field}
                   error={!!error}
                   helperText={error ? error.message : null}
+                  disabled={disabled}
                 />
               )}
             />
@@ -213,7 +218,7 @@ const ContactFields = () => {
             control={control}
             render={({ field }) => (
               <FormControlLabel
-                control={<Checkbox {...field} checked={field.value} />}
+                control={<Checkbox {...field} checked={field.value} disabled={disabled}/>}
                 label="¿Vive en el mismo domicilio?"
               />
             )}
@@ -233,17 +238,20 @@ const ContactFields = () => {
             <Typography variant="h4" mb={1}>
               Ingresa su domicilio
             </Typography>
-            <AddressAutocompleteForm prefix={`emergency_contacts.${index}.domicile`} domicile={true} errors={contactErrors?.domicile} />
+            <AddressAutocompleteForm prefix={`emergency_contacts.${index}.domicile`} domicile={true} errors={contactErrors?.domicile} disabled={disabled} />
           </Box>
         )}
 
-        <Grid xs={12} display="flex" justifyContent="flex-end">
+        <Grid xs={12} sx={{ alignSelf: "center" }} >
           <Button
             onClick={() => handleRemoveClick(index)}
             color="error"
             variant="outlined"
             startIcon={<RemoveCircle />}
-          >
+            size="small"
+            sx={{ height: "inherit" }}
+            disabled={disabled}
+            >
             Eliminar Contacto
           </Button>
         </Grid>
@@ -286,6 +294,7 @@ const ContactFields = () => {
                 },
               })
             }
+            disabled={disabled}
           >
             Agregar Contacto
           </Button>
