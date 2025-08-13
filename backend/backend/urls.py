@@ -3,9 +3,11 @@ from django.urls import path, include
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.conf import settings
 from django.conf.urls.static import static
+from .views import home_view
 
 urlpatterns = [
-    path("api/admin/", admin.site.urls),
+    path("", home_view, name="home"),
+    path("admin/", admin.site.urls),
     path("api/token/", TokenObtainPairView.as_view(), name="get_token"),
     path("api/token/refresh/", TokenRefreshView.as_view(), name="refresh"),
     #path("api-auth/", include("rest_framework.urls")),

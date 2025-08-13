@@ -61,7 +61,8 @@ MIDDLEWARE = [
 
 CORS_ALLOWED_ORIGINS = [
     'https://kaiuki.com',
-    'https://zealous-desert-08853fc0f.6.azurestaticapps.net'
+    'https://zealous-desert-08853fc0f.6.azurestaticapps.net',
+    'https://ceil.institucionconfe.org.mx'
 ]
 
 # --- Configuración de Static Files ---

@@ -6,7 +6,7 @@ db.sqlite3
 **temp.xlsx
 
 media/
-static/
+staticfiles/
 dump.rdb
 exports/
 *.sqlite3
