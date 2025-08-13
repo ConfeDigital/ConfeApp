@@ -110,7 +110,7 @@ AUTH_ADFS = {
     "TENANT_ID": tenant_id,
     "RELYING_PARTY_ID": client_id, 
     'LOGIN_EXEMPT_URLS': [
-        '^api', "^admin", "^auth", "public/", "^media", "^static", # Assuming you API is available at /api
+        '^api', "^admin", "^auth", "public/", "^media", "^static", "^$", # Assuming you API is available at /api
     ],
     'CREATE_NEW_USERS': True,
     # 'SCOPES': 'api://confe.app.org/read',
@@ -255,6 +255,11 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 DJOSER = {

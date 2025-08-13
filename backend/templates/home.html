@@ -1,0 +1,184 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConfeApp - Api</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Montserrat', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(60deg, rgba(2, 0, 36, 1) 0%, rgba(17, 68, 129, 1) 35%, rgba(0, 212, 255, 1) 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background: white;
+            padding: 3rem;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 500px;
+            width: 90%;
+        }
+
+        .logo {
+            width: 220px;
+            height: 220px;
+            background: white;
+            border-radius: 5%;
+            margin: 0 auto 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .logo:empty {
+            /* This background will apply ONLY when the .logo div is empty */
+            background: linear-gradient(60deg, rgba(2, 0, 36, 1) 0%, rgba(17, 68, 129, 1) 35%, rgba(0, 212, 255, 1) 100%);
+            color: white;
+            /* You can add or override other styles here */
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 3rem;
+            font-size: 1.1rem;
+        }
+
+        .buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: linear-gradient(60deg, rgba(2, 0, 36, 1) 0%, rgba(17, 68, 129, 1) 35%, rgba(0, 212, 255, 1) 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #e9ecef;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .environment-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .env-production {
+            background: #28a745;
+            color: white;
+        }
+
+        .env-development {
+            background: #ffc107;
+            color: #333;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 2rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .buttons {
+                gap: 0.8rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="environment-badge {% if is_production %}env-production{% else %}env-development{% endif %}">
+        {% if is_production %}
+        Producción
+        {% else %}
+        Desarrollo
+        {% endif %}
+    </div>
+
+    <div class="container">
+        <div class="logo">
+            <img src="{% static 'logos/logoConfe.png' %}" alt="CONFE">
+        </div>
+
+        <!-- <h1>ConfeApp</h1> -->
+        <p class="subtitle">Sistema de Gestión Integral</p>
+
+        <div class="buttons">
+            <a href="{{ frontend_url }}" class="btn btn-primary" target="_blank">
+                🌐 Ir a la Aplicación Frontend
+            </a>
+
+            <a href="{{ admin_url }}" class="btn btn-secondary">
+                ⚙️ Panel de Administración
+            </a>
+        </div>
+
+        <div style="margin-top: 2rem; font-size: 0.9rem; color: #888;">
+            <p>Frontend: {{ frontend_url }}</p>
+            <p>Entorno: {% if is_production %}Producción{% else %}Desarrollo{% endif %}</p>
+        </div>
+    </div>
+</body>
+
+</html>
