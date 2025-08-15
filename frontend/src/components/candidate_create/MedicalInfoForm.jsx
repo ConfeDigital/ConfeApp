@@ -57,8 +57,8 @@ const MedicalInfoForm = () => {
           defaultValue=""
           render={({ field, fieldState: { error } }) => (
             <FormControl fullWidth error={!!error} sx={{ minWidth: 223 }}>
-              <InputLabel id="blood-type-label">Recibe Pensión</InputLabel>
-              <Select labelId="blood-type-label" label="Recibe Pensión" {...field}>
+              <InputLabel id="blood-type-label">Seguro Social</InputLabel>
+              <Select labelId="blood-type-label" label="Seguro Social" {...field}>
                 <MenuItem value={undefined}>No sé</MenuItem>
                 <MenuItem value="NINGUNO">Ninguno</MenuItem>
                 <MenuItem value="IMSS">IMSS</MenuItem>

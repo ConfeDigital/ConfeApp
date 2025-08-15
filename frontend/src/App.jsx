@@ -9,7 +9,7 @@ import {
 import { CssBaseline, ThemeProvider } from "@mui/material";
 import { ColorModeContext, useMode } from "./theme";
 import "./main.css";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import {
   checkAndFetchUser,
@@ -78,6 +78,9 @@ import QuestionnaireInterface from "./pages/cuestionarios/questionnaireInterface
 import CommunicationForum from "./pages/scenes/CommunicationForum";
 import CenterChat from "./pages/scenes/CenterChat";
 
+import { onSessionExpired } from "./components/session_expired/sessionExpiredEvent";
+import SessionExpiredDialog from "./components/session_expired/SessionExpiredDialog";
+
 reactDebugHooks(React);
 
 function Logout({ instance }) {
@@ -131,6 +134,14 @@ function RegisterAndLogout({ instance }) {
 function App({ instance }) {
   const [{ theme, mode, resolvedMode }, { cycleColorMode }] = useMode();
   const dispatch = useDispatch();
+
+  const [showSessionExpired, setShowSessionExpired] = useState(false);
+
+  useEffect(() => {
+    onSessionExpired(() => {
+      setShowSessionExpired(true);
+    });
+  }, []);
 
   useEffect(() => {
     const authType = sessionStorage.getItem(AUTH_TYPE);
@@ -386,6 +397,10 @@ function App({ instance }) {
                   />
                 </Route>
               </Routes>
+              <SessionExpiredDialog
+                open={showSessionExpired}
+                onClose={() => setShowSessionExpired(false)}
+              />
             </LocalizationProvider>
           </ThemeProvider>
         </ColorModeContext.Provider>

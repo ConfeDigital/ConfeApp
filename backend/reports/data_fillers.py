@@ -74,11 +74,19 @@ def build_proyecto_vida_table(profile):
         for r in respuestas:
             texto = r.pregunta.texto.strip()
             section = r.pregunta.nombre_seccion.strip() or "Sin sección"
-            resp = r.respuesta.strip()
+        
+            if isinstance(r.respuesta, dict):
+                resp = r.respuesta.get("texto", "")
+            elif isinstance(r.respuesta, str):
+                resp = r.respuesta.strip()
+            else:
+                resp = str(r.respuesta).strip()
+        
             if texto in preguntas_textuales:
                 preguntas_textuales[texto] = resp
             elif "talento" in texto.lower():
                 talentos_por_seccion[section].append(resp)
+
         table = []
         for key, val in preguntas_textuales.items():
             if val and val.strip().startswith("{"):
