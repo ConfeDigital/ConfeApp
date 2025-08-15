@@ -2,7 +2,7 @@
 
 import os
 from django.conf import settings
-from reportlab.platypus import Table, TableStyle, Paragraph, Spacer, Image, PageBreak
+from reportlab.platypus import Table, TableStyle, Paragraph, Spacer, Image, PageBreak, KeepTogether
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, landscape, A3
 from reportlab.lib.units import inch
@@ -17,20 +17,78 @@ from cuestionarios.utils import evaluar_rango, get_user_evaluation_summary
 from reportlab.lib.units import cm
 
 
+def normalize_text(text):
+    """Normalize text by removing accents and converting to lowercase."""
+    if not isinstance(text, str):
+        return ""
+    
+    # Remove accents and normalize
+    text = unicodedata.normalize("NFKD", text)
+    text = text.encode("ASCII", "ignore").decode("utf-8")
+    
+    # Clean up whitespace
+    text = re.sub(r"\s+", " ", text)
+    
+    return text.strip().lower()
+
+
+def redondear_percentil(percentil):
+    """Round percentile to nearest standard value."""
+    if percentil is None:
+        return None
+    
+    standard_percentiles = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+    
+    # Find the closest standard percentile
+    closest = min(standard_percentiles, key=lambda x: abs(x - percentil))
+    return closest
+
+
 
 def draw_logo_header():
-    logo_paths = [
-        os.path.join(settings.MEDIA_ROOT, "logos/confe_Azul.png"),
-        os.path.join(settings.MEDIA_ROOT, "logos/JAP.png"),
-        os.path.join(settings.MEDIA_ROOT, "logos/ceil.png")
-    ]
+    """Create logo header with fallback options."""
+    # Try multiple possible locations for logos
+    logo_filenames = ["confe_Azul.png", "ceil.png"]
+    possible_paths = []
+    
+    # Add different possible locations
+    if hasattr(settings, 'STATIC_ROOT') and settings.STATIC_ROOT:
+        possible_paths.append(settings.STATIC_ROOT)
+    if hasattr(settings, 'STATICFILES_DIRS'):
+        possible_paths.extend(settings.STATICFILES_DIRS)
+    
+    # Fallback to common locations
+    possible_paths.extend([
+        os.path.join(settings.BASE_DIR, 'static'),
+        os.path.join(settings.BASE_DIR, 'staticfiles'),
+        os.path.join(settings.BASE_DIR, 'backend', 'static'),
+    ])
+    
     logos = []
-    for path in logo_paths:
-        if os.path.exists(path):
-            logos.append(Image(path, width=80, height=60))
-        else:
-            logos.append(Spacer(1, 60))
-    logo_table = Table([[logos[0], logos[1], logos[2]]], colWidths=[180, 180, 180])
+    for filename in logo_filenames:
+        logo_found = False
+        for base_path in possible_paths:
+            full_path = os.path.join(base_path, "logos", filename)
+            try:
+                if os.path.exists(full_path):
+                    logos.append(Image(full_path, width=100, height=75))
+                    logo_found = True
+                    break
+            except Exception as e:
+                continue
+        
+        if not logo_found:
+            # Create a placeholder with the logo name
+            placeholder_style = ParagraphStyle(
+                'LogoPlaceholder',
+                fontSize=8,
+                textColor=colors.grey,
+                alignment=1  # Center alignment
+            )
+            placeholder = Paragraph(f"[{filename.split('.')[0]}]", placeholder_style)
+            logos.append(placeholder)
+    
+    logo_table = Table([[logos[0], logos[1]]], colWidths=[220, 220])
     logo_table.setStyle(TableStyle([
         ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
@@ -40,9 +98,9 @@ def draw_logo_header():
 
 def draw_logo_header_canvas(canvas_obj, width, height):
     logo_paths = [
-        os.path.join(settings.MEDIA_ROOT, "logos/logo1.png"),
-        os.path.join(settings.MEDIA_ROOT, "logos/logo2.png"),
-        os.path.join(settings.MEDIA_ROOT, "logos/logo3.png")
+        os.path.join(settings.STATIC_ROOT, "logos/logo1.png"),
+        os.path.join(settings.STATIC_ROOT, "logos/logo2.png"),
+        os.path.join(settings.STATIC_ROOT, "logos/logo3.png")
     ]
     positions = [50, (width / 2) - 40, width - 130]
     for i, path in enumerate(logo_paths):
@@ -311,7 +369,7 @@ def draw_table(data, title, celdas_coloreadas=None):
         table_style.add('TEXTCOLOR', (0, 0), (-1, 0), colors.white)
         table_style.add('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold')
         table_style.add('FONTSIZE', (0, 0), (-1, 0), 10)
-        table_style.add('ALIGN', (0, 0), (-1, 0), 'CENTER')
+        table_style.add('ALIGN', (0, 0), (-1, -1), 'CENTER')
         table_style.add('VALIGN', (0, 0), (-1, 0), 'MIDDLE')
 
         table_style.add('ALIGN', (0, 1), (-1, 2), 'CENTER')
@@ -324,8 +382,8 @@ def draw_table(data, title, celdas_coloreadas=None):
         table_style.add('FONTNAME', (-1, 3), (-1, -1), 'Helvetica-Bold')
         table_style.add('ALIGN', (0, 3), (-1, -1), 'CENTER')
         table_style.add('FONTSIZE', (0, 3), (-1, -1), 9)
-        table_style.add('TOPPADDING', (0, 3), (-1, -1), 6)
-        table_style.add('BOTTOMPADDING', (0, 3), (-1, -1), 6)
+        table_style.add('TOPPADDING', (0, 3), (-1, -1), 4)
+        table_style.add('BOTTOMPADDING', (0, 3), (-1, -1), 4)
 
     # Líneas extra (para percentil 50)
     for row_idx, row_data in enumerate(data):
@@ -398,7 +456,12 @@ def draw_table(data, title, celdas_coloreadas=None):
     
     table = Table(formatted_data, repeatRows=repeat_rows, colWidths=col_widths)
     table.setStyle(table_style)
-    elements.append(table)
+    
+    # For the SIS Habilidades Adaptativas table, wrap it in KeepTogether to prevent page breaks
+    if title == "Habilidades Adaptativas":
+        elements.append(KeepTogether([table]))
+    else:
+        elements.append(table)
 
     # Leyenda solo si es tabla adaptativa
     # if title == "Habilidades Adaptativas - Tabla de resultados SIS":

@@ -4,6 +4,7 @@ import store from "./store";
 import { checkAndRefreshToken, logout, setUser } from "./features/auth/authSlice";
 import { jwtDecode } from "jwt-decode";
 import { loginRequest } from "./auth-config";
+import { triggerSessionExpired } from "./components/session_expired/sessionExpiredEvent";
 
 const isDevelopment = import.meta.env.MODE === 'development';
 const baseUrl = isDevelopment
@@ -92,7 +93,8 @@ export const configureApi = (msalInstance) => {
                 })
                 .catch(() => {
                   isRefreshing = false;
-                  store.dispatch(logout());
+                  triggerSessionExpired();
+                  setTimeout(() => store.dispatch(logout()), 2000); // wait 2s before logging out
                 });
             }
 
@@ -103,7 +105,8 @@ export const configureApi = (msalInstance) => {
               });
             });
           } else {
-            store.dispatch(logout());
+            triggerSessionExpired();
+            setTimeout(() => store.dispatch(logout()), 2000);
             return Promise.reject(error);
           }
         }

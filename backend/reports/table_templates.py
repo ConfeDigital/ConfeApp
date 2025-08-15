@@ -55,7 +55,7 @@ TABLE_TEMPLATES = {
     ],
     "Habilidades Adaptativas - Tabla de resultados SIS": [
         ["PERCENTILES", "Vida en el hogar", "Vida en la comunidad", "Aprendizaje a lo largo de la vida", 
-         "Empleo", "Salud y seguridad", "Social", "Índice de Necesidades de Apoyo", "PERCENTILES"],
+         "Empleo", "Salud y seguridad", "Social", "Índice de necesidades de apoyo", "PERCENTILES"],
         ["100", "17-20", "17-20", "17-20", "#N/A", "#N/A", "#N/A", ">137", "100"],
         ["95", "16", "15-16", "15-16", "15", "#N/A", "#N/A", "121-127", "95"],
         ["90", "15", "14", "14", "14", "14", "14", "117-120", "90"],
