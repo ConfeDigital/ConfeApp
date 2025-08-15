@@ -1,6 +1,6 @@
 from django.urls import path
 # from .views import generate_report_pdf
-from .report_dispatcher import generate_report_pdf
+from .legacy.report_dispatcher import generate_report_pdf
 from .views_clean import generate_report
 
 urlpatterns = [
