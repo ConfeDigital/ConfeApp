@@ -14,9 +14,35 @@ from reportlab.platypus import Image
 from candidatos.models import UserProfile
 from .data_collector import ReportDataCollector
 from .report_utils import create_section_header, create_basic_table, create_side_by_side_tables, draw_logo_header
-from .table_templates import TABLE_TEMPLATES
 from .data_fillers import fill_table_data
 
+SIS_TEMPLATE = {
+    "Habilidades Adaptativas - Tabla de resultados SIS": [
+        ["PERCENTILES", "Vida en el hogar", "Vida en la comunidad", "Aprendizaje a lo largo de la vida", 
+         "Empleo", "Salud y seguridad", "Social", "Índice de necesidades de apoyo", "PERCENTILES"],
+        ["100", "17-20", "17-20", "17-20", "N/A", "N/A", "N/A", ">137", "100"],
+        ["95", "16", "15-16", "15-16", "15", "N/A", "N/A", "121-127", "95"],
+        ["90", "15", "14", "14", "14", "14", "14", "117-120", "90"],
+        ["85", "14", "", "13", "13", "13", "13", "114-116", "85"],
+        ["80", "13", "13", "", "", "", "", "111-113", "80"],
+        ["75", "", "", "12", "12", "12", "12", "109-110", "75"],
+        ["70", "12", "12", "", "", "", "", "107-108", "70"],
+        ["65", "11", "11", "11", "11", "11", "11", "104-106", "65"],
+        ["60", "", "", "", "", "", "", "102-103", "60"],
+        ["55", "", "", "", "", "", "", "101", "55"],
+        ["50", "10", "10", "10", "10", "10", "10", "98-100", "50"],
+        ["45", "", "", "", "", "", "", "96-97", "45"],
+        ["40", "9", "9", "9", "9", "9", "9", "93-95", "40"],
+        ["35", "", "", "", "", "", "", "91-92", "35"],
+        ["30", "8", "8", "8", "8", "8", "8", "89-90", "30"],
+        ["25", "", "", "", "", "", "", "87-88", "25"],
+        ["20", "7", "7", "7", "7", "7", "7", "84-86", "20"],
+        ["15", "", "", "", "", "", "", "82-83", "15"],
+        ["10", "6", "6", "6", "6", "6", "6", "79-81", "10"],
+        ["5", "", "", "5", "5", "5", "", "75-78", "5"],
+        ["1", "1-5", "1-5", "1-4", "1-4", "1-4", "1-5", "<73", "1"]
+    ],
+}
 
 class FichaTecnicaReport:
     """Generator for Ficha Técnica reports."""
@@ -357,13 +383,13 @@ class FichaTecnicaReport:
             return text.strip().lower()
         
         section_to_column = {
-            "actividades de la vida en el hogar": "Vida en el hogar",
-            "actividades de la vida en la comunidad": "Vida en la comunidad",
-            "actividades de aprendizaje a lo largo de la vida": "Aprendizaje a lo largo de la vida",
-            "empleo": "Empleo",
-            "actividades de salud y seguridad": "Salud y seguridad",
-            "actividades sociales": "Social",
-            "índice de necesidades de apoyo": "Índice de necesidades de apoyo"
+            "actividades de la vida en el hogar": "vida en el hogar",
+            "actividades de la vida en la comunidad": "vida en la comunidad",
+            "actividades de aprendizaje a lo largo de la vida": "aprendizaje a lo largo de la vida",
+            "empleo": "empleo",
+            "actividades de salud y seguridad": "salud y seguridad",
+            "actividades sociales": "social",
+            "índice de necesidades de apoyo": "índice de necesidades de apoyo"
         }
 
         try:
@@ -377,11 +403,13 @@ class FichaTecnicaReport:
 
             header_row = table[0]
             col_index_map = {}
-            for key, col_name in section_to_column.items():
-                for idx, header in enumerate(header_row):
-                    if normalize_text(col_name) == normalize_text(header):
-                        col_index_map[key] = idx
-                        break
+            for i, col in enumerate(header_row):
+                for section, mapped_col in section_to_column.items():
+                    if normalize_text(mapped_col) == normalize_text(col):
+                        # GUARDA usando la versión NORMALIZADA del mapped_col
+                        normalized_key = normalize_text(mapped_col)
+                        col_index_map[normalized_key] = i
+
 
             percentil_col_indices = [idx for idx, name in enumerate(header_row) if "percentil" in name.lower()]
             percentil_col_idx = percentil_col_indices[1] if len(percentil_col_indices) > 1 else (
@@ -393,9 +421,13 @@ class FichaTecnicaReport:
             def redondear_percentil(percentil):
                 if percentil is None:
                     return None
-                standard_percentiles = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
-                closest = min(standard_percentiles, key=lambda x: abs(x - percentil))
-                return closest
+                try:
+                    percentil_num = float(percentil)
+                    standard_percentiles = [1, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100]
+                    closest = min(standard_percentiles, key=lambda x: abs(x - percentil_num))
+                    return closest
+                except (ValueError, TypeError):
+                    return None
 
             def encontrar_fila_por_percentil(percentil):
                 for row_idx in range(1, len(table)):
@@ -416,37 +448,57 @@ class FichaTecnicaReport:
             def procesar_seccion(nombre, puntaje, percentil_val):
                 if nombre not in col_index_map or not isinstance(puntaje, (int, float)):
                     return
+                    
                 col_idx = col_index_map[nombre]
                 match_encontrado = False
-                for row_idx in range(1, len(table)):
+                
+                for row_idx in range(2, len(table)):
                     celda = str(table[row_idx][col_idx]).strip()
-                    if not celda or celda == "#N/A":
+                    if not celda or celda == "-" or celda == "" or celda.upper() == "N/A":
                         continue
                     
-                    if evaluar_rango(float(puntaje), celda):
-                        marcar_celda(row_idx, col_idx)
-                        if percentil_col_idx is not None:
-                            marcar_celda(row_idx, percentil_col_idx)
-                        match_encontrado = True
-                        break
+                    try:
+                        if evaluar_rango(float(puntaje), celda):
+                            marcar_celda(row_idx, col_idx)
+                            if percentil_col_idx is not None:
+                                marcar_celda(row_idx, percentil_col_idx)
+                            match_encontrado = True
+                            break
+                    except Exception:
+                        continue
                 
                 if not match_encontrado and percentil_val is not None:
-                    percentil_redondeado = redondear_percentil(percentil_val)
-                    fila_idx = encontrar_fila_por_percentil(percentil_redondeado)
-                    if fila_idx is not None:
-                        marcar_celda(fila_idx, col_idx)
-                        if percentil_col_idx is not None:
-                            marcar_celda(fila_idx, percentil_col_idx)
+                    try:
+                        percentil_redondeado = redondear_percentil(percentil_val)
+                        fila_idx = encontrar_fila_por_percentil(percentil_redondeado)
+                        if fila_idx is not None:
+                            marcar_celda(fila_idx, col_idx)
+                            if percentil_col_idx is not None:
+                                marcar_celda(fila_idx, percentil_col_idx)
+                    except Exception:
+                        pass
 
             for seccion in secciones:
-                nombre = seccion["nombre_seccion"].strip().lower()
-                procesar_seccion(nombre, seccion.get("puntuacion_estandar"), seccion.get("percentil"))
+                nombre_seccion = seccion["nombre_seccion"].strip().lower()
+                # Normalize the section name and find the corresponding column mapping
+                nombre_normalizado = normalize_text(nombre_seccion)
+                
+                # Find the mapped column name for this section
+                mapped_column = None
+                for section_key, column_name in section_to_column.items():
+                    if normalize_text(section_key) == nombre_normalizado:
+                        mapped_column = normalize_text(column_name)
+                        break
+                
+                if mapped_column:
+                    procesar_seccion(mapped_column, seccion.get("puntuacion_estandar"), seccion.get("percentil"))
 
             indice = resumen_global.get("indice_de_necesidades_de_apoyo")
             percentil_global = resumen_global.get("percentil")
-            col_idx = col_index_map.get("índice de necesidades de apoyo")
-            if col_idx is not None:
-                procesar_seccion("índice de necesidades de apoyo", indice, percentil_global)
+            # Use the normalized key for the global index
+            indice_normalizado = normalize_text("índice de necesidades de apoyo")
+            if indice_normalizado in col_index_map:
+                procesar_seccion(indice_normalizado, indice, percentil_global)
 
             return table, celdas_a_colorear
         except Exception as e:
@@ -509,9 +561,15 @@ class FichaTecnicaReport:
                     )
                 else:
                     style = deepcopy(styles['Normal'])
+                    style.alignment = 1  # Center alignment for all cells
                     if celdas_coloreadas:
                         for celda in celdas_coloreadas:
-                            if celda["row"] == i and celda["col"] == j:
+                            # Adjust for the title row that was inserted for Habilidades Adaptativas
+                            adjusted_row = celda["row"]
+                            if title == "Habilidades Adaptativas":
+                                adjusted_row += 1
+                            
+                            if adjusted_row == i and celda["col"] == j:
                                 if "textColor" in celda:
                                     style.textColor = celda["textColor"]
                                 if "fontName" in celda:
@@ -563,12 +621,25 @@ class FichaTecnicaReport:
             table_style.add('FONTSIZE', (0, 0), (-1, 0), 10)
             table_style.add('ALIGN', (0, 0), (-1, -1), 'CENTER')
             table_style.add('VALIGN', (0, 0), (-1, 0), 'MIDDLE')
+            table_style.add('BACKGROUND', (0, 1), (-1, 1), colors.Color(218 / 255, 233 / 255, 248 / 255 ))
+            table_style.add('BACKGROUND', (0, 1), (0, -1), colors.Color(218 / 255, 233 / 255, 248 / 255 ))
+            table_style.add('BACKGROUND', (-1, 1), (-1, -1), colors.Color(218 / 255, 233 / 255, 248 / 255 ))
+
+        # Líneas extra (para percentil 50) DAE9F8
+        for row_idx, row_data in enumerate(data):
+            if row_data and str(row_data[0]).strip() == "50":
+                table_style.add('BACKGROUND', (0, row_idx), (-1, row_idx), colors.Color(218 / 255, 233 / 255, 248 / 255 ))
 
         # Add colored cells
         if celdas_coloreadas:
             for celda in celdas_coloreadas:
                 row_idx = celda["row"]
                 col_idx = celda["col"]
+                
+                # Adjust row index if title was inserted for Habilidades Adaptativas
+                if title == "Habilidades Adaptativas":
+                    row_idx += 1  # Account for the inserted title row
+                
                 background = celda.get("background", colors.Color(6 / 255, 45 / 255, 85 / 255))
                 text_color = celda.get("textColor", colors.white)
                 font_name = celda.get("fontName", "Helvetica-Bold")
@@ -640,7 +711,7 @@ class FichaTecnicaReport:
         
         # Add the missing SIS Adaptive Skills table
         # Get the table data using the old system
-        tables = fill_table_data(profile, TABLE_TEMPLATES)
+        tables = fill_table_data(profile, SIS_TEMPLATE)
         
         if "Habilidades Adaptativas - Tabla de resultados SIS" in tables:
             # Get the colored table with user's scores highlighted
