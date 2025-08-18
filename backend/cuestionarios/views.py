@@ -171,7 +171,7 @@ class RespuestasGuardadas(APIView):
         if pregunta_tipo in ['fecha', 'fecha_hora']:
             # Date/datetime validation could go here
             return respuesta
-        elif pregunta_tipo == 'numero':
+        elif pregunta_tipo in ['numero', 'imagen']:
             # Numeric validation
             try:
                 if isinstance(respuesta, str):
@@ -243,13 +243,15 @@ class RespuestasGuardadas(APIView):
             # Process response according to type for Azure SQL compatibility
             try:
                 # Para ciertos tipos, guardar el valor simple en lugar de procesarlo
-                if pregunta.tipo in ['numero', 'multiple', 'dropdown', 'binaria']:
+                if pregunta.tipo in ['numero', 'multiple', 'dropdown', 'binaria', 'imagen']:
                     if pregunta.tipo == 'numero':
                         respuesta_procesada = float(respuesta_limpia) if respuesta_limpia else 0
                     elif pregunta.tipo in ['multiple', 'dropdown']:
                         respuesta_procesada = int(respuesta_limpia) if respuesta_limpia else 0
                     elif pregunta.tipo == 'binaria':
                         respuesta_procesada = respuesta_limpia in [True, 'true', '1', 'sí', 'si']
+                    elif pregunta.tipo == 'imagen':
+                        respuesta_procesada = float(respuesta_limpia) if respuesta_limpia else 0
                     else:
                         respuesta_procesada = respuesta_limpia
                 else:
@@ -1474,6 +1476,25 @@ def procesar_respuesta_para_tipo(respuesta, tipo):
                     'valor_original': respuesta
                 }
     
+    elif tipo == 'imagen':
+        if isinstance(respuesta, (int, float)):
+            return {
+                'valor': respuesta,
+                'valor_original': respuesta
+            }
+        else:
+            try:
+                valor = float(respuesta)
+                return {
+                    'valor': valor,
+                    'valor_original': respuesta
+                }
+            except:
+                return {
+                    'valor': 0,
+                    'valor_original': respuesta
+                }
+    
     elif tipo == 'checkbox':
         if isinstance(respuesta, list):
             return {
@@ -1600,7 +1621,7 @@ def procesar_respuesta_para_tipo(respuesta, tipo):
     # Para tipos complejos (sis, sis2, canalizacion, etc.), mantener la estructura original
     elif tipo in ['sis', 'sis2', 'canalizacion', 'canalizacion_centro', 'ch', 'ed', 'meta', 
                   'datos_personales', 'datos_domicilio', 'datos_medicos', 'contactos', 
-                  'tipo_discapacidad', 'imagen']:
+                  'tipo_discapacidad']:
         if isinstance(respuesta, dict):
             return respuesta
         else:
