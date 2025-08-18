@@ -1,11 +1,8 @@
 from django.db import IntegrityError, transaction, models
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
-from .models import Cuestionario, Pregunta, Opcion, DesbloqueoPregunta
+from rest_framework import status, permissions
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 from .funciones.guardar_cuestionario import guardar_cuestionario_desde_json
 from .precargacuestionario import procesar_archivo_precarga
 from django.shortcuts import get_object_or_404
@@ -22,6 +19,7 @@ import json
 from django.http import FileResponse, FileResponse, Http404
 import unicodedata
 import re
+import traceback
 
 import logging
 from django.views.decorators.http import require_http_methods
@@ -502,7 +500,6 @@ class RespuestasGuardadas(APIView):
 
                     except Exception as e:
                         print(f"❌ Error al procesar desbloqueos: {str(e)}")
-                        import traceback
                         traceback.print_exc()
                         # Don't fail the whole request if unlocking fails
                         pass
@@ -513,7 +510,6 @@ class RespuestasGuardadas(APIView):
 
         except Exception as e:
             print(f"Error general en el proceso: {str(e)}")
-            import traceback
             traceback.print_exc()
             return Response(
                 {"error": "An unexpected error occurred while processing your request"},
@@ -972,13 +968,6 @@ class EditarCuestionarioView(generics.UpdateAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status, permissions
-from django.shortcuts import get_object_or_404
-from .models import Respuesta, CustomUser, Cuestionario
-from .serializers import RespuestaUnlockedPathSerializer
-
 class RespuestasUnlockedPathView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -1367,7 +1356,7 @@ class PrecargaCuestionarioView(APIView):
 
         excel_file = request.FILES.get("file")
         tipo_cuestionario = request.data.get("tipo_cuestionario")
-        import json
+
         tipos_raw = request.POST.get("tipos_permitidos", "[]")
         try:
             tipos_pregunta_permitidos = json.loads(tipos_raw)

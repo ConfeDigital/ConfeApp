@@ -4,8 +4,6 @@ import {
   Tabs,
   Tab,
   Box,
-  MenuItem,
-  Select,
   useMediaQuery,
   Typography,
   Button
@@ -74,22 +72,13 @@ const PlanApoyosSeguimiento = () => {
             : ""
         }
         actionButton={
-          <Box display="flex" gap={2}>
-            <Button
-              variant="outlined"
-              color="primary"
-              onClick={() => navigate(`/candidatos/${uid}`)}
-            >
-              Volver al Perfil
-            </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={descargarReportePDF}
-            >
-              Descargar Plan Personalizado Completo
-            </Button>
-          </Box>
+          <Button
+            variant="outlined"
+            color="primary"
+            onClick={() => navigate(`/candidatos/${uid}`)}
+          >
+            Volver al Perfil
+          </Button>
         }
         
 
