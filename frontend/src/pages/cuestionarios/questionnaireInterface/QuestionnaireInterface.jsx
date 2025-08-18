@@ -282,6 +282,13 @@ const EditorCuestionario = () => {
     console.log("Tipo de cuestionario actual:", tipoCuestionario);
     console.log("Preguntas actuales:", preguntas);
     console.log("📝 Mis preguntitas:", preguntas);
+
+    // Guardar las referencias a las imágenes para subirlas después
+    const imagenesPendientes = preguntas
+      .filter(
+        (p) => p.tipo === "imagen" && p.imagen && typeof p.imagen === "object"
+      )
+      .map((p) => ({ pregunta: p, imagen: p.imagen }));
     // Validación de secciones antes de guardar
     const seccionesInvalidas = preguntas.filter(
       (p) => !p.seccion || p.seccion.trim() === ""
@@ -354,6 +361,55 @@ const EditorCuestionario = () => {
       }
 
       setMensajeConfirmacionGuardar("Cuestionario guardado correctamente.");
+
+      // Ahora subir las imágenes después de que las preguntas tengan ID
+      if (imagenesPendientes.length > 0) {
+        console.log("📤 Subiendo imágenes pendientes...");
+
+        // Obtener las preguntas actualizadas con sus IDs
+        const preguntasActualizadas = await api.get(
+          `/api/cuestionarios/${id}/preguntas/`
+        );
+        const preguntasConIds = preguntasActualizadas.data;
+
+        for (const item of imagenesPendientes) {
+          try {
+            // Buscar la pregunta correspondiente por texto
+            const preguntaConId = preguntasConIds.find(
+              (p) => p.texto === item.pregunta.texto
+            );
+
+            if (preguntaConId) {
+              const imagenData = new FormData();
+              imagenData.append("imagen", item.imagen);
+
+              await api.put(
+                `/api/cuestionarios/subir-imagen-pregunta/${preguntaConId.id}/`,
+                imagenData,
+                {
+                  headers: { "Content-Type": "multipart/form-data" },
+                }
+              );
+
+              console.log(`✅ Imagen subida para pregunta ${preguntaConId.id}`);
+            } else {
+              console.warn(
+                `⚠️ No se encontró la pregunta: ${item.pregunta.texto}`
+              );
+            }
+          } catch (error) {
+            console.error(
+              `❌ Error subiendo imagen para pregunta: ${item.pregunta.texto}`,
+              error
+            );
+            // No detener el proceso, solo mostrar warning
+            alert(
+              `Advertencia: No se pudo subir la imagen para la pregunta: ${item.pregunta.texto}`
+            );
+          }
+        }
+      }
+
       setDialogoExito(true);
     } catch (err) {
       console.log("❌ Error atrapado en catch:", err);

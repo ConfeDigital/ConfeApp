@@ -35,6 +35,15 @@ class ImagenOpcionSerializer(serializers.ModelSerializer):
         model = ImagenOpcion
         fields = ['id', 'imagen', 'descripcion']
 
+class PreguntaImagenSerializer(serializers.ModelSerializer):
+    """
+    Serializer para subir imágenes de preguntas tipo "imagen"
+    Similar al CandidatePhotoSerializer
+    """
+    class Meta:
+        model = ImagenOpcion
+        fields = ['imagen']
+
 class PreguntaSerializer(serializers.ModelSerializer):
     """Serializador para preguntas dentro de un cuestionario."""
     opciones = OpcionSerializer(many=True, read_only=True)

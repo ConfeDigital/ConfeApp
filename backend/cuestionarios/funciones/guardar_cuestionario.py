@@ -1,4 +1,4 @@
-from cuestionarios.models import Pregunta, Opcion, DesbloqueoPregunta, Cuestionario
+from cuestionarios.models import Pregunta, Opcion, DesbloqueoPregunta, Cuestionario, ImagenOpcion
 import json
 
 def guardar_cuestionario_desde_json(preguntas, cuestionario_id):

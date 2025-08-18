@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .views import PreguntaImagenUploadAPIView
 
 urlpatterns = [
     # Ruta para obtener todos los cuestionarios con preguntas desbloqueadas
@@ -62,6 +63,7 @@ urlpatterns = [
     path('usuario/<int:usuario_id>/cuestionarios-con-respuestas/', views.CuestionariosConRespuestasView.as_view(), name='cuestionarios_con_respuestas'),
 
     path('ver-imagen-pregunta/<int:pregunta_id>/', views.ver_imagen_pregunta, name='ver_imagen_pregunta'),
+    path('subir-imagen-pregunta/<int:pregunta_id>/', PreguntaImagenUploadAPIView.as_view(), name='subir_imagen_pregunta'),
     path('precarga-cuestionario/', views.PrecargaCuestionarioView.as_view(), name='precarga_cuestionario'),
 
     path('guardar-cuestionario/', views.GuardarCuestionarioView.as_view(), name='guardar_cuestionario'),

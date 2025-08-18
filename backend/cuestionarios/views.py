@@ -11,8 +11,9 @@ from .precargacuestionario import procesar_archivo_precarga
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework import permissions, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-from rest_framework.generics import UpdateAPIView
+from rest_framework import generics
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from api.models import CustomUser
@@ -42,6 +43,7 @@ from .serializers import (
     CuestionarioDesbloqueosSerializer, BaseCuestionariosSerializer,
     RespuestaDesbloqueadaSerializer, RespuestaUnlockedPathSerializer,
     RespuestaSISSerializer, ResumenSISSerializer, ReporteCuestionariosSerializer,
+    PreguntaImagenSerializer,
 )
 
 from .utils import (
@@ -518,7 +520,7 @@ class RespuestasGuardadas(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-class RespuestaActualizacion(UpdateAPIView):
+class RespuestaActualizacion(generics.UpdateAPIView):
     """Actualiza una respuesta existente"""
     queryset = Respuesta.objects.all()
     serializer_class = RespuestaSerializer
@@ -934,7 +936,7 @@ class CuestionarioPreentrevistaActivo(APIView):
             return Response({"detail": "No se encontró un cuestionario activo con los criterios especificados."}, status=status.HTTP_404_NOT_FOUND)
 
         ############ edicion de cuestionarios ############
-class EditarCuestionarioView(UpdateAPIView):
+class EditarCuestionarioView(generics.UpdateAPIView):
     """Vista para editar una base de cuestionarios existente."""
     queryset = BaseCuestionarios.objects.all()
     serializer_class = BaseCuestionariosSerializer
@@ -1319,6 +1321,38 @@ def ver_imagen_pregunta(request, pregunta_id):
     except Pregunta.DoesNotExist:
         print(f"❌ Pregunta con ID {pregunta_id} no encontrada.")
         raise Http404("Pregunta no encontrada.")
+
+class PreguntaImagenUploadAPIView(generics.UpdateAPIView):
+    """
+    Vista para subir imágenes de preguntas tipo "imagen"
+    Similar a CandidatePhotoUploadAPIView
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = PreguntaImagenSerializer
+
+    def get_object(self):
+        # Usar el pregunta_id pasado en la URL para obtener la pregunta
+        pregunta_id = self.kwargs.get('pregunta_id')
+        try:
+            # Buscar si ya existe una ImagenOpcion para esta pregunta
+            imagen_opcion = ImagenOpcion.objects.get(pregunta_id=pregunta_id)
+            return imagen_opcion
+        except ImagenOpcion.DoesNotExist:
+            # Si no existe, crear una nueva
+            pregunta = get_object_or_404(Pregunta, id=pregunta_id)
+            return ImagenOpcion.objects.create(
+                pregunta=pregunta,
+                descripcion=f'Imagen para pregunta: {pregunta.texto}'
+            )
+
+    def update(self, request, *args, **kwargs):
+        # Esta vista espera solo la imagen en el payload
+        instance = self.get_object()
+        partial = kwargs.pop('partial', True)
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class PrecargaCuestionarioView(APIView):
     permission_classes = [permissions.AllowAny]
