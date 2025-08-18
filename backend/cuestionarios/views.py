@@ -1665,9 +1665,9 @@ def procesar_respuesta_para_tipo(respuesta, tipo):
 
 class CuestionariosConRespuestasView(APIView):
     """
-    Devuelve los cuestionarios activos del usuario:
-    - Cuestionarios con respuestas del usuario (prioridad)
-    - Cuestionarios activos sin respuestas del usuario
+    Devuelve los cuestionarios del usuario con la siguiente prioridad:
+    1. Cuestionarios con respuestas del usuario (aunque no estén activos)
+    2. Cuestionarios activos sin respuestas del usuario
     Con el estado de finalización pero sin las preguntas.
     """
     permission_classes = [permissions.AllowAny]
@@ -1690,9 +1690,10 @@ class CuestionariosConRespuestasView(APIView):
         cuestionarios_activos = Cuestionario.objects.filter(activo=True)
         
         resultado = []
-        cuestionarios_procesados = set()
+        stages_con_respuestas = set()
+        stages_con_activos = set()
         
-        # Primero procesar los cuestionarios con respuestas
+        # Primero procesar los cuestionarios con respuestas (incluyendo inactivos)
         for cuestionario_id in cuestionarios_con_respuestas:
             cuestionario = Cuestionario.objects.get(id=cuestionario_id)
             
@@ -1703,6 +1704,10 @@ class CuestionariosConRespuestasView(APIView):
             ).first()
             
             finalizado = estado_obj.estado == 'finalizado' if estado_obj else False
+            
+            # Marcar que este stage tiene respuestas
+            if cuestionario.base_cuestionario and cuestionario.base_cuestionario.estado_desbloqueo:
+                stages_con_respuestas.add(cuestionario.base_cuestionario.estado_desbloqueo)
             
             resultado.append({
                 "id": cuestionario.id,
@@ -1719,15 +1724,14 @@ class CuestionariosConRespuestasView(APIView):
                 "estado": estado_obj.estado if estado_obj else "inactivo",
                 "tiene_respuestas": True
             })
-            
-            cuestionarios_procesados.add(cuestionario.base_cuestionario.id if cuestionario.base_cuestionario else None)
         
-        # Luego agregar los cuestionarios activos sin respuestas
+        # Luego agregar los cuestionarios activos para stages que NO tienen respuestas
         for cuestionario in cuestionarios_activos:
             base_cuestionario_id = cuestionario.base_cuestionario.id if cuestionario.base_cuestionario else None
+            stage_code = cuestionario.base_cuestionario.estado_desbloqueo if cuestionario.base_cuestionario else None
             
-            # Solo agregar si no se procesó ya (no tiene respuestas)
-            if base_cuestionario_id not in cuestionarios_procesados:
+            # Solo agregar si este stage no tiene respuestas
+            if stage_code and stage_code not in stages_con_respuestas:
                 # Obtener el estado de finalización
                 estado_obj = EstadoCuestionario.objects.filter(
                     usuario_id=usuario_id, 
@@ -1753,4 +1757,5 @@ class CuestionariosConRespuestasView(APIView):
                 })
         
         print(f"✅ Total cuestionarios procesados: {len(resultado)}")
+        print(f"🔍 Stages con respuestas: {stages_con_respuestas}")
         return Response(resultado, status=status.HTTP_200_OK)
