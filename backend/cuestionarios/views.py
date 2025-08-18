@@ -1665,9 +1665,9 @@ def procesar_respuesta_para_tipo(respuesta, tipo):
 
 class CuestionariosConRespuestasView(APIView):
     """
-    Devuelve los cuestionarios del usuario con la siguiente prioridad:
-    1. Cuestionarios con respuestas del usuario (aunque no estén activos)
-    2. Cuestionarios activos sin respuestas del usuario
+    Devuelve TODOS los base_cuestionarios disponibles para el usuario:
+    - Si el usuario tiene respuestas en un base_cuestionario → devolver ese cuestionario
+    - Si no tiene respuestas → devolver el cuestionario activo de ese base_cuestionario
     Con el estado de finalización pero sin las preguntas.
     """
     permission_classes = [permissions.AllowAny]
@@ -1686,76 +1686,70 @@ class CuestionariosConRespuestasView(APIView):
         
         print(f"🧾 Cuestionarios con respuestas: {list(cuestionarios_con_respuestas)}")
         
-        # Obtener todos los cuestionarios activos
-        cuestionarios_activos = Cuestionario.objects.filter(activo=True)
+        # Obtener todos los base_cuestionarios
+        base_cuestionarios = BaseCuestionarios.objects.all()
+        print(f"🔍 Total de base_cuestionarios en el sistema: {base_cuestionarios.count()}")
+        for bc in base_cuestionarios:
+            print(f"  - {bc.nombre} (estado: {bc.estado_desbloqueo})")
         
         resultado = []
-        stages_con_respuestas = set()
-        stages_con_activos = set()
         
-        # Primero procesar los cuestionarios con respuestas (incluyendo inactivos)
-        for cuestionario_id in cuestionarios_con_respuestas:
-            cuestionario = Cuestionario.objects.get(id=cuestionario_id)
+        # Procesar cada base_cuestionario
+        for base_cuestionario in base_cuestionarios:
+            # Buscar cuestionarios de este base_cuestionario que tengan respuestas
+            cuestionarios_con_respuestas_de_base = Cuestionario.objects.filter(
+                base_cuestionario=base_cuestionario,
+                id__in=cuestionarios_con_respuestas
+            )
             
-            # Obtener el estado de finalización
-            estado_obj = EstadoCuestionario.objects.filter(
-                usuario_id=usuario_id, 
-                cuestionario=cuestionario
-            ).first()
+            if cuestionarios_con_respuestas_de_base.exists():
+                # Si hay respuestas, usar el cuestionario con respuestas (priorizar el más reciente)
+                cuestionario_seleccionado = cuestionarios_con_respuestas_de_base.order_by('-version').first()
+                tiene_respuestas = True
+                print(f"✅ Base '{base_cuestionario.nombre}': usando cuestionario con respuestas (ID: {cuestionario_seleccionado.id})")
+            else:
+                # Si no hay respuestas, usar el cuestionario activo
+                cuestionario_activo = Cuestionario.objects.filter(
+                    base_cuestionario=base_cuestionario,
+                    activo=True
+                ).first()
+                
+                if cuestionario_activo:
+                    cuestionario_seleccionado = cuestionario_activo
+                    tiene_respuestas = False
+                    print(f"📋 Base '{base_cuestionario.nombre}': usando cuestionario activo (ID: {cuestionario_activo.id})")
+                else:
+                    # Si no hay cuestionario activo, usar el más reciente
+                    cuestionario_seleccionado = Cuestionario.objects.filter(
+                        base_cuestionario=base_cuestionario
+                    ).order_by('-version').first()
+                    tiene_respuestas = False
+                    print(f"⚠️ Base '{base_cuestionario.nombre}': usando cuestionario más reciente (ID: {cuestionario_seleccionado.id})")
             
-            finalizado = estado_obj.estado == 'finalizado' if estado_obj else False
-            
-            # Marcar que este stage tiene respuestas
-            if cuestionario.base_cuestionario and cuestionario.base_cuestionario.estado_desbloqueo:
-                stages_con_respuestas.add(cuestionario.base_cuestionario.estado_desbloqueo)
-            
-            resultado.append({
-                "id": cuestionario.id,
-                "nombre": cuestionario.nombre,
-                "version": cuestionario.version,
-                "activo": cuestionario.activo,
-                "fecha_creacion": cuestionario.fecha_creacion,
-                "base_cuestionario_id": cuestionario.base_cuestionario.id if cuestionario.base_cuestionario else None,
-                "base_cuestionario_nombre": cuestionario.base_cuestionario.nombre if cuestionario.base_cuestionario else None,
-                "estado_desbloqueo": cuestionario.base_cuestionario.estado_desbloqueo if cuestionario.base_cuestionario else None,
-                "responsable": cuestionario.base_cuestionario.responsable if cuestionario.base_cuestionario else None,
-                "inicio": cuestionario.base_cuestionario.inicio if cuestionario.base_cuestionario else None,
-                "finalizado": finalizado,
-                "estado": estado_obj.estado if estado_obj else "inactivo",
-                "tiene_respuestas": True
-            })
-        
-        # Luego agregar los cuestionarios activos para stages que NO tienen respuestas
-        for cuestionario in cuestionarios_activos:
-            base_cuestionario_id = cuestionario.base_cuestionario.id if cuestionario.base_cuestionario else None
-            stage_code = cuestionario.base_cuestionario.estado_desbloqueo if cuestionario.base_cuestionario else None
-            
-            # Solo agregar si este stage no tiene respuestas
-            if stage_code and stage_code not in stages_con_respuestas:
+            if cuestionario_seleccionado:
                 # Obtener el estado de finalización
                 estado_obj = EstadoCuestionario.objects.filter(
                     usuario_id=usuario_id, 
-                    cuestionario=cuestionario
+                    cuestionario=cuestionario_seleccionado
                 ).first()
                 
                 finalizado = estado_obj.estado == 'finalizado' if estado_obj else False
                 
                 resultado.append({
-                    "id": cuestionario.id,
-                    "nombre": cuestionario.nombre,
-                    "version": cuestionario.version,
-                    "activo": cuestionario.activo,
-                    "fecha_creacion": cuestionario.fecha_creacion,
-                    "base_cuestionario_id": base_cuestionario_id,
-                    "base_cuestionario_nombre": cuestionario.base_cuestionario.nombre if cuestionario.base_cuestionario else None,
-                    "estado_desbloqueo": cuestionario.base_cuestionario.estado_desbloqueo if cuestionario.base_cuestionario else None,
-                    "responsable": cuestionario.base_cuestionario.responsable if cuestionario.base_cuestionario else None,
-                    "inicio": cuestionario.base_cuestionario.inicio if cuestionario.base_cuestionario else None,
+                    "id": cuestionario_seleccionado.id,
+                    "nombre": cuestionario_seleccionado.nombre,
+                    "version": cuestionario_seleccionado.version,
+                    "activo": cuestionario_seleccionado.activo,
+                    "fecha_creacion": cuestionario_seleccionado.fecha_creacion,
+                    "base_cuestionario_id": base_cuestionario.id,
+                    "base_cuestionario_nombre": base_cuestionario.nombre,
+                    "estado_desbloqueo": base_cuestionario.estado_desbloqueo,
+                    "responsable": base_cuestionario.responsable,
+                    "inicio": base_cuestionario.inicio,
                     "finalizado": finalizado,
                     "estado": estado_obj.estado if estado_obj else "inactivo",
-                    "tiene_respuestas": False
+                    "tiene_respuestas": tiene_respuestas
                 })
         
-        print(f"✅ Total cuestionarios procesados: {len(resultado)}")
-        print(f"🔍 Stages con respuestas: {stages_con_respuestas}")
+        print(f"✅ Total base_cuestionarios procesados: {len(resultado)}")
         return Response(resultado, status=status.HTTP_200_OK)
