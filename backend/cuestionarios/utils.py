@@ -214,7 +214,7 @@ def cargar_cuestionarios_desde_excel(ruta_archivo, cuestionario_id):
                             opcion_desbloqueadora=opcion_desbloqueadora,
                             pregunta_desbloqueada=pregunta_desbloqueada
                         )
-                        print(f"{pregunta_origen.texto} -> {opcion_desbloqueadora.texto} -> {pregunta_desbloqueada.texto}")
+                        # print(f"{pregunta_origen.texto} -> {opcion_desbloqueadora.texto} -> {pregunta_desbloqueada.texto}")
 
         return {
             'status': 'success',
@@ -414,7 +414,7 @@ def evaluar_rango(valor, rango_str):
         # Caso puntual (valor único tipo "90")
         return valor == float(rango_str)
     except (ValueError, TypeError) as e:
-        print(f"⚠️ Error al evaluar rango '{rango_str}' con valor {valor}: {e}")
+        # print(f"⚠️ Error al evaluar rango '{rango_str}' con valor {valor}: {e}")
         return False
 
 
@@ -626,7 +626,7 @@ def get_resumen_cuestionarios_completo(usuario_id):
             for key, label in diagnostica_mapping.items():
                 if texto_pregunta == label:
                     resumen_general["evaluacion_diagnostica"][key] = texto_respuesta
-                    print(f"texto_respuesta: {texto_respuesta}")
+                    # print(f"texto_respuesta: {texto_respuesta}")
     
 
     return resumen_general

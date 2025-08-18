@@ -181,28 +181,36 @@ class ReportDataCollector:
             pregunta__nombre_seccion="Actividades de protección y defensa",
             pregunta__tipo__in=["sis", "sis2"]
         ).select_related("pregunta")
-        
+
         items_scores = {}
         for response in responses:
             item_name = response.pregunta.texto.strip() if response.pregunta.texto else ""
             if not item_name:
                 continue
-                
+
             try:
-                if response.respuesta:
+                # Check if the response is already a dictionary
+                if isinstance(response.respuesta, dict):
+                    data = response.respuesta
+                # If it's a string, attempt to parse it as JSON
+                elif isinstance(response.respuesta, str):
                     data = json.loads(response.respuesta)
-                    frequency = int(data.get("frecuencia", 0))
-                    support_time = int(data.get("tiempo_apoyo", 0))
-                    support_type = int(data.get("tipo_apoyo", 0))
-                    total = frequency + support_time + support_type
-                    
-                    if item_name in items_scores:
-                        items_scores[item_name] += total
-                    else:
-                        items_scores[item_name] = total
+                else:
+                    continue
+
+                # Extract scores and calculate total
+                frequency = int(data.get("frecuencia", 0))
+                support_time = int(data.get("tiempo_apoyo", 0))
+                support_type = int(data.get("tipo_apoyo", 0))
+                total = frequency + support_time + support_type
+
+                # Add to or update the items_scores dictionary
+                items_scores[item_name] = items_scores.get(item_name, 0) + total
+
             except (json.JSONDecodeError, ValueError, TypeError):
+                # This block handles any errors from invalid data types or formats
                 continue
-        
+
         return items_scores
     
     def get_sis_medical_behavioral_data(self):
@@ -220,7 +228,15 @@ class ReportDataCollector:
                     continue
                 try:
                     if response.respuesta:
-                        data = json.loads(response.respuesta)
+                        # data = json.loads(response.respuesta)
+                        # Check if the response is already a dictionary
+                        if isinstance(response.respuesta, dict):
+                            data = response.respuesta
+                        # If it's a string, attempt to parse it as JSON
+                        elif isinstance(response.respuesta, str):
+                            data = json.loads(response.respuesta)
+                        else:
+                            continue
                         question_text = response.pregunta.texto if response.pregunta.texto else ""
                         items[question_text]["frecuencia"] += int(data.get("frecuencia", 0))
                         items[question_text]["tiempo_apoyo"] += int(data.get("tiempo_apoyo", 0))

@@ -8,13 +8,13 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib import colors
+from copy import deepcopy
 from datetime import datetime
 from django.core.files.storage import default_storage
 from reportlab.platypus import Image
 from candidatos.models import UserProfile
 from .data_collector import ReportDataCollector
 from .report_utils import create_section_header, create_basic_table, create_side_by_side_tables, draw_logo_header
-from .data_fillers import fill_table_data
 
 SIS_TEMPLATE = {
     "Habilidades Adaptativas - Tabla de resultados SIS": [
@@ -87,7 +87,7 @@ class FichaTecnicaReport:
         profile_pic = None
         if profile.photo and default_storage.exists(profile.photo.name):
             img_path = default_storage.path(profile.photo.name)
-            profile_pic = Image(img_path, width=100, height=100, kind='proportional')
+            profile_pic = Image(img_path, width=120, height=120, kind='proportional')
         
         # Create title content
         title_content = Table([
@@ -155,18 +155,18 @@ class FichaTecnicaReport:
             ["Discapacidad:", discapacidades, "", ""],  # Will span across columns 1-3
             ["Teléfono:", getattr(profile, 'phone_number', 'N/A') or "N/A", "Etapa:", stage_display],
             ["Edad:", str(datetime.now().year - profile.birth_date.year) + " años" if profile.birth_date else "N/A",
-             "Tipo de sangre:", getattr(profile, 'blood_type', 'N/A') or "N/A"],
-            ["CURP:", getattr(profile, 'curp', 'N/A') or "N/A",
+             "CURP:", getattr(profile, 'curp', 'N/A') or "N/A"],
+            ["Tipo de sangre:", getattr(profile, 'blood_type', 'N/A') or "N/A",
              "Medicamentos:", ", ".join([m.name for m in profile.medications.all()]) if profile.medications.exists() else "N/A"],
-            ["Registro:", profile.registration_date.strftime('%Y-%m-%d') if profile.registration_date else "N/A",
+            # ["Registro:", profile.registration_date.strftime('%Y-%m-%d') if profile.registration_date else "N/A"],
+            ["Restricciones de dieta:", getattr(profile, 'dietary_restrictions', 'N/A') or "N/A",
+             "Restricciones físicas:", getattr(profile, 'physical_restrictions', 'N/A') or "N/A"],
+            ["Convulsiones:", "Sí" if getattr(profile, 'has_seizures', False) else "No", 
              "Alergias:", getattr(profile, 'allergies', 'N/A') or "N/A"],
-            ["Restricciones Físicas:", getattr(profile, 'physical_restrictions', 'N/A') or "N/A",
-             "Restricciones Dietéticas:", getattr(profile, 'dietary_restrictions', 'N/A') or "N/A"],
-            ["Seguridad Social:", social_security_display,
+            ["Seguridad social:", social_security_display,
              "Recibe pensión:", receives_pension_display],
-            ["Presenta convulsiones:", "Sí" if getattr(profile, 'has_seizures', False) else "No", "", ""],
-            ["Atención Psicológica:", "Sí" if getattr(profile, 'receives_psychological_care', False) else "No", 
-             "Atención Psiquiátrica:", "Sí" if getattr(profile, 'receives_psychiatric_care', False) else "No"],
+            ["Atención psicológica:", "Sí" if getattr(profile, 'receives_psychological_care', False) else "No", 
+             "Atención psiquiátrica:", "Sí" if getattr(profile, 'receives_psychiatric_care', False) else "No"],
             ["Cert. de discapacidad:", "Sí" if getattr(profile, 'has_disability_certificate', False) else "No",
              "Juicio de interdicción:", "Sí" if getattr(profile, 'has_interdiction_judgment', False) else "No"],
             ["Dirección:", address, "", ""]  # Will span across columns 1-3
@@ -183,7 +183,7 @@ class FichaTecnicaReport:
                     wrapped_row.append(cell)
             wrapped_info_data.append(wrapped_row)
         
-        info_table = Table(wrapped_info_data, colWidths=[125, 150, 125, 150])
+        info_table = Table(wrapped_info_data, colWidths=[110, 145, 110, 145])
         info_table.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
@@ -296,7 +296,7 @@ class FichaTecnicaReport:
         # Create side-by-side tables
         elements.extend(create_side_by_side_tables(table_data_1, table_data_2))
         elements.append(Spacer(1, 24))
-        return elements
+        return [KeepTogether(elements)]
     
     def create_text_sections(self, data_collector):
         """Create text-based sections (support needs, life project, talents)."""
@@ -502,13 +502,11 @@ class FichaTecnicaReport:
 
             return table, celdas_a_colorear
         except Exception as e:
-            print(f"❌ Error general en get_habilidades_adaptativas_coloreadas: {e}")
+            # print(f"❌ Error general en get_habilidades_adaptativas_coloreadas: {e}")
             return table, []
 
     def draw_sis_table(self, data, title, celdas_coloreadas=None):
         """Draw SIS table with proper formatting and highlighting."""
-        from reportlab.lib.styles import getSampleStyleSheet
-        from copy import deepcopy
         
         if not data or len(data) == 0 or not any(data):
             return []
@@ -710,14 +708,13 @@ class FichaTecnicaReport:
         elements.append(Spacer(1, 24))
         
         # Add the missing SIS Adaptive Skills table
-        # Get the table data using the old system
-        tables = fill_table_data(profile, SIS_TEMPLATE)
+        sis_table = deepcopy(SIS_TEMPLATE)
         
-        if "Habilidades Adaptativas - Tabla de resultados SIS" in tables:
+        if "Habilidades Adaptativas - Tabla de resultados SIS" in sis_table:
             # Get the colored table with user's scores highlighted
             updated_table, celdas_coloreadas = self.get_habilidades_adaptativas_coloreadas(
                 profile.user.id, 
-                tables["Habilidades Adaptativas - Tabla de resultados SIS"]
+                sis_table["Habilidades Adaptativas - Tabla de resultados SIS"]
             )
             
             # Use the internal draw_sis_table function to render it properly
@@ -735,19 +732,12 @@ class FichaTecnicaReport:
         protection_data = data_collector.get_sis_protection_defense_data()
         
         if protection_data:
-            # Get top 3 items for highlighting
-            top_3 = sorted(protection_data.items(), key=lambda x: x[1], reverse=True)[:3]
-            top_items = {item for item, _ in top_3}
-            
             # Build table
             table_data = [["Actividad", "Puntaje Directo"]]
             for item, score in sorted(protection_data.items(), key=lambda x: x[1], reverse=True):
-                if item in top_items:
-                    table_data.append([f"<b>{item}</b>", f"<b>{score}</b>"])
-                else:
-                    table_data.append([item, str(score)])
+                table_data.append([item, str(score)])
             
-            protection_table = create_basic_table(table_data)
+            protection_table = create_basic_table(table_data, col_widths=[400, 100], center_right_column=True)
             elements.extend(protection_table)
         else:
             elements.append(Paragraph("No hay datos de protección y defensa disponibles.", self.normal_style))
@@ -761,14 +751,14 @@ class FichaTecnicaReport:
         table_data = [
             ["Pregunta", "Respuesta"],
             ["Introduzca la puntuación total de la sección 3a", str(medical_behavioral_data.get("medical_total", 0))],
-            ["¿Es la puntuación total mayor a 5?", "SÍ" if medical_behavioral_data.get("medical_greater_than_5", False) else "NO"],
+            ["¿La puntuación total es mayor a 5?", "SÍ" if medical_behavioral_data.get("medical_greater_than_5", False) else "NO"],
             ["¿Hay al menos un '2' para necesidades médicas?", "SÍ" if medical_behavioral_data.get("medical_has_2", False) else "NO"],
             ["Introduzca la puntuación total de la sección 3b", str(medical_behavioral_data.get("behavioral_total", 0))],
-            ["¿Es la puntuación mayor que 5?", "SÍ" if medical_behavioral_data.get("behavioral_greater_than_5", False) else "NO"],
+            ["¿La puntuación es mayor a 5?", "SÍ" if medical_behavioral_data.get("behavioral_greater_than_5", False) else "NO"],
             ["¿Hay al menos un '2' para necesidades conductuales?", "SÍ" if medical_behavioral_data.get("behavioral_has_2", False) else "NO"]
         ]
         
-        medical_table = create_basic_table(table_data)
+        medical_table = create_basic_table(table_data, col_widths=[420, 80], center_right_column=True)
         elements.extend(medical_table)
         elements.append(Spacer(1, 12))
         
