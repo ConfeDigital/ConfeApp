@@ -49,10 +49,17 @@ class BulkCandidateUploadView(APIView):
         errors = []
 
         for index, candidate_data in enumerate(candidates_data):
-            serializer = BulkCandidateCreateSerializer(data=candidate_data)
-            if serializer.is_valid():
+            print(f"DEBUG VIEW: Procesando candidato {index + 1}: {candidate_data.get('first_name', 'N/A')}")
+            print(f"DEBUG VIEW: emergency_contacts en candidate_data: {candidate_data.get('emergency_contacts', 'NO ENCONTRADO')}")
+            serializer = BulkCandidateCreateSerializer(data=candidate_data, context={'request': request})
+            print(f"DEBUG VIEW: Validando serializer para {candidate_data.get('first_name', 'N/A')}")
+            is_valid = serializer.is_valid()
+            print(f"DEBUG VIEW: Serializer válido: {is_valid}")
+            if not is_valid:
+                print(f"DEBUG VIEW: Errores del serializer: {serializer.errors}")
+            if is_valid:
                 try:
-                    serializer.save()
+                    user = serializer.save()
                     successfully_processed += 1
                 except Exception as e:
                     errors.append({
@@ -67,9 +74,27 @@ class BulkCandidateUploadView(APIView):
                     "errors": serializer.errors
                 })
 
+        # Limpiar errores para evitar problemas de JSON
+        cleaned_errors = []
+        for error in pre_validation_errors + errors:
+            try:
+                # Asegurar que el error sea serializable
+                if isinstance(error, dict):
+                    cleaned_error = {}
+                    for key, value in error.items():
+                        if isinstance(value, (int, str, bool, type(None))):
+                            cleaned_error[key] = value
+                        else:
+                            cleaned_error[key] = str(value)
+                    cleaned_errors.append(cleaned_error)
+                else:
+                    cleaned_errors.append(str(error))
+            except Exception:
+                cleaned_errors.append("Error no serializable")
+        
         return Response({
             "successfully_processed": successfully_processed,
-            "errors": pre_validation_errors + errors
+            "errors": cleaned_errors
         })
 
 
@@ -101,12 +126,19 @@ class CandidateListAPIView(generics.ListAPIView):
     serializer_class = CandidateListSerializer
 
     def get_queryset(self):
+        print(f"DEBUG: CandidateListAPIView - User: {self.request.user.email}")
+        print(f"DEBUG: CandidateListAPIView - User center: {self.request.user.center}")
+        
         if self.request.user.is_authenticated and hasattr(self.request.user, 'center'):
-            return User.objects.filter(
+            queryset = User.objects.filter(
                 groups__name='candidatos',
                 center=self.request.user.center
             )
-        return User.objects.none()
+            print(f"DEBUG: CandidateListAPIView - Found {queryset.count()} candidates")
+            return queryset
+        else:
+            print(f"DEBUG: CandidateListAPIView - User not authenticated or no center")
+            return User.objects.none()
     
 class CandidateListAgencyAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, PersonalPermission]
@@ -178,7 +210,7 @@ class CandidateCreateAPIView(generics.CreateAPIView):
 
         # Add the user to the 'candidatos' group
         group, _ = Group.objects.get_or_create(name='candidatos')
-        user.groups.add(group)
+        user.groups.set([group])
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)

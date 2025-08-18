@@ -311,7 +311,7 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
     
         from django.contrib.auth.models import Group
         group, _ = Group.objects.get_or_create(name='candidatos')
-        user.groups.add(group)
+        user.groups.set([group])
     
         # If a UserProfile already exists, update it; otherwise, create it.
         if hasattr(user, 'userprofile'):
@@ -350,7 +350,7 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
             else:
                 contact_domicile = None
             contact = EmergencyContact.objects.create(domicile=contact_domicile, **contact_data)
-            user_profile.emergency_contacts.add(contact)
+            user_profile.emergency_contacts.set([contact])
     
         # --- NEW: Handle medications ---
         # medications_data is expected to be a list of dictionaries
@@ -492,7 +492,7 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
                 else:
                     contact_domicile = None
                 contact = EmergencyContact.objects.create(domicile=contact_domicile, **contact_data)
-                profile.emergency_contacts.add(contact)
+                profile.emergency_contacts.set([contact])
 
         # --- NEW: Update medications if provided ---
         if 'medications' in validated_data:
@@ -556,7 +556,7 @@ class CandidateRegisterSerializer(UserCreateSerializer):
         
         # Add the new user to the "candidatos" group
         group, _ = Group.objects.get_or_create(name='candidatos')
-        user.groups.add(group)
+        user.groups.set([group])
         
         # ✅ Add user to center with ID 1 if they don't have a center
         if not hasattr(user, 'center') or user.center is None:
@@ -584,95 +584,304 @@ class CandidateRegisterSerializer(UserCreateSerializer):
     
 
 class BulkCandidateCreateSerializer(serializers.ModelSerializer):
+    # Campos del usuario
     first_name = serializers.CharField(write_only=True, required=False)
     last_name = serializers.CharField(write_only=True, required=False)
     second_last_name = serializers.CharField(write_only=True, required=False)
-    email = serializers.EmailField(write_only=True, required=False)
-
+    email = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    password = serializers.CharField(write_only=True, required=False)
+    
+    # Campos del perfil
+    birth_date = serializers.DateField(write_only=True, required=False)
+    gender = serializers.CharField(write_only=True, required=False)
+    curp = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     phone_number = serializers.CharField(write_only=True, required=False)
     stage = serializers.CharField(write_only=True, required=False)
-    disability = serializers.ListField(
-        child=serializers.CharField(),
-        write_only=True,
-        required=False
-    )
+    disability = serializers.ListField(write_only=True, required=False)
     cycle = serializers.IntegerField(write_only=True, required=False)
+    
+    # Campos booleanos (solo los que existen en el modelo)
     has_disability_certificate = serializers.BooleanField(write_only=True, required=False)
     has_interdiction_judgment = serializers.BooleanField(write_only=True, required=False)
-
-    tutor_name = serializers.CharField(write_only=True, required=False)
-    tutor_relationship = serializers.CharField(write_only=True, required=False)
-    municipio = serializers.CharField(write_only=True, required=False)
+    receives_psychological_care = serializers.BooleanField(write_only=True, required=False)
+    receives_psychiatric_care = serializers.BooleanField(write_only=True, required=False)
+    has_seizures = serializers.BooleanField(write_only=True, required=False)
+    
+    # Campos de pensiones y seguridad social
+    receives_pension = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    social_security = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    
+    # Campos médicos
+    blood_type = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    allergies = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    dietary_restrictions = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    physical_restrictions = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    medications = serializers.ListField(write_only=True, required=False)
+    
+    # Campos de agencia
+    agency_state = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    current_job = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    
+    # Campos de domicilio
+    address_road = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    address_number = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    address_number_int = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    address_PC = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    address_municip = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    address_col = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    address_state = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    address_city = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    address_lat = serializers.FloatField(write_only=True, required=False, allow_null=True)
+    address_lng = serializers.FloatField(write_only=True, required=False, allow_null=True)
+    residence_type = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    
+    # Campos de contacto de emergencia (legacy)
+    emergency_first_name = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_last_name = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_second_last_name = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_relationship = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_phone = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_email = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    
+    # Campos de contacto de emergencia múltiples (nuevo formato)
+    emergency_first_name_1 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_last_name_1 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_second_last_name_1 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_relationship_1 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_phone_1 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_email_1 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    
+    emergency_first_name_2 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_last_name_2 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_second_last_name_2 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_relationship_2 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_phone_2 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_email_2 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    
+    emergency_first_name_3 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_last_name_3 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_second_last_name_3 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_relationship_3 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_phone_3 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_email_3 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    
+    emergency_first_name_4 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_last_name_4 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_second_last_name_4 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_relationship_4 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_phone_4 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_email_4 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    
+    emergency_first_name_5 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_last_name_5 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_second_last_name_5 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_relationship_5 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_phone_5 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    emergency_email_5 = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    # emergency_contacts = serializers.ListField(
+    #     child=serializers.DictField(),
+    #     write_only=True, 
+    #     required=False
+    # )
 
     class Meta:
-        model = UserProfile
+        model = User
         fields = [
-            'first_name', 'last_name', 'second_last_name', 'email',
-            'phone_number', 'stage', 'disability', 'cycle',
+            'first_name', 'last_name', 'second_last_name', 'email', 'password',
+            'birth_date', 'gender', 'blood_type', 'curp', 'phone_number', 'stage',
             'has_disability_certificate', 'has_interdiction_judgment',
-            'tutor_name', 'tutor_relationship', 'municipio'
+            'receives_psychological_care', 'receives_psychiatric_care',
+            'has_seizures', 'receives_pension', 'social_security', 'allergies',
+            'dietary_restrictions', 'physical_restrictions', 'medications', 'agency_state',
+            'current_job', 'address_road', 'address_number', 'address_number_int',
+            'address_PC', 'address_municip', 'address_col', 'address_state',
+            'address_city', 'address_lat', 'address_lng', 'residence_type',
+            'emergency_first_name', 'emergency_last_name', 'emergency_second_last_name',
+            'emergency_relationship', 'emergency_phone', 'emergency_email',
+            'emergency_first_name_1', 'emergency_last_name_1', 'emergency_second_last_name_1',
+            'emergency_relationship_1', 'emergency_phone_1', 'emergency_email_1',
+            'emergency_first_name_2', 'emergency_last_name_2', 'emergency_second_last_name_2',
+            'emergency_relationship_2', 'emergency_phone_2', 'emergency_email_2',
+            'emergency_first_name_3', 'emergency_last_name_3', 'emergency_second_last_name_3',
+            'emergency_relationship_3', 'emergency_phone_3', 'emergency_email_3',
+            'emergency_first_name_4', 'emergency_last_name_4', 'emergency_second_last_name_4',
+            'emergency_relationship_4', 'emergency_phone_4', 'emergency_email_4',
+            'emergency_first_name_5', 'emergency_last_name_5', 'emergency_second_last_name_5',
+            'emergency_relationship_5', 'emergency_phone_5', 'emergency_email_5',
+            'disability', 'cycle'
         ]
 
     def to_internal_value(self, data):
+        print(f"DEBUG TO_INTERNAL_VALUE: Starting validation for data keys: {list(data.keys()) if isinstance(data, dict) else 'Not a dict'}")
+        
+        # Debug: mostrar el email antes de la limpieza
+        if isinstance(data, dict) and 'email' in data:
+            print(f"DEBUG TO_INTERNAL_VALUE: Email antes de limpieza: '{data.get('email')}'")
+        
+        # Limpiar valores problemáticos antes de la validación
+        if isinstance(data, dict):
+            cleaned_data = {}
+            for key, value in data.items():
+                if isinstance(value, float):
+                    import math
+                    if math.isinf(value) or math.isnan(value) or abs(value) > 1e308:
+                        cleaned_data[key] = None
+                    elif value.is_integer():
+                        cleaned_data[key] = int(value)
+                    else:
+                        cleaned_data[key] = value
+                else:
+                    cleaned_data[key] = value
+            data = cleaned_data
+            
+            # Debug: mostrar el email después de la limpieza
+            if 'email' in data:
+                print(f"DEBUG TO_INTERNAL_VALUE: Email después de limpieza: '{data.get('email')}'")
+        
+        # Manejar disability como lista
         if 'disability' in data and isinstance(data['disability'], str):
             data['disability'] = [data['disability']]
-        return super().to_internal_value(data)
+        
+        print(f"DEBUG TO_INTERNAL_VALUE: About to call super().to_internal_value")
+        try:
+            result = super().to_internal_value(data)
+            print(f"DEBUG TO_INTERNAL_VALUE: Validation successful")
+            return result
+        except Exception as e:
+            print(f"DEBUG TO_INTERNAL_VALUE: Validation failed with error: {e}")
+            raise
 
     def create(self, validated_data):
+        print(f"DEBUG SERIALIZER: Iniciando método create para {validated_data.get('first_name', 'N/A')}")
+        print(f"DEBUG SERIALIZER: validated_data keys al inicio: {list(validated_data.keys())}")
+        print(f"DEBUG SERIALIZER: validated_data completo: {validated_data}")
+        print(f"DEBUG SERIALIZER: Antes de extraer datos del usuario")
+        # Extraer datos del usuario
         user_data = {key: validated_data.pop(key, None) for key in ['first_name', 'last_name', 'second_last_name', 'email']}
-
-        if not user_data.get("email"):
+        print(f"DEBUG SERIALIZER: user_data extraído: {user_data}")
+        
+        # Generar email si no se proporciona, es None, o es un valor inválido
+        email_value = user_data.get("email")
+        if not email_value or email_value is None or email_value.lower() in ['no aplica', 'n/a', 'na', '']:
             first_name = user_data.get("first_name", "user")
             last_name = user_data.get("last_name", "placeholder")
-            user_data["email"] = f"{first_name.lower()}.{last_name.lower()}@placeholder.com"
-
+            base_email = f"{first_name.lower()}.{last_name.lower()}@placeholder.com"
+            
+            # Verificar si el email ya existe y generar uno único
+            counter = 1
+            email = base_email
+            while User.objects.filter(email=email).exists():
+                email = f"{first_name.lower()}.{last_name.lower()}{counter}@placeholder.com"
+                counter += 1
+            
+            user_data["email"] = email
+            print(f"DEBUG SERIALIZER: Email generado automáticamente: {email}")
+        
+        # Generar contraseña si no se proporciona
+        password = validated_data.pop('password', None)
+        if not password:
+            import secrets
+            import string
+            alphabet = string.ascii_letters + string.digits + "!@#$%^&*"
+            password = ''.join(secrets.choice(alphabet) for i in range(12))
+        
+        print(f"DEBUG SERIALIZER: Antes de crear/obtener usuario")
+        # Crear o obtener usuario
         user, created = User.objects.get_or_create(email=user_data["email"], defaults=user_data)
-
+        print(f"DEBUG SERIALIZER: Usuario {'creado' if created else 'obtenido'}: {user.email}")
+        
         if created:
+            user.set_password(password)
+            
+            # Asignar center del usuario que está creando
+            print(f"DEBUG: Assigning center for user {user.email}")
+            
+            # Obtener el centro del usuario que está creando
+            creating_user = None
+            if hasattr(self, 'context') and self.context.get('request'):
+                creating_user = self.context['request'].user
+                print(f"DEBUG: Creating user: {creating_user.email}")
+                print(f"DEBUG: Creating user center: {creating_user.center}")
+            
+            # Asignar centro
+            if creating_user and hasattr(creating_user, 'center') and creating_user.center:
+                user.center = creating_user.center
+                print(f"DEBUG: Assigned center from creating user: {user.center}")
+            else:
+                # Fallback al primer center disponible
+                from centros.models import Center
+                first_center = Center.objects.first()
+                if first_center:
+                    user.center = first_center
+                    print(f"DEBUG: Assigned fallback center: {user.center}")
+                else:
+                    print(f"DEBUG: No center available - user will be created without center")
+            
+            user.save()
+            print(f"DEBUG: User saved with center: {user.center}")
+            
+            # Agregar al grupo candidatos
+            from django.contrib.auth.models import Group
             group, _ = Group.objects.get_or_create(name='candidatos')
-            user.groups.add(group)
-
-        cycle_id = validated_data.pop('cycle', None)
-        cycle_instance = Cycle.objects.filter(id=cycle_id).first() if cycle_id else None
-
-        disability_list = validated_data.pop('disability', [])
-        if isinstance(disability_list, str):
-            disability_list = [disability_list]
-        disability_instances = Disability.objects.filter(name__in=disability_list)
-
-        tutor_name = validated_data.pop("tutor_name", None)
-        tutor_relationship = validated_data.pop("tutor_relationship", None)
-        municipio = validated_data.pop("municipio", None)
-
+            user.groups.set([group])
+            print(f"DEBUG: Added user to 'candidatos' group")
+        
+        # Extraer datos de domicilio
+        domicile_fields = ['address_road', 'address_number', 'address_number_int', 'address_PC', 
+                           'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng', 'residence_type']
+        
+        # Verificar qué campos de domicilio están disponibles
+        domicile_available = [field for field in domicile_fields if field in validated_data]
+        print(f"DEBUG SERIALIZER: Campos de domicilio disponibles: {domicile_available}")
+        for field in domicile_available:
+            print(f"DEBUG SERIALIZER: {field}: {validated_data.get(field)}")
+        
+        # Verificar todos los campos que contienen 'address' en validated_data
+        address_fields_in_data = [key for key in validated_data.keys() if 'address' in key]
+        print(f"DEBUG SERIALIZER: Todos los campos con 'address' en validated_data: {address_fields_in_data}")
+        for field in address_fields_in_data:
+            print(f"DEBUG SERIALIZER: {field}: {validated_data.get(field)}")
+        
+        domicile_data = {field: validated_data.pop(field, None) for field in domicile_fields}
+        
+        # Crear domicilio si hay datos
         domicile = None
-        if municipio:
-            try:
-                domicile = Domicile.objects.create(address_municip=municipio)
-            except Exception:
-                domicile = None
-
-        emergency_contact = None
-        if tutor_name and tutor_relationship:
-            try:
-                emergency_contact = EmergencyContact.objects.create(
-                    first_name=tutor_name,
-                    last_name=user.last_name,
-                    second_last_name=user.second_last_name,
-                    relationship=tutor_relationship.upper(),
-                    phone_number=validated_data.get("phone_number", ""),
-                    email=validated_data.get("email", ""),
-                    lives_at_same_address=True,
-                    domicile=domicile
-                )
-            except Exception:
-                emergency_contact = None
-
+        if any(domicile_data.values()):
+            # Limpiar valores None antes de crear el domicilio
+            clean_domicile_data = {k: v for k, v in domicile_data.items() if v is not None}
+            if clean_domicile_data:
+                domicile = Domicile.objects.create(**clean_domicile_data)
+        
+        # Extraer datos de medicamentos
+        medications_data = validated_data.pop('medications', [])
+        
+        # Extraer campos relacionales
+        disability_ids = validated_data.pop('disability', None)
+        cycle_id = validated_data.pop('cycle', None)
+        
+        # Obtener ciclo si se especifica
+        cycle_instance = None
+        if cycle_id:
+            cycle_instance = Cycle.objects.filter(id=cycle_id).first()
+        
+        # ASIGNAR AUTOMÁTICAMENTE ETAPA "ENTREVISTA"
+        validated_data['stage'] = 'Ent'
+        
+        # Crear o actualizar perfil
+        # Asegurar que phone_number tenga un valor por defecto si no se proporciona
+        if 'phone_number' not in validated_data or not validated_data['phone_number']:
+            validated_data['phone_number'] = 'Sin especificar'
+        
+        print(f"DEBUG SERIALIZER: Antes de crear/obtener UserProfile")
         user_profile, profile_created = UserProfile.objects.get_or_create(
             user=user,
             defaults={**validated_data, "cycle": cycle_instance, "domicile": domicile}
         )
-
+        print(f"DEBUG SERIALIZER: UserProfile {'creado' if profile_created else 'obtenido'}")
+        print(f"DEBUG SERIALIZER: validated_data después de crear UserProfile: {list(validated_data.keys())}")
+        
         if not profile_created:
+            # Actualizar perfil existente
             for key, value in validated_data.items():
                 setattr(user_profile, key, value)
             if cycle_instance:
@@ -680,13 +889,91 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
             if domicile:
                 user_profile.domicile = domicile
             user_profile.save()
-
-        if disability_instances:
-            user_profile.disability.set(disability_instances)
-
-        if emergency_contact:
-            user_profile.emergency_contacts.add(emergency_contact)
-
+            print(f"DEBUG SERIALIZER: UserProfile actualizado")
+        else:
+            print(f"DEBUG SERIALIZER: UserProfile creado exitosamente")
+        
+        print(f"DEBUG SERIALIZER: validated_data después de actualizar/crear UserProfile: {list(validated_data.keys())}")
+        
+        print(f"DEBUG SERIALIZER: Antes de manejar discapacidades")
+        # Manejar discapacidades
+        if disability_ids:
+            user_profile.disability.set(disability_ids)
+            print(f"DEBUG SERIALIZER: Discapacidades procesadas: {len(disability_ids)}")
+        else:
+            print(f"DEBUG SERIALIZER: No hay discapacidades para procesar")
+        
+        # Manejar medicamentos
+        if medications_data:
+            medication_instances = []
+            for med_data in medications_data:
+                if isinstance(med_data, dict):
+                    med_instance = Medication.objects.create(**med_data)
+                    medication_instances.append(med_instance)
+            user_profile.medications.set(medication_instances)
+            print(f"DEBUG SERIALIZER: Medicamentos procesados: {len(medication_instances)}")
+        else:
+            print(f"DEBUG SERIALIZER: No hay medicamentos para procesar")
+        
+        print(f"DEBUG SERIALIZER: Antes de procesar contactos de emergencia")
+        # Verificar qué campos de emergencia están disponibles
+        emergency_fields = [key for key in validated_data.keys() if 'emergency' in key]
+        print(f"DEBUG SERIALIZER: Campos de emergencia disponibles: {emergency_fields}")
+        for field in emergency_fields:
+            print(f"DEBUG SERIALIZER: {field}: {validated_data.get(field)}")
+        
+        # MANEJAR CONTACTOS DE EMERGENCIA (usando campos individuales)
+        emergency_contacts_list = []
+        
+        # Procesar contacto individual (legacy)
+        if any(validated_data.get(field) for field in ['emergency_first_name', 'emergency_last_name', 'emergency_relationship']):
+            print(f"DEBUG SERIALIZER: Procesando contacto legacy para {user.first_name}")
+            contact_data = {
+                'first_name': validated_data.pop('emergency_first_name', None),
+                'last_name': validated_data.pop('emergency_last_name', None),
+                'second_last_name': validated_data.pop('emergency_second_last_name', None),
+                'relationship': validated_data.pop('emergency_relationship', None),
+                'phone_number': validated_data.pop('emergency_phone', None),
+                'email': validated_data.pop('emergency_email', None),
+                'lives_at_same_address': False
+            }
+            
+            # Solo crear si tiene los campos mínimos
+            if contact_data['first_name'] and contact_data['last_name'] and contact_data['relationship']:
+                contact = EmergencyContact.objects.create(**contact_data)
+                emergency_contacts_list.append(contact)
+                print(f"DEBUG SERIALIZER: Contacto legacy creado: {contact.first_name} {contact.last_name}")
+        
+        # Procesar múltiples contactos (nuevo formato)
+        for contact_num in range(1, 6):  # 1, 2, 3, 4, 5
+            first_name = validated_data.pop(f'emergency_first_name_{contact_num}', None)
+            last_name = validated_data.pop(f'emergency_last_name_{contact_num}', None)
+            relationship = validated_data.pop(f'emergency_relationship_{contact_num}', None)
+            
+            if first_name and last_name and relationship:
+                contact_data = {
+                    'first_name': first_name,
+                    'last_name': last_name,
+                    'second_last_name': validated_data.pop(f'emergency_second_last_name_{contact_num}', None),
+                    'relationship': relationship,
+                    'phone_number': validated_data.pop(f'emergency_phone_{contact_num}', None),
+                    'email': validated_data.pop(f'emergency_email_{contact_num}', None),
+                    'lives_at_same_address': False
+                }
+                
+                contact = EmergencyContact.objects.create(**contact_data)
+                emergency_contacts_list.append(contact)
+                print(f"DEBUG SERIALIZER: Contacto {contact_num} creado: {contact.first_name} {contact.last_name}")
+        
+        # Asignar todos los contactos usando .set()
+        if emergency_contacts_list:
+            user_profile.emergency_contacts.set(emergency_contacts_list)
+            print(f"DEBUG SERIALIZER: {len(emergency_contacts_list)} contactos de emergencia asignados")
+        else:
+            print(f"DEBUG SERIALIZER: No hay contactos de emergencia para asignar")
+        
+        print(f"DEBUG SERIALIZER: Procesamiento de contactos de emergencia completado")
+        
         return user_profile.user
     
 class TAidCandidateHistorySerializer(serializers.ModelSerializer):
@@ -781,48 +1068,7 @@ class DomicileUpdateSerializer(serializers.ModelSerializer):
         return instance
 
 
-class EmergencyContactSerializer(serializers.ModelSerializer):
-    domicile = DomicileSerializer(required=False, allow_null=True)
-
-    class Meta:
-        model = EmergencyContact
-        fields = [
-            "id",
-            "first_name",
-            "last_name",
-            "second_last_name",
-            "relationship",
-            "phone_number",
-            "email",
-            "lives_at_same_address",
-            "domicile",
-        ]
-
-    def create(self, validated_data):
-        domicile_data = validated_data.pop("domicile", None)
-        if domicile_data:
-            domicile = Domicile.objects.create(**domicile_data)
-        else:
-            domicile = None
-        return EmergencyContact.objects.create(domicile=domicile, **validated_data)
-
-    def update(self, instance, validated_data):
-        domicile_data = validated_data.pop("domicile", None)
-
-        # Actualizar datos del contacto
-        for key, value in validated_data.items():
-            setattr(instance, key, value)
-
-        # Actualizar domicilio si existe
-        if domicile_data:
-            if instance.domicile:
-                for key, value in domicile_data.items():
-                    setattr(instance.domicile, key, value)
-                instance.domicile.save()
-            else:
-                instance.domicile = Domicile.objects.create(**domicile_data)
-        instance.save()
-        return instance
+# EmergencyContactSerializer duplicado eliminado - usando la primera definición
     
 
 class DatosMedicosSerializer(serializers.ModelSerializer):
