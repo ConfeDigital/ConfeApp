@@ -786,14 +786,21 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
             password = ''.join(secrets.choice(alphabet) for i in range(12))
         
         print(f"DEBUG SERIALIZER: Antes de crear/obtener usuario")
-        # Crear o obtener usuario
-        user, created = User.objects.get_or_create(email=user_data["email"], defaults=user_data)
-        print(f"DEBUG SERIALIZER: Usuario {'creado' if created else 'obtenido'}: {user.email}")
-        
-        if created:
+        # Verificar si el usuario ya existe
+        existing_user = User.objects.filter(email=user_data["email"]).first()
+        if existing_user:
+            print(f"DEBUG SERIALIZER: Usuario ya existe: {existing_user.email}")
+            user = existing_user
+            created = False
+        else:
+            # Crear nuevo usuario
+            user = User.objects.create(**user_data)
             user.set_password(password)
-            
-            # Asignar center del usuario que está creando
+            created = True
+            print(f"DEBUG SERIALIZER: Usuario creado: {user.email}")
+        
+        # Asignar center del usuario que está creando (solo si es nuevo)
+        if created:
             print(f"DEBUG: Assigning center for user {user.email}")
             
             # Obtener el centro del usuario que está creando
@@ -872,17 +879,26 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
         if 'phone_number' not in validated_data or not validated_data['phone_number']:
             validated_data['phone_number'] = 'Sin especificar'
         
+        # Limpiar validated_data removiendo campos de emergencia antes de crear UserProfile
+        emergency_fields_to_remove = []
+        for key in validated_data.keys():
+            if 'emergency' in key:
+                emergency_fields_to_remove.append(key)
+        
+        # Crear una copia limpia de validated_data para UserProfile
+        userprofile_data = {k: v for k, v in validated_data.items() if k not in emergency_fields_to_remove}
+        
         print(f"DEBUG SERIALIZER: Antes de crear/obtener UserProfile")
         user_profile, profile_created = UserProfile.objects.get_or_create(
             user=user,
-            defaults={**validated_data, "cycle": cycle_instance, "domicile": domicile}
+            defaults={**userprofile_data, "cycle": cycle_instance, "domicile": domicile}
         )
         print(f"DEBUG SERIALIZER: UserProfile {'creado' if profile_created else 'obtenido'}")
         print(f"DEBUG SERIALIZER: validated_data después de crear UserProfile: {list(validated_data.keys())}")
         
         if not profile_created:
             # Actualizar perfil existente
-            for key, value in validated_data.items():
+            for key, value in userprofile_data.items():
                 setattr(user_profile, key, value)
             if cycle_instance:
                 user_profile.cycle = cycle_instance

@@ -48,6 +48,13 @@ const Imagen = ({
     setSeleccionOpcion(value);
   };
 
+  // Inicializar el valor del slider si no hay selección previa
+  useEffect(() => {
+    if (seleccionOpcion === null || seleccionOpcion === undefined) {
+      setSeleccionOpcion(0);
+    }
+  }, [seleccionOpcion, setSeleccionOpcion]);
+
   return (
     <Box
       sx={{
@@ -76,9 +83,7 @@ const Imagen = ({
         <Typography
           variant="body2"
           sx={{ color: colors.grey[400], fontStyle: "italic", mt: 2 }}
-        >
-          Esta pregunta no tiene imagen asociada.
-        </Typography>
+        ></Typography>
       )}
 
       <Box sx={{ width: "100%", maxWidth: "600px" }}>
@@ -86,7 +91,11 @@ const Imagen = ({
           Selecciona un valor:
         </Typography>
         <Slider
-          value={seleccionOpcion ?? 0}
+          value={
+            seleccionOpcion !== null && seleccionOpcion !== undefined
+              ? seleccionOpcion
+              : 0
+          }
           onChange={handleSliderChange}
           step={10}
           marks

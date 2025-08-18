@@ -483,6 +483,14 @@ const Preguntas = ({
         // Para preguntas binarias, debe tener un valor seleccionado
         return respuestaParaValidar === true || respuestaParaValidar === false;
 
+      case "imagen":
+        // Para preguntas de imagen (slider), debe ser un número válido
+        return (
+          !isNaN(Number(respuestaParaValidar)) &&
+          respuestaParaValidar !== null &&
+          respuestaParaValidar !== undefined
+        );
+
       default:
         // Para otros tipos, validación genérica
         if (typeof respuestaParaValidar === "string") {
@@ -560,6 +568,14 @@ const Preguntas = ({
           return (
             !isNaN(parseFloat(respuestaParaValidar)) &&
             parseFloat(respuestaParaValidar) !== 0
+          );
+        }
+
+        if (pregunta.tipo === "imagen") {
+          return (
+            !isNaN(parseFloat(respuestaParaValidar)) &&
+            respuestaParaValidar !== null &&
+            respuestaParaValidar !== undefined
           );
         }
 
@@ -696,8 +712,15 @@ const Preguntas = ({
         case "datos_medicos":
         case "contactos":
         case "tipo_discapacidad":
-        case "imagen":
           return respuesta; // Mantener la estructura original para datos especializados
+
+        case "imagen":
+          // Para preguntas de imagen (slider), retornar el valor numérico
+          const valorImagen = parseFloat(respuesta) || 0;
+          return {
+            valor: valorImagen,
+            valor_original: respuesta,
+          };
 
         default:
           return respuesta;
@@ -778,6 +801,9 @@ const Preguntas = ({
         } else if (preguntaActual.tipo === "checkbox") {
           // Para checkbox, enviar el array de IDs
           respuestaParaEnviar = Array.isArray(respuesta) ? respuesta : [];
+        } else if (preguntaActual.tipo === "imagen") {
+          // Para preguntas de imagen (slider), enviar el valor numérico
+          respuestaParaEnviar = parseFloat(respuesta) || 0;
         } else {
           // Para otros tipos, procesar la respuesta
           respuestaParaEnviar = procesarRespuesta(respuesta, preguntaActual);
@@ -880,7 +906,7 @@ const Preguntas = ({
                 // );
                 nuevos.add(d.pregunta_desbloqueada);
               });
-            // } else {
+              // } else {
               // console.log("❌ No se encontró la opción o no tiene desbloqueos");
             }
           } else if (
@@ -931,8 +957,8 @@ const Preguntas = ({
                 // );
                 nuevos.add(d.pregunta_desbloqueada);
               });
-            // } else {
-            //   console.log("❌ No se encontró la opción o no tiene desbloqueos");
+              // } else {
+              //   console.log("❌ No se encontró la opción o no tiene desbloqueos");
             }
           } else {
             // console.log("🔘 Procesando OTRO TIPO para desbloqueos");
@@ -1510,66 +1536,73 @@ const Preguntas = ({
             {Object.entries(otherQuestions).map(([section, preguntas]) =>
               expandedSection === section ? (
                 <Box key={section}>
-                  {preguntas.filter((pregunta) => {
-                    if (pregunta.desbloqueos_recibidos.length === 0) return true;
-                    return pregunta.desbloqueos_recibidos.some((desbloqueo) =>
-                      unlockedQuestions.has(desbloqueo.pregunta_desbloqueada)
-                    );
-                  }).map((pregunta) => (
-                    <Box
-                      key={pregunta.id}
-                      id={`pregunta-${pregunta.id}`}
-                      sx={{
-                        width: "100%",
-                        my: 3,
-                        overflow: "visible",
-                        position: "relative",
-                      }}
-                    >
-                      <Paper
-                        elevation={2}
+                  {preguntas
+                    .filter((pregunta) => {
+                      if (pregunta.desbloqueos_recibidos.length === 0)
+                        return true;
+                      return pregunta.desbloqueos_recibidos.some((desbloqueo) =>
+                        unlockedQuestions.has(desbloqueo.pregunta_desbloqueada)
+                      );
+                    })
+                    .map((pregunta) => (
+                      <Box
+                        key={pregunta.id}
+                        id={`pregunta-${pregunta.id}`}
                         sx={{
-                          p: 2,
-                          borderRadius: 2,
-                          border: preguntasNoRespondidas.has(pregunta.id)
-                            ? "2px solid #ff1744"
-                            : "2px solid transparent",
-                          backgroundColor: preguntasNoRespondidas.has(
-                            pregunta.id
-                          )
-                            ? "rgba(255, 23, 68, 0.05)"
-                            : "background.paper",
-                          transition: "all 0.3s ease",
-                          "&:hover": {
-                            boxShadow: preguntasNoRespondidas.has(pregunta.id)
-                              ? "0 0 0 2px rgba(255, 23, 68, 0.2)"
-                              : "0 2px 8px rgba(0,0,0,0.1)",
-                          },
+                          width: "100%",
+                          my: 3,
+                          overflow: "visible",
+                          position: "relative",
                         }}
                       >
-                        <Box sx={{ width: "100%" }}>
-                          <TiposDePregunta
-                            pregunta={pregunta}
-                            respuesta={respuestas[pregunta.id]}
-                            onRespuestaChange={(resp) => {
-                              setRespuestas((prev) => ({
-                                ...prev,
-                                [pregunta.id]: resp,
-                              }));
-                              handleRespuestaChange(pregunta.id, resp);
-                              validarPregunta(pregunta.id, resp, pregunta.tipo);
-                            }}
-                            unlockedQuestions={unlockedQuestions}
-                            cuestionarioFinalizado={cuestionarioFinalizado}
-                            usuario={usuario}
-                            cuestionario={cuestionario}
-                            esEditable={esEditable}
-                            onGuardarCambios={handleGuardarCambios}
-                          />
-                        </Box>
-                      </Paper>
-                    </Box>
-                  ))}
+                        <Paper
+                          elevation={2}
+                          sx={{
+                            p: 2,
+                            borderRadius: 2,
+                            border: preguntasNoRespondidas.has(pregunta.id)
+                              ? "2px solid #ff1744"
+                              : "2px solid transparent",
+                            backgroundColor: preguntasNoRespondidas.has(
+                              pregunta.id
+                            )
+                              ? "rgba(255, 23, 68, 0.05)"
+                              : "background.paper",
+                            transition: "all 0.3s ease",
+                            "&:hover": {
+                              boxShadow: preguntasNoRespondidas.has(pregunta.id)
+                                ? "0 0 0 2px rgba(255, 23, 68, 0.2)"
+                                : "0 2px 8px rgba(0,0,0,0.1)",
+                            },
+                          }}
+                        >
+                          <Box sx={{ width: "100%" }}>
+                            <TiposDePregunta
+                              pregunta={pregunta}
+                              respuesta={respuestas[pregunta.id]}
+                              onRespuestaChange={(resp) => {
+                                setRespuestas((prev) => ({
+                                  ...prev,
+                                  [pregunta.id]: resp,
+                                }));
+                                handleRespuestaChange(pregunta.id, resp);
+                                validarPregunta(
+                                  pregunta.id,
+                                  resp,
+                                  pregunta.tipo
+                                );
+                              }}
+                              unlockedQuestions={unlockedQuestions}
+                              cuestionarioFinalizado={cuestionarioFinalizado}
+                              usuario={usuario}
+                              cuestionario={cuestionario}
+                              esEditable={esEditable}
+                              onGuardarCambios={handleGuardarCambios}
+                            />
+                          </Box>
+                        </Paper>
+                      </Box>
+                    ))}
                 </Box>
               ) : null
             )}

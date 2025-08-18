@@ -33,7 +33,7 @@ const CH = ({
   const [openAidDialog, setOpenAidDialog] = React.useState(false);
   const [selectedAidText, setSelectedAidText] = React.useState("");
 
-  console.log("chAids:", Object.values(chAids));
+  // console.log("chAids:", Object.values(chAids));
 
   const opciones = [
     {
@@ -74,7 +74,7 @@ const CH = ({
       (aid) => normalize(aid.name) === normalize(pregunta.texto)
     );
 
-    console.log("✅ CH Aids para", pregunta.texto, matched);
+    // console.log("✅ CH Aids para", pregunta.texto, matched);
     return matched.length > 0 ? matched[0] : null;
   };
 
@@ -96,7 +96,7 @@ const CH = ({
     <Box>
       {preguntas.map((pregunta) => {
         const matchedAid = getAidForPregunta(pregunta);
-        console.log("CH Aids for pregunta", pregunta.texto, matchedAid);
+        // console.log("CH Aids for pregunta", pregunta.texto, matchedAid);
         const estado = respuestas[pregunta.id]?.resultado;
         return (
           <Card

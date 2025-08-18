@@ -11,8 +11,8 @@ QUESTION_THRESHOLDS = {
     "Describe el nivel de suma del/la candidato/a": range(0, 2),  
     "Describe el nivel de resta del/la candidato/a": range(0, 2),  
     "Describe el nivel de manejo de dinero del/la candidato/a": range(0, 3),
-    "¿Necesita apoyo para comunicarse?": range(0, 1),
-    "¿Requiere apoyos conductuales?": range(0, 1),
+    "¿Necesita apoyo para comunicarse?": [0],
+    "¿Se observa alguna problemática conductual?": [0],
 }
 
 QUESTION_IMPEDIMENT_MAP = {
@@ -23,7 +23,7 @@ QUESTION_IMPEDIMENT_MAP = {
     "Describe el nivel de resta del/la candidato/a": "Manejo del Dinero",  
     "Describe el nivel de manejo de dinero del/la candidato/a": "Manejo del Dinero",
     "¿Necesita apoyo para comunicarse?": "Comunicación",
-    "¿Requiere apoyos conductuales?": "Conductual",
+    "¿Se observa alguna problemática conductual?": "Conductual",
 }
 
 def get_suggested_technical_aids_grouped(user_id):

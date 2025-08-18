@@ -1,18 +1,16 @@
 from django.db import IntegrityError, transaction, models
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import status
-from .models import Cuestionario, Pregunta, Opcion, DesbloqueoPregunta
+from rest_framework import status, permissions
 from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
 from .funciones.guardar_cuestionario import guardar_cuestionario_desde_json
 from .precargacuestionario import procesar_archivo_precarga
 from django.shortcuts import get_object_or_404
 from rest_framework.response import Response
 from rest_framework import permissions, status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
-from rest_framework.generics import UpdateAPIView
+from rest_framework import generics
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from api.models import CustomUser
@@ -21,6 +19,7 @@ import json
 from django.http import FileResponse, FileResponse, Http404
 import unicodedata
 import re
+import traceback
 
 import logging
 from django.views.decorators.http import require_http_methods
@@ -42,6 +41,7 @@ from .serializers import (
     CuestionarioDesbloqueosSerializer, BaseCuestionariosSerializer,
     RespuestaDesbloqueadaSerializer, RespuestaUnlockedPathSerializer,
     RespuestaSISSerializer, ResumenSISSerializer, ReporteCuestionariosSerializer,
+    PreguntaImagenSerializer,
 )
 
 from .utils import (
@@ -171,7 +171,7 @@ class RespuestasGuardadas(APIView):
         if pregunta_tipo in ['fecha', 'fecha_hora']:
             # Date/datetime validation could go here
             return respuesta
-        elif pregunta_tipo == 'numero':
+        elif pregunta_tipo in ['numero', 'imagen']:
             # Numeric validation
             try:
                 if isinstance(respuesta, str):
@@ -243,13 +243,15 @@ class RespuestasGuardadas(APIView):
             # Process response according to type for Azure SQL compatibility
             try:
                 # Para ciertos tipos, guardar el valor simple en lugar de procesarlo
-                if pregunta.tipo in ['numero', 'multiple', 'dropdown', 'binaria']:
+                if pregunta.tipo in ['numero', 'multiple', 'dropdown', 'binaria', 'imagen']:
                     if pregunta.tipo == 'numero':
                         respuesta_procesada = float(respuesta_limpia) if respuesta_limpia else 0
                     elif pregunta.tipo in ['multiple', 'dropdown']:
                         respuesta_procesada = int(respuesta_limpia) if respuesta_limpia else 0
                     elif pregunta.tipo == 'binaria':
                         respuesta_procesada = respuesta_limpia in [True, 'true', '1', 'sí', 'si']
+                    elif pregunta.tipo == 'imagen':
+                        respuesta_procesada = float(respuesta_limpia) if respuesta_limpia else 0
                     else:
                         respuesta_procesada = respuesta_limpia
                 else:
@@ -498,7 +500,6 @@ class RespuestasGuardadas(APIView):
 
                     except Exception as e:
                         print(f"❌ Error al procesar desbloqueos: {str(e)}")
-                        import traceback
                         traceback.print_exc()
                         # Don't fail the whole request if unlocking fails
                         pass
@@ -509,14 +510,13 @@ class RespuestasGuardadas(APIView):
 
         except Exception as e:
             print(f"Error general en el proceso: {str(e)}")
-            import traceback
             traceback.print_exc()
             return Response(
                 {"error": "An unexpected error occurred while processing your request"},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
     
-class RespuestaActualizacion(UpdateAPIView):
+class RespuestaActualizacion(generics.UpdateAPIView):
     """Actualiza una respuesta existente"""
     queryset = Respuesta.objects.all()
     serializer_class = RespuestaSerializer
@@ -932,7 +932,7 @@ class CuestionarioPreentrevistaActivo(APIView):
             return Response({"detail": "No se encontró un cuestionario activo con los criterios especificados."}, status=status.HTTP_404_NOT_FOUND)
 
         ############ edicion de cuestionarios ############
-class EditarCuestionarioView(UpdateAPIView):
+class EditarCuestionarioView(generics.UpdateAPIView):
     """Vista para editar una base de cuestionarios existente."""
     queryset = BaseCuestionarios.objects.all()
     serializer_class = BaseCuestionariosSerializer
@@ -967,13 +967,6 @@ class EditarCuestionarioView(UpdateAPIView):
 
         return Response(serializer.data, status=status.HTTP_200_OK)
     
-
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status, permissions
-from django.shortcuts import get_object_or_404
-from .models import Respuesta, CustomUser, Cuestionario
-from .serializers import RespuestaUnlockedPathSerializer
 
 class RespuestasUnlockedPathView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -1318,6 +1311,38 @@ def ver_imagen_pregunta(request, pregunta_id):
         print(f"❌ Pregunta con ID {pregunta_id} no encontrada.")
         raise Http404("Pregunta no encontrada.")
 
+class PreguntaImagenUploadAPIView(generics.UpdateAPIView):
+    """
+    Vista para subir imágenes de preguntas tipo "imagen"
+    Similar a CandidatePhotoUploadAPIView
+    """
+    permission_classes = [IsAuthenticated]
+    serializer_class = PreguntaImagenSerializer
+
+    def get_object(self):
+        # Usar el pregunta_id pasado en la URL para obtener la pregunta
+        pregunta_id = self.kwargs.get('pregunta_id')
+        try:
+            # Buscar si ya existe una ImagenOpcion para esta pregunta
+            imagen_opcion = ImagenOpcion.objects.get(pregunta_id=pregunta_id)
+            return imagen_opcion
+        except ImagenOpcion.DoesNotExist:
+            # Si no existe, crear una nueva
+            pregunta = get_object_or_404(Pregunta, id=pregunta_id)
+            return ImagenOpcion.objects.create(
+                pregunta=pregunta,
+                descripcion=f'Imagen para pregunta: {pregunta.texto}'
+            )
+
+    def update(self, request, *args, **kwargs):
+        # Esta vista espera solo la imagen en el payload
+        instance = self.get_object()
+        partial = kwargs.pop('partial', True)
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class PrecargaCuestionarioView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -1331,7 +1356,7 @@ class PrecargaCuestionarioView(APIView):
 
         excel_file = request.FILES.get("file")
         tipo_cuestionario = request.data.get("tipo_cuestionario")
-        import json
+
         tipos_raw = request.POST.get("tipos_permitidos", "[]")
         try:
             tipos_pregunta_permitidos = json.loads(tipos_raw)
@@ -1456,6 +1481,25 @@ def procesar_respuesta_para_tipo(respuesta, tipo):
             }
     
     elif tipo == 'numero':
+        if isinstance(respuesta, (int, float)):
+            return {
+                'valor': respuesta,
+                'valor_original': respuesta
+            }
+        else:
+            try:
+                valor = float(respuesta)
+                return {
+                    'valor': valor,
+                    'valor_original': respuesta
+                }
+            except:
+                return {
+                    'valor': 0,
+                    'valor_original': respuesta
+                }
+    
+    elif tipo == 'imagen':
         if isinstance(respuesta, (int, float)):
             return {
                 'valor': respuesta,
@@ -1600,7 +1644,7 @@ def procesar_respuesta_para_tipo(respuesta, tipo):
     # Para tipos complejos (sis, sis2, canalizacion, etc.), mantener la estructura original
     elif tipo in ['sis', 'sis2', 'canalizacion', 'canalizacion_centro', 'ch', 'ed', 'meta', 
                   'datos_personales', 'datos_domicilio', 'datos_medicos', 'contactos', 
-                  'tipo_discapacidad', 'imagen']:
+                  'tipo_discapacidad']:
         if isinstance(respuesta, dict):
             return respuesta
         else:

@@ -88,6 +88,17 @@ const TiposDePregunta = ({
           }
           const parsed = parseInt(respuesta, 10);
           return isNaN(parsed) ? -1 : parsed;
+        case "imagen":
+          // Para preguntas de imagen (slider), asegurar que sea un número
+          if (
+            respuesta === undefined ||
+            respuesta === null ||
+            respuesta === ""
+          ) {
+            return 0;
+          }
+          const valorImagen = parseFloat(respuesta);
+          return isNaN(valorImagen) ? 0 : valorImagen;
         default:
           return respuesta || "";
       }

@@ -306,6 +306,6 @@ CORS_ALLOWED_ORIGINS = [
 CORS_ALLOWS_CREDENTIALS = True
 
 AUTH_USER_MODEL = 'api.CustomUser'
-
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+

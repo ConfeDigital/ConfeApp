@@ -347,6 +347,7 @@ const Datasheet = () => {
   const REPORT_TYPES = [
     {value: "ficha_tecnica", text: "Ficha Técnica"}, 
     {value: "habilidades", text: "Cuadro de Habilidades"}, 
+    {value: "plan_apoyos", text: "Plan Personalizado de Apoyos"},
     {value: "proyecto_vida", text: "Proyecto de Vida"},
   ];
 
@@ -861,8 +862,8 @@ const Datasheet = () => {
 
         {/* PDF Download */}
 
-        <Dialog open={open} onClose={handleClose} maxWidth={selectedTab === 3 ? "xl" : "md"} fullWidth>
-          <DialogTitle>{selectedTab === 3 ? "Reporte de Cuestionarios" : "Seleccione el documento"}</DialogTitle>
+        <Dialog open={open} onClose={handleClose} maxWidth={selectedTab === 4 ? "xl" : "md"} fullWidth>
+          <DialogTitle>{selectedTab === 4 ? "Reporte de Cuestionarios" : "Seleccione el documento"}</DialogTitle>
           <DialogContent>
             <Box display="flex" justifyContent="center" gap={2} mt={1}>
               <Button
@@ -885,14 +886,22 @@ const Datasheet = () => {
                 variant={selectedTab === 2 ? "contained" : "outlined"}
                 color="primary"
                 onClick={() => setSelectedTab(2)}
+                endIcon={<PictureAsPdfIcon />}
+              >
+                Plan Personalizado de Apoyos
+              </Button>
+              <Button
+                variant={selectedTab === 3 ? "contained" : "outlined"}
+                color="primary"
+                onClick={() => setSelectedTab(3)}
                 endIcon={<FileDownloadIcon />}
               >
                 Proyecto de Vida
               </Button>
               <Button
-                variant={selectedTab === 3 ? "contained" : "outlined"}
+                variant={selectedTab === 4 ? "contained" : "outlined"}
                 color="secondary"
-                onClick={() => setSelectedTab(3)}
+                onClick={() => setSelectedTab(4)}
                 endIcon={<AssignmentIcon />}
               >
                 Reporte de Cuestionarios
@@ -900,7 +909,7 @@ const Datasheet = () => {
             </Box>
             
             {/* Questionnaire Report Content */}
-            {selectedTab === 3 && (
+            {selectedTab === 4 && (
               <Box sx={{ mt: 2, height: "70vh" }}>
                 <CuestionarioReportView
                   usuarioId={candidateProfile.user.id}
@@ -917,7 +926,7 @@ const Datasheet = () => {
             <Button onClick={handleClose} color="secondary">
               Cerrar
             </Button>
-            {selectedTab !== 3 && (
+            {selectedTab !== 4 && (
               <Button
                 variant="contained"
                 color="primary"

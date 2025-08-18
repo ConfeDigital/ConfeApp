@@ -218,7 +218,9 @@ const PreguntaCard = ({
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    updatePregunta(index, { ...pregunta, imagen: file });
+    if (file) {
+      updatePregunta(index, { ...pregunta, imagen: file });
+    }
   };
 
   // Función para manejar el cambio de pregunta seleccionada para desbloqueo
@@ -430,22 +432,26 @@ const PreguntaCard = ({
             <Typography variant="subtitle2" sx={{ mt: 2 }}>
               Imagen:
             </Typography>
-            <Button variant="contained" component="label">
-              Subir imagen
+            <Box>
+              {pregunta.imagen && typeof pregunta.imagen === "string" && (
+                <Box mb={1}>
+                  <img
+                    src={pregunta.imagen}
+                    alt="Imagen de pregunta"
+                    style={{
+                      maxWidth: "200px",
+                      display: "block",
+                      borderRadius: 8,
+                    }}
+                  />
+                </Box>
+              )}
               <input
-                hidden
-                accept="image/*"
                 type="file"
+                accept="image/*"
                 onChange={handleImageChange}
               />
-            </Button>
-            {pregunta.imagen && (
-              <img
-                src={URL.createObjectURL(pregunta.imagen)}
-                alt="Vista previa"
-                style={{ marginTop: 16, maxWidth: "100%", borderRadius: 8 }}
-              />
-            )}
+            </Box>
           </>
         )}
 
