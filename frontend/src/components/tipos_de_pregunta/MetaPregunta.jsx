@@ -21,7 +21,9 @@ const MetaPregunta = ({
   const [pasos, setPasos] = React.useState(seleccionOpcion?.pasos || []);
 
   React.useEffect(() => {
-    setSeleccionOpcion({ meta, pasos });
+    if(meta !== ""){
+      setSeleccionOpcion({ meta, pasos });
+    }
   }, [meta, pasos]);
 
   const handleAddPaso = () => {
