@@ -123,7 +123,7 @@ def create_basic_table(data, col_widths=None, title=None, center_right_column=Fa
     elements.append(KeepTogether(table))
     return elements
 
-def create_side_by_side_tables(table_data_1, table_data_2):
+def create_side_by_side_tables(table_data_1, table_data_2, inner_col_widths = [85, 155]):
     """Create two tables side by side with a margin and center them."""
     
     # Create table style for content
@@ -164,9 +164,8 @@ def create_side_by_side_tables(table_data_1, table_data_2):
     # Process both tables
     processed_data_1 = process_table_data(table_data_1)
     processed_data_2 = process_table_data(table_data_2)
-    
-    # Define the core widths of the inner tables
-    inner_col_widths = [85, 155]
+
+    num_cols = len(processed_data_1[1])
     
     # Create individual tables
     table1 = Table(processed_data_1, colWidths=inner_col_widths)
@@ -186,6 +185,10 @@ def create_side_by_side_tables(table_data_1, table_data_2):
         ('FONTSIZE', (0, 0), (-1, 0), 10),
         ('FONTSIZE', (0, 1), (-1, -1), 9),
     ])
+
+    if len(processed_data_1[0]) == 1 and len(processed_data_2[0]) == 1:
+        table_style.add('SPAN', (0, 0), (num_cols - 1, 0))
+        table_style.add('ALIGN', (0, 0), (num_cols - 1, 0), 'CENTER')
     
     table1.setStyle(table_style)
     table2.setStyle(table_style)

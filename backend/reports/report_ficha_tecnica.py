@@ -12,9 +12,12 @@ from copy import deepcopy
 from datetime import datetime
 from django.core.files.storage import default_storage
 from reportlab.platypus import Image
+import unicodedata
+import re
 from candidatos.models import UserProfile
 from .data_collector import ReportDataCollector
 from .report_utils import create_section_header, create_basic_table, create_side_by_side_tables, draw_logo_header
+from cuestionarios.utils import evaluar_rango, get_user_evaluation_summary
 
 SIS_TEMPLATE = {
     "Habilidades Adaptativas - Tabla de resultados SIS": [
@@ -294,7 +297,7 @@ class FichaTecnicaReport:
             table_data_2.append([skill, response])
         
         # Create side-by-side tables
-        elements.extend(create_side_by_side_tables(table_data_1, table_data_2))
+        elements.extend(create_side_by_side_tables(table_data_1, table_data_2, inner_col_widths = [85, 155]))
         elements.append(Spacer(1, 24))
         return [KeepTogether(elements)]
     
@@ -369,9 +372,6 @@ class FichaTecnicaReport:
     
     def get_habilidades_adaptativas_coloreadas(self, uid, table):
         """Get SIS adaptive skills table with highlighted cells for user scores."""
-        from cuestionarios.utils import evaluar_rango, get_user_evaluation_summary
-        import unicodedata
-        import re
         
         def normalize_text(text):
             """Normalize text by removing accents and converting to lowercase."""
@@ -672,7 +672,85 @@ class FichaTecnicaReport:
 
         elements.append(Spacer(1, 12))
         return elements
-    
+
+    def create_sis_summary_table(self, uid):
+        """Create SIS summary table with section scores and percentiles."""
+        try:
+            evaluation_summary = get_user_evaluation_summary(usuario_id=uid, query_params={})
+            
+            if not evaluation_summary:
+                return []
+            
+            elements = []
+            elements.append(create_section_header("RESUMEN DE PUNTUACIONES SIS"))
+            
+            # Create paragraph style for section names that allows wrapping
+            section_style = ParagraphStyle(
+                "SectionNameStyle",
+                fontSize=10,
+                textColor=colors.black,
+                fontName="Helvetica",
+                wordWrap='LTR',
+                splitLongWords=True,
+                alignment=0  # Left alignment
+            )
+            
+            # Build table data with headers
+            table_data = [["Sección", "Puntuación Directa", "Puntuación Estándar", "Percentil"]]
+            
+            secciones = evaluation_summary.get("detalles_por_seccion", [])
+            for seccion in secciones:
+                if seccion.get("tiene_puntuacion", False):
+                    # Wrap the section name in a Paragraph for text wrapping
+                    section_name = Paragraph(seccion.get("nombre_seccion", ""), section_style)
+                    
+                    table_data.append([
+                        section_name,
+                        seccion.get("puntuacion_directa", ""),
+                        str(seccion.get("puntuacion_estandar", "")),
+                        str(seccion.get("percentil", ""))
+                    ])
+            
+            # Create and style the table
+            summary_table = Table(table_data, colWidths=[260, 80, 80, 80])
+            summary_table.setStyle(TableStyle([
+                # Header styling
+                ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+                # ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 11),
+                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+                
+                # Body styling
+                ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
+                ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Section names left-aligned
+                ('ALIGN', (1, 1), (-1, -1), 'CENTER'),  # Scores centered
+                
+                # Grid and borders
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                
+                # Padding
+                ('LEFTPADDING', (0, 0), (-1, -1), 6),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                
+                # Alternating row colors for better readability
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.Color(248/255, 250/255, 252/255)]),
+            ]))
+            
+            elements.append(summary_table)
+            elements.append(Spacer(1, 12))
+            
+            return elements
+            
+        except Exception as e:
+            # Return empty list if there's an error
+            return []
+
     def create_sis_sections(self, data_collector, profile):
         """Create SIS-related sections."""
         elements = []
@@ -748,20 +826,38 @@ class FichaTecnicaReport:
         elements.append(create_section_header("NECESIDADES MÉDICAS Y CONDUCTUALES"))
         medical_behavioral_data = data_collector.get_sis_medical_behavioral_data()
         
-        table_data = [
-            ["Pregunta", "Respuesta"],
-            ["Introduzca la puntuación total de la sección 3a", str(medical_behavioral_data.get("medical_total", 0))],
+        # table_data = [
+        #     ["Pregunta", "Respuesta"],
+        #     ["Puntuación total de la sección 3a", str(medical_behavioral_data.get("medical_total", 0))],
+        #     ["¿La puntuación total es mayor a 5?", "SÍ" if medical_behavioral_data.get("medical_greater_than_5", False) else "NO"],
+        #     ["¿Hay al menos un '2' para necesidades médicas?", "SÍ" if medical_behavioral_data.get("medical_has_2", False) else "NO"],
+        #     ["Puntuación total de la sección 3b", str(medical_behavioral_data.get("behavioral_total", 0))],
+        #     ["¿La puntuación es mayor a 5?", "SÍ" if medical_behavioral_data.get("behavioral_greater_than_5", False) else "NO"],
+        #     ["¿Hay al menos un '2' para necesidades conductuales?", "SÍ" if medical_behavioral_data.get("behavioral_has_2", False) else "NO"]
+        # ]
+
+        medical_table = [
+            ["Necesidades de Apoyo Médico"],
+            # ["Puntuación total de la sección 3a", str(medical_behavioral_data.get("medical_total", 0))],
             ["¿La puntuación total es mayor a 5?", "SÍ" if medical_behavioral_data.get("medical_greater_than_5", False) else "NO"],
-            ["¿Hay al menos un '2' para necesidades médicas?", "SÍ" if medical_behavioral_data.get("medical_has_2", False) else "NO"],
-            ["Introduzca la puntuación total de la sección 3b", str(medical_behavioral_data.get("behavioral_total", 0))],
-            ["¿La puntuación es mayor a 5?", "SÍ" if medical_behavioral_data.get("behavioral_greater_than_5", False) else "NO"],
-            ["¿Hay al menos un '2' para necesidades conductuales?", "SÍ" if medical_behavioral_data.get("behavioral_has_2", False) else "NO"]
+            ["¿Hay al menos un '2'?", "SÍ" if medical_behavioral_data.get("medical_has_2", False) else "NO"],
+        ]
+
+        conduct_table = [
+            ["Necesidades de Apoyo Conductual"],
+            # ["Puntuación total de la sección 3b", str(medical_behavioral_data.get("behavioral_total", 0))],
+            ["¿La puntuación total es mayor a 5?", "SÍ" if medical_behavioral_data.get("behavioral_greater_than_5", False) else "NO"],
+            ["¿Hay al menos un '2'?", "SÍ" if medical_behavioral_data.get("behavioral_has_2", False) else "NO"]
         ]
         
-        medical_table = create_basic_table(table_data, col_widths=[420, 80], center_right_column=True)
-        elements.extend(medical_table)
+        # medical_table = create_basic_table(table_data, col_widths=[420, 80], center_right_column=True)
+        # elements.extend(medical_table)
+
+        elements.extend(create_side_by_side_tables(medical_table, conduct_table, inner_col_widths = [160, 80]))
         elements.append(Spacer(1, 12))
         
+        elements.extend(self.create_sis_summary_table(profile.user.id))
+
         return elements
     
     def generate(self, uid):
