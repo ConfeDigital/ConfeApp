@@ -46,6 +46,16 @@ class CuadroHabilidadesReport:
             alignment=1, 
             fontSize=10
         )
+
+        self.normal_style = ParagraphStyle(
+            "NormalStyle", 
+            fontSize=10, 
+            textColor=colors.black, 
+            fontName="Helvetica",
+            wordWrap='LTR',  # Enable word wrapping
+            splitLongWords=True,  # Split long words
+            spaceAfter=6  # Add space after paragraphs
+        )
     
     def get_profile(self, uid):
         """Get user profile."""
@@ -92,14 +102,25 @@ class CuadroHabilidadesReport:
         
         user_info = [
             ["Nombre completo:", full_name, "Género:", gender],
-            ["Discapacidad:", discapacidad, "Etapa:", stage],
+            ["Discapacidad:", discapacidad, "", ""],
             ["Teléfono:", getattr(profile, 'phone_number', 'N/A') or "N/A", "Fecha nacimiento:", birth_date],
-            ["Registro:", registration_date, "Tipo de sangre:", getattr(profile, 'blood_type', 'N/A') or "N/A"],
+            ["Tipo de sangre:", getattr(profile, 'blood_type', 'N/A') or "N/A", "Medicamentos:", ", ".join([m.name for m in profile.medications.all()]) if profile.medications.exists() else "N/A"],
             ["CURP:", getattr(profile, 'curp', 'N/A') or "N/A", "Alergias:", getattr(profile, 'allergies', 'N/A') or "N/A"],
+            ["Restricciones de dieta:", getattr(profile, 'dietary_restrictions', 'N/A') or "N/A", "Restricciones físicas:", getattr(profile, 'physical_restrictions', 'N/A') or "N/A"],
             ["Dirección:", domicilio, "", ""],
         ]
+
+        wrapped_user_info = []
+        for row in user_info:
+            wrapped_row = []
+            for i, cell in enumerate(row):
+                if isinstance(cell, str) and len(cell) > 50:  # Wrap long text
+                    wrapped_row.append(Paragraph(cell, self.normal_style))
+                else:
+                    wrapped_row.append(cell)
+            wrapped_user_info.append(wrapped_row)
         
-        user_table = Table(user_info, colWidths=[100, 220, 100, 200])
+        user_table = Table(wrapped_user_info, colWidths=[120, 220, 120, 220])
         user_table.setStyle(TableStyle([
             ('GRID', (0, 0), (-1, -1), 1, colors.black),
             ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
@@ -107,7 +128,8 @@ class CuadroHabilidadesReport:
             ('FONTNAME', (2, 0), (2, -1), 'Helvetica-Bold'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('BACKGROUND', (0, 0), (-1, -1), colors.whitesmoke),
-            ('SPAN', (1, 5), (-1, 5)),
+            ('SPAN', (1, 1), (-1, 1)),
+            ('SPAN', (1, -1), (-1, -1)),
         ]))
         
         return user_table

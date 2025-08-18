@@ -344,7 +344,11 @@ const Datasheet = () => {
     navigate(`/candidatos/${userId}/${questionnaireId}`);
   };
 
-  const REPORT_TYPES = ["ficha_tecnica", "habilidades", "proyecto_vida"];
+  const REPORT_TYPES = [
+    {value: "ficha_tecnica", text: "Ficha Técnica"}, 
+    {value: "habilidades", text: "Cuadro de Habilidades"}, 
+    {value: "proyecto_vida", text: "Proyecto de Vida"},
+  ];
 
   const handleDownload = async () => {
     setDownloadLoading(true);
@@ -355,14 +359,11 @@ const Datasheet = () => {
         return;
       }
 
-      console.log("Downloading report:", reportType);
-
-      // Primero genera el archivo en el backend
-      // await axios.get(`/api/reports/generate/${uid}/${reportType}/`);
+      console.log("Downloading report:", reportType.text);
 
       // Descarga el archivo generado
       const downloadResponse = await axios.get(
-        `/api/reports/download/${uid}/${reportType}/`,
+        `/api/reports/download/${uid}/${reportType.value}/`,
         {
           responseType: "blob",
         }
@@ -379,7 +380,7 @@ const Datasheet = () => {
         },
       };
 
-      const { mime, ext } = fileTypes[reportType] || {
+      const { mime, ext } = fileTypes[reportType.value] || {
         mime: "application/octet-stream",
         ext: "bin",
       };
@@ -388,7 +389,7 @@ const Datasheet = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${reportType}-${candidateProfile.user.first_name}_${candidateProfile.user.last_name}_${candidateProfile.user.second_last_name}.${ext}`;
+      a.download = `${candidateProfile.user.first_name} ${candidateProfile.user.last_name} ${candidateProfile.user.second_last_name} - ${reportType.text} - ${dayjs().format('YYYY/MM/DD')}.${ext}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
