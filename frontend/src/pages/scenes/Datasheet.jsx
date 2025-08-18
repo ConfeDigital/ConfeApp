@@ -286,9 +286,10 @@ const Datasheet = () => {
   const handleStageClick = (stageCode) => {
     /**
      * Lógica de selección de cuestionarios:
-     * 1. Si el usuario tiene respuestas en una versión (aunque no esté activa) → Cargar esa versión
-     * 2. Si no tiene respuestas en ninguna versión → Cargar el cuestionario activo
-     * 3. Si no hay cuestionarios activos → Mostrar lista para que el usuario elija
+     * 1. Si solo hay una opción disponible → Abrir directamente
+     * 2. Si hay exactamente 2 opciones y una tiene respuestas → Abrir la que tiene respuestas
+     * 3. Si hay múltiples opciones sin prioridad clara → Mostrar lista para que el usuario elija
+     * 4. Si no hay opciones → Mostrar mensaje de error
      */
 
     // 🔍 Filtrar cuestionarios de la etapa actual
@@ -308,67 +309,66 @@ const Datasheet = () => {
     }
 
     // 📌 Lógica mejorada para selección de cuestionarios
-    // 1. Si solo hay un cuestionario, abrirlo directamente
+    // 1. Si solo hay un cuestionario disponible, abrirlo directamente
     if (filteredQuestionnaires.length === 1) {
-      handleOpenDialog(candidateProfile.user.id, filteredQuestionnaires[0].id);
-    } else {
-      // 2. Si hay múltiples cuestionarios, buscar el que tiene respuestas
+      const unicoCuestionario = filteredQuestionnaires[0];
+      console.log(
+        `✅ Solo hay una opción disponible: ${unicoCuestionario.nombre} (ID: ${unicoCuestionario.id})`
+      );
+      handleOpenDialog(candidateProfile.user.id, unicoCuestionario.id);
+    } else if (filteredQuestionnaires.length > 1) {
+      // 2. Si hay múltiples cuestionarios, verificar si hay uno con respuestas
       const cuestionarioConRespuestas = filteredQuestionnaires.find(
         (q) => q.tiene_respuestas
       );
 
-      if (cuestionarioConRespuestas) {
-        // Si hay un cuestionario con respuestas, abrirlo directamente
+      if (cuestionarioConRespuestas && filteredQuestionnaires.length === 2) {
+        // Si hay exactamente 2 opciones y una tiene respuestas, abrir la que tiene respuestas
         console.log(
-          `✅ Abriendo cuestionario con respuestas: ${cuestionarioConRespuestas.nombre} (ID: ${cuestionarioConRespuestas.id})`
+          `✅ Dos opciones disponibles, seleccionando la que tiene respuestas: ${cuestionarioConRespuestas.nombre} (ID: ${cuestionarioConRespuestas.id})`
         );
         handleOpenDialog(
           candidateProfile.user.id,
           cuestionarioConRespuestas.id
         );
       } else {
-        // Si no hay cuestionarios con respuestas, buscar el activo
-        const cuestionarioActivo = filteredQuestionnaires.find((q) => q.activo);
+        // Si hay múltiples opciones o no hay una clara prioridad, mostrar la lista
+        console.log(
+          "📋 Múltiples opciones disponibles, mostrando lista de selección"
+        );
+        setExpandedPhase(expandedPhase === stageCode ? null : stageCode);
 
-        if (cuestionarioActivo) {
+        // Construir subfases visuales con información detallada
+        const subfasesVisuales = filteredQuestionnaires.map((q) => {
+          let colorFinal = "primary";
+          let targetId = q.id;
+
+          if (q.finalizado) {
+            colorFinal = "success";
+            targetId = q.id;
+          } else if (q.tiene_respuestas) {
+            colorFinal = "info";
+            targetId = q.id;
+          } else {
+            colorFinal = undefined; // outlined (gris)
+            targetId = q.id;
+          }
+
           console.log(
-            `📋 Abriendo cuestionario activo: ${cuestionarioActivo.nombre} (ID: ${cuestionarioActivo.id})`
+            `🟦 Opción disponible: ${q.nombre}, id: ${q.id}, color: ${colorFinal}, tiene_respuestas: ${q.tiene_respuestas}, activo: ${q.activo}`
           );
-          handleOpenDialog(candidateProfile.user.id, cuestionarioActivo.id);
-        } else {
-          // Si no hay cuestionarios activos, mostrar la lista para que el usuario elija
-          console.log("📋 Mostrando lista de opciones disponibles");
-          setExpandedPhase(expandedPhase === stageCode ? null : stageCode);
 
-          // Construir subfases visuales
-          const subfasesVisuales = filteredQuestionnaires.map((q) => {
-            let colorFinal = "primary";
-            let targetId = q.id;
-
-            if (q.finalizado) {
-              colorFinal = "success";
-              targetId = q.id;
-            } else if (q.tiene_respuestas) {
-              colorFinal = "info";
-              targetId = q.id;
-            } else {
-              colorFinal = undefined; // outlined (gris)
-              targetId = q.id;
-            }
-
-            console.log(
-              `🟦 Subfase: ${q.nombre}, id: ${q.id}, color: ${colorFinal}, tiene_respuestas: ${q.tiene_respuestas}, activo: ${q.activo}`
-            );
-
-            return {
-              ...q,
-              color: colorFinal,
-              targetId,
-            };
-          });
-          setCuestionariosBotonesVisualizar(subfasesVisuales);
-        }
+          return {
+            ...q,
+            color: colorFinal,
+            targetId,
+          };
+        });
+        setCuestionariosBotonesVisualizar(subfasesVisuales);
       }
+    } else {
+      // 3. Si no hay cuestionarios disponibles
+      console.log("❌ No hay cuestionarios disponibles para esta etapa");
     }
   };
 
