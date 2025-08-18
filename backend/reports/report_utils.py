@@ -4,9 +4,10 @@ Common functions used across different report types.
 """
 import unicodedata
 import re
-from reportlab.platypus import Paragraph, Table, TableStyle, KeepTogether
+from reportlab.platypus import Paragraph, Table, TableStyle, KeepTogether, Spacer, ListFlowable
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
 
 
 def normalize_text(text):
@@ -41,7 +42,7 @@ def create_section_header(text):
     return Paragraph(f"<b><font size=14 color='white'>{text}</font></b>", section_header_style)
 
 
-def create_basic_table(data, col_widths=None, title=None):
+def create_basic_table(data, col_widths=None, title=None, center_right_column=False):
     """Create a basic table with standard styling and text wrapping."""
     if not data:
         return []
@@ -99,27 +100,37 @@ def create_basic_table(data, col_widths=None, title=None):
         processed_data.append(processed_row)
     
     table = Table(processed_data, colWidths=col_widths)
-    table.setStyle(TableStyle([
+    table_style = TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ('LEFTPADDING', (0, 0), (-1, -1), 8),
         ('RIGHTPADDING', (0, 0), (-1, -1), 8),
         ('TOPPADDING', (0, 0), (-1, -1), 6),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),  # Header background
-        ('BACKGROUND', (0, 1), (-1, -1), colors.white),     # Data background
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),    # Header font
-        ('FONTSIZE', (0, 0), (-1, 0), 10),                  # Header font size
-        ('FONTSIZE', (0, 1), (-1, -1), 9),                  # Data font size
-    ]))
+        ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.whitesmoke]),
+    ])
+
+    if center_right_column:
+        table_style.add('ALIGN', (-1, 0), (-1, -1), 'CENTER')
+
+    for row_idx, row_data in enumerate(processed_data):
+        if row_data and str(row_data[0]).strip() == "Puntuación Total":
+            table_style.add('FONTNAME', (0, row_idx), (-1, row_idx), 'Helvetica-Bold'),
+            table_style.add('LINEABOVE', (0, row_idx), (-1, row_idx), 2, colors.black)
+
+    table.setStyle(table_style)
     
     # Wrap table in KeepTogether to prevent splitting across pages when possible
     elements.append(KeepTogether(table))
     return elements
 
-def create_side_by_side_tables(table_data_1, table_data_2):
-    """Create two tables side by side."""
-    from reportlab.lib.styles import ParagraphStyle
+def create_side_by_side_tables(table_data_1, table_data_2, inner_col_widths = [85, 155]):
+    """Create two tables side by side with a margin and center them."""
     
     # Create table style for content
     table_text_style = ParagraphStyle(
@@ -159,10 +170,12 @@ def create_side_by_side_tables(table_data_1, table_data_2):
     # Process both tables
     processed_data_1 = process_table_data(table_data_1)
     processed_data_2 = process_table_data(table_data_2)
+
+    num_cols = len(processed_data_1[1])
     
     # Create individual tables
-    table1 = Table(processed_data_1, colWidths=[80, 180])
-    table2 = Table(processed_data_2, colWidths=[80, 180])
+    table1 = Table(processed_data_1, colWidths=inner_col_widths)
+    table2 = Table(processed_data_2, colWidths=inner_col_widths)
     
     # Apply styling to both tables
     table_style = TableStyle([
@@ -177,23 +190,51 @@ def create_side_by_side_tables(table_data_1, table_data_2):
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 10),
         ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.whitesmoke]),
     ])
+
+    if len(processed_data_1[0]) == 1 and len(processed_data_2[0]) == 1:
+        table_style.add('SPAN', (0, 0), (num_cols - 1, 0))
+        table_style.add('ALIGN', (0, 0), (num_cols - 1, 0), 'CENTER')
     
     table1.setStyle(table_style)
     table2.setStyle(table_style)
+
+    # --- KEY FIX START ---
     
-    # Create a container table to place them side by side
-    side_by_side_data = [[table1, table2]]
-    container_table = Table(side_by_side_data, colWidths=[280, 280])
+    # Calculate the actual rendered width of the inner tables
+    # sum of col widths + left padding + right padding
+    table_actual_width = sum(inner_col_widths) + 8 + 8  # 80 + 150 + 8 + 8 = 246
+    
+    # Define the margin between the two tables (e.g., 20 points)
+    margin_between = 0
+    
+    # Create a container table with three columns: table1, a spacer, and table2
+    side_by_side_data = [[table1, Spacer(margin_between, 1), table2]]
+    
+    # The colWidths for the container table must account for the actual rendered width
+    container_col_widths = [table_actual_width, margin_between, table_actual_width]
+    container_table = Table(side_by_side_data, colWidths=container_col_widths)
+    
     container_table.setStyle(TableStyle([
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('LEFTPADDING', (0, 0), (-1, -1), 0),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-        ('TOPPADDING', (0, 0), (-1, -1), 0),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
     ]))
     
-    return [KeepTogether(container_table)]
+    # Calculate padding to center the container table, using your document's margins
+    page_width = 612
+    available_width = page_width - (50 * 2)  # Your document's margins are 50 points on each side
+    total_table_width = sum(container_col_widths)
+    
+    left_padding_width = (available_width - total_table_width) / 2
+    
+    # Create a wrapper table to apply centering using Spacers
+    wrapper_table = Table([
+        [Spacer(left_padding_width, 1), container_table, Spacer(left_padding_width, 1)]
+    ], colWidths=[left_padding_width, total_table_width, left_padding_width])
+    
+    # --- KEY FIX END ---
+    
+    return [KeepTogether(wrapper_table)]
 
 
 def draw_logo_header():
