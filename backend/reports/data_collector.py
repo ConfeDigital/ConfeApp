@@ -183,6 +183,7 @@ class ReportDataCollector:
         ).select_related("pregunta")
 
         items_scores = {}
+        total_score = 0
         for response in responses:
             item_name = response.pregunta.texto.strip() if response.pregunta.texto else ""
             if not item_name:
@@ -206,10 +207,13 @@ class ReportDataCollector:
 
                 # Add to or update the items_scores dictionary
                 items_scores[item_name] = items_scores.get(item_name, 0) + total
+                total_score += total
 
             except (json.JSONDecodeError, ValueError, TypeError):
                 # This block handles any errors from invalid data types or formats
                 continue
+                
+        items_scores["total"] = total_score
 
         return items_scores
     

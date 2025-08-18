@@ -524,7 +524,7 @@ class FichaTecnicaReport:
 
             if len(data) > 2:
                 data[1] = [
-                    "Percentiles",
+                    "Per-<br/>centil",
                     "Vida en<br/>el hogar",
                     "Vida en<br/>comunidad",
                     "Aprendizaje<br/>a lo largo<br/>de la vida",
@@ -532,7 +532,7 @@ class FichaTecnicaReport:
                     "Salud y<br/>seguridad",
                     "Social",
                     "Índice de<br/>necesidades<br/>de apoyo",
-                    "Percentiles"
+                    "Per-<br/>centil",
                 ]
 
         # Process cells
@@ -584,7 +584,7 @@ class FichaTecnicaReport:
         available_width = page_width - margins
         
         if title == "Habilidades Adaptativas":
-            col_widths = [available_width * 0.12] + [available_width * 0.13] * 7 + [available_width * 0.12]
+            col_widths = [available_width * 0.08] + [available_width * 0.13] * 7 + [available_width * 0.08]
         else:
             num_cols = len(formatted_data[0]) if formatted_data else 1
             col_widths = [available_width / num_cols] * num_cols
@@ -694,11 +694,29 @@ class FichaTecnicaReport:
                 splitLongWords=True,
                 alignment=0  # Left alignment
             )
+
+            header_style = ParagraphStyle(
+                "HeaderStyle",
+                fontSize=10,
+                textColor=colors.black,
+                fontName="Helvetica-Bold",
+                wordWrap='LTR',
+                splitLongWords=True,
+                alignment=1 # Center alignment
+            )
+
+            headers = [
+                Paragraph("Sección", header_style),
+                Paragraph("Puntuación Directa", header_style),
+                Paragraph("Puntuación Estándar", header_style),
+                Paragraph("Percentil", header_style)
+            ]
             
             # Build table data with headers
-            table_data = [["Sección", "Puntuación Directa", "Puntuación Estándar", "Percentil"]]
+            table_data = [headers]
             
             secciones = evaluation_summary.get("detalles_por_seccion", [])
+            resumen_global = evaluation_summary.get("resumen_global", {})
             for seccion in secciones:
                 if seccion.get("tiene_puntuacion", False):
                     # Wrap the section name in a Paragraph for text wrapping
@@ -706,32 +724,32 @@ class FichaTecnicaReport:
                     
                     table_data.append([
                         section_name,
-                        seccion.get("puntuacion_directa", ""),
+                        seccion.get("total_general", ""),
                         str(seccion.get("puntuacion_estandar", "")),
                         str(seccion.get("percentil", ""))
                     ])
             
+            table_data.append(["Total", "", resumen_global.get("total_general", ""), str(resumen_global.get("percentil", ""))])
+            table_data.append(["Índice de Necesidades de Apoyo", resumen_global.get("indice_de_necesidades_de_apoyo", ""), "", ""])
+
             # Create and style the table
             summary_table = Table(table_data, colWidths=[260, 80, 80, 80])
             summary_table.setStyle(TableStyle([
-                # Header styling
+                # Grid and borders
                 ('BACKGROUND', (0, 0), (-1, 0), colors.lightgrey),
-                # ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
-                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                ('FONTSIZE', (0, 0), (-1, 0), 11),
-                ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-                
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+
                 # Body styling
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 1), (-1, -1), 10),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
                 ('TEXTCOLOR', (0, 1), (-1, -1), colors.black),
                 ('ALIGN', (0, 1), (0, -1), 'LEFT'),  # Section names left-aligned
                 ('ALIGN', (1, 1), (-1, -1), 'CENTER'),  # Scores centered
-                
-                # Grid and borders
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                
+                ('FONTNAME', (0, -2), (-1, -1), 'Helvetica-Bold'),
+                ('LINEABOVE', (0, -2), (-1, -2), 2, colors.black),
+                ('SPAN', (1, -1), (3, -1)),
+
                 # Padding
                 ('LEFTPADDING', (0, 0), (-1, -1), 6),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 6),
@@ -739,11 +757,11 @@ class FichaTecnicaReport:
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
                 
                 # Alternating row colors for better readability
-                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.Color(248/255, 250/255, 252/255)]),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.whitesmoke]),
             ]))
             
             elements.append(summary_table)
-            elements.append(Spacer(1, 12))
+            # elements.append(Spacer(1, 12))
             
             return elements
             
@@ -813,14 +831,18 @@ class FichaTecnicaReport:
             # Build table
             table_data = [["Actividad", "Puntaje Directo"]]
             for item, score in sorted(protection_data.items(), key=lambda x: x[1], reverse=True):
+                if(item == "total"):
+                    continue
                 table_data.append([item, str(score)])
+            
+            table_data.append(["Puntuación Total", str(protection_data.get("total", 0))])
             
             protection_table = create_basic_table(table_data, col_widths=[400, 100], center_right_column=True)
             elements.extend(protection_table)
         else:
             elements.append(Paragraph("No hay datos de protección y defensa disponibles.", self.normal_style))
         
-        elements.append(Spacer(1, 24))
+        elements.append(Spacer(1, 12))
         
         # Medical and behavioral needs section
         elements.append(create_section_header("NECESIDADES MÉDICAS Y CONDUCTUALES"))

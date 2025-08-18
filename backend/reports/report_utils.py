@@ -112,10 +112,16 @@ def create_basic_table(data, col_widths=None, title=None, center_right_column=Fa
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 10),
         ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.whitesmoke]),
     ])
 
     if center_right_column:
         table_style.add('ALIGN', (-1, 0), (-1, -1), 'CENTER')
+
+    for row_idx, row_data in enumerate(processed_data):
+        if row_data and str(row_data[0]).strip() == "Puntuación Total":
+            table_style.add('FONTNAME', (0, row_idx), (-1, row_idx), 'Helvetica-Bold'),
+            table_style.add('LINEABOVE', (0, row_idx), (-1, row_idx), 2, colors.black)
 
     table.setStyle(table_style)
     
@@ -184,6 +190,7 @@ def create_side_by_side_tables(table_data_1, table_data_2, inner_col_widths = [8
         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
         ('FONTSIZE', (0, 0), (-1, 0), 10),
         ('FONTSIZE', (0, 1), (-1, -1), 9),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.whitesmoke]),
     ])
 
     if len(processed_data_1[0]) == 1 and len(processed_data_2[0]) == 1:
