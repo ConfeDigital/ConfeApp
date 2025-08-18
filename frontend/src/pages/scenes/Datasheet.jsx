@@ -284,55 +284,91 @@ const Datasheet = () => {
   );
 
   const handleStageClick = (stageCode) => {
-    // 🔍 Filtrar solo los cuestionarios de la etapa actual
+    /**
+     * Lógica de selección de cuestionarios:
+     * 1. Si el usuario tiene respuestas en una versión (aunque no esté activa) → Cargar esa versión
+     * 2. Si no tiene respuestas en ninguna versión → Cargar el cuestionario activo
+     * 3. Si no hay cuestionarios activos → Mostrar lista para que el usuario elija
+     */
+
+    // 🔍 Filtrar cuestionarios de la etapa actual
+    // Incluir cuestionarios con respuestas aunque no estén activos
     const filteredQuestionnaires = questionnaires.filter(
-      (q) => q.estado_desbloqueo === stageCode && q.activo
+      (q) => q.estado_desbloqueo === stageCode
     );
 
-    // console.log(
-    //   "🔍 Cuestionarios activos encontrados:",
-    //   filteredQuestionnaires
-    // );
+    console.log(
+      "🔍 Cuestionarios encontrados para la etapa:",
+      filteredQuestionnaires
+    );
 
     if (filteredQuestionnaires.length === 0) {
-      console.log("❌ No hay cuestionarios activos en esta etapa.");
+      console.log("❌ No hay cuestionarios para esta etapa.");
       return;
     }
 
-    // 📌 Si solo hay un cuestionario activo, abrirlo directamente
+    // 📌 Lógica mejorada para selección de cuestionarios
+    // 1. Si solo hay un cuestionario, abrirlo directamente
     if (filteredQuestionnaires.length === 1) {
       handleOpenDialog(candidateProfile.user.id, filteredQuestionnaires[0].id);
     } else {
-      // 📌 Si hay más de un cuestionario, expandir la lista para mostrar botones
-      setExpandedPhase(expandedPhase === stageCode ? null : stageCode);
-      // Nueva lógica: construir subfases visuales usando questionnaireStatus
-      // console.log("🧩 Subfases visuales:");
-      const subfasesVisuales = filteredQuestionnaires.map((q) => {
-        let colorFinal = "primary";
-        let targetId = q.id;
+      // 2. Si hay múltiples cuestionarios, buscar el que tiene respuestas
+      const cuestionarioConRespuestas = filteredQuestionnaires.find(
+        (q) => q.tiene_respuestas
+      );
 
-        if (q.finalizado) {
-          colorFinal = "success";
-          targetId = q.id;
-        } else if (q.tiene_respuestas) {
-          colorFinal = "info";
-          targetId = q.id;
+      if (cuestionarioConRespuestas) {
+        // Si hay un cuestionario con respuestas, abrirlo directamente
+        console.log(
+          `✅ Abriendo cuestionario con respuestas: ${cuestionarioConRespuestas.nombre} (ID: ${cuestionarioConRespuestas.id})`
+        );
+        handleOpenDialog(
+          candidateProfile.user.id,
+          cuestionarioConRespuestas.id
+        );
+      } else {
+        // Si no hay cuestionarios con respuestas, buscar el activo
+        const cuestionarioActivo = filteredQuestionnaires.find((q) => q.activo);
+
+        if (cuestionarioActivo) {
+          console.log(
+            `📋 Abriendo cuestionario activo: ${cuestionarioActivo.nombre} (ID: ${cuestionarioActivo.id})`
+          );
+          handleOpenDialog(candidateProfile.user.id, cuestionarioActivo.id);
         } else {
-          colorFinal = undefined; // outlined (gris)
-          targetId = q.id;
+          // Si no hay cuestionarios activos, mostrar la lista para que el usuario elija
+          console.log("📋 Mostrando lista de opciones disponibles");
+          setExpandedPhase(expandedPhase === stageCode ? null : stageCode);
+
+          // Construir subfases visuales
+          const subfasesVisuales = filteredQuestionnaires.map((q) => {
+            let colorFinal = "primary";
+            let targetId = q.id;
+
+            if (q.finalizado) {
+              colorFinal = "success";
+              targetId = q.id;
+            } else if (q.tiene_respuestas) {
+              colorFinal = "info";
+              targetId = q.id;
+            } else {
+              colorFinal = undefined; // outlined (gris)
+              targetId = q.id;
+            }
+
+            console.log(
+              `🟦 Subfase: ${q.nombre}, id: ${q.id}, color: ${colorFinal}, tiene_respuestas: ${q.tiene_respuestas}, activo: ${q.activo}`
+            );
+
+            return {
+              ...q,
+              color: colorFinal,
+              targetId,
+            };
+          });
+          setCuestionariosBotonesVisualizar(subfasesVisuales);
         }
-
-        // console.log(
-        //   `🟦 Subfase: ${q.nombre}, id: ${q.id}, color: ${colorFinal}, tiene_respuestas: ${q.tiene_respuestas}`
-        // );
-
-        return {
-          ...q,
-          color: colorFinal,
-          targetId,
-        };
-      });
-      setCuestionariosBotonesVisualizar(subfasesVisuales);
+      }
     }
   };
 
@@ -345,10 +381,10 @@ const Datasheet = () => {
   };
 
   const REPORT_TYPES = [
-    {value: "ficha_tecnica", text: "Ficha Técnica"}, 
-    {value: "habilidades", text: "Cuadro de Habilidades"}, 
-    {value: "plan_apoyos", text: "Plan Personalizado de Apoyos"},
-    {value: "proyecto_vida", text: "Proyecto de Vida"},
+    { value: "ficha_tecnica", text: "Ficha Técnica" },
+    { value: "habilidades", text: "Cuadro de Habilidades" },
+    { value: "plan_apoyos", text: "Plan Personalizado de Apoyos" },
+    { value: "proyecto_vida", text: "Proyecto de Vida" },
   ];
 
   const handleDownload = async () => {
@@ -390,7 +426,11 @@ const Datasheet = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${candidateProfile.user.first_name} ${candidateProfile.user.last_name} ${candidateProfile.user.second_last_name} - ${reportType.text} - ${dayjs().format('YYYY/MM/DD')}.${ext}`;
+      a.download = `${candidateProfile.user.first_name} ${
+        candidateProfile.user.last_name
+      } ${candidateProfile.user.second_last_name} - ${
+        reportType.text
+      } - ${dayjs().format("YYYY/MM/DD")}.${ext}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -476,7 +516,9 @@ const Datasheet = () => {
               </Typography>
               {candidateProfile.cycle ? (
                 <Tooltip
-                  title={`De ${dayjs(candidateProfile.cycle.start_date).format("LL")} a ${dayjs(candidateProfile.cycle.end_date).format("LL")}`}
+                  title={`De ${dayjs(candidateProfile.cycle.start_date).format(
+                    "LL"
+                  )} a ${dayjs(candidateProfile.cycle.end_date).format("LL")}`}
                 >
                   <Typography variant="subtitle1" color="textSecondary">
                     {candidateProfile.cycle.name}
@@ -862,8 +904,17 @@ const Datasheet = () => {
 
         {/* PDF Download */}
 
-        <Dialog open={open} onClose={handleClose} maxWidth={selectedTab === 4 ? "xl" : "md"} fullWidth>
-          <DialogTitle>{selectedTab === 4 ? "Reporte de Cuestionarios" : "Seleccione el documento"}</DialogTitle>
+        <Dialog
+          open={open}
+          onClose={handleClose}
+          maxWidth={selectedTab === 4 ? "xl" : "md"}
+          fullWidth
+        >
+          <DialogTitle>
+            {selectedTab === 4
+              ? "Reporte de Cuestionarios"
+              : "Seleccione el documento"}
+          </DialogTitle>
           <DialogContent>
             <Box display="flex" justifyContent="center" gap={2} mt={1}>
               <Button
@@ -907,16 +958,18 @@ const Datasheet = () => {
                 Reporte de Cuestionarios
               </Button>
             </Box>
-            
+
             {/* Questionnaire Report Content */}
             {selectedTab === 4 && (
               <Box sx={{ mt: 2, height: "70vh" }}>
                 <CuestionarioReportView
                   usuarioId={candidateProfile.user.id}
-                  cuestionariosFinalizados={questionnaires.filter(q => q.finalizado).map(q => ({
-                    id: q.id,
-                    nombre: q.nombre
-                  }))}
+                  cuestionariosFinalizados={questionnaires
+                    .filter((q) => q.finalizado)
+                    .map((q) => ({
+                      id: q.id,
+                      nombre: q.nombre,
+                    }))}
                   onClose={() => setSelectedTab(0)}
                 />
               </Box>
