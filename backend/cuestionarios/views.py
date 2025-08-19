@@ -141,7 +141,7 @@ class PreguntaSeleccion(APIView):
 
 class RespuestasGuardadas(APIView):
     """Guarda o actualiza respuestas de los usuarios y desbloquea nuevas preguntas si aplica"""
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         """Obtiene las respuestas filtradas por usuario y cuestionario"""
@@ -969,7 +969,7 @@ class EditarCuestionarioView(generics.UpdateAPIView):
     
 
 class RespuestasUnlockedPathView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         # Obtener los parámetros de consulta
@@ -1063,7 +1063,7 @@ class RespuestasUnlockedPathView(APIView):
 
 class RespuestasSISView(APIView):
     """Obtiene respuestas de preguntas tipo SIS o SIS2, con la posibilidad de filtrado dinámico"""
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         filtros = {}
@@ -1102,7 +1102,7 @@ class RespuestasSISView(APIView):
 
 class ResumenSISView(APIView):
     """Obtiene el resumen de respuestas SIS agrupado por usuario y sección, con totales y ayudas"""
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         usuario_id = request.query_params.get("usuario_id")
@@ -1121,7 +1121,7 @@ class ResumenSISView(APIView):
 # Nueva vista: ResumenCHView
 class ResumenCHView(APIView):
     """Obtiene el resumen de respuestas tipo CH agrupado por usuario, incluyendo conteo de resultados y ayudas."""
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         usuario_id = request.query_params.get("usuario_id")
@@ -1344,7 +1344,7 @@ class PreguntaImagenUploadAPIView(generics.UpdateAPIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 class PrecargaCuestionarioView(APIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request):
         print("\n📥 Datos crudos recibidos en la precarga:")
@@ -1385,6 +1385,8 @@ class PrecargaCuestionarioView(APIView):
 
 
 class GuardarCuestionarioView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+    
     def post(self, request, *args, **kwargs):
         try:
             data = request.data
@@ -1417,7 +1419,7 @@ class ReporteCuestionariosView(APIView):
     - usuario_id: Filtrar por usuario específico
     - cuestionario_id: Filtrar por cuestionario específico
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         # Obtener parámetros opcionales
@@ -1670,7 +1672,7 @@ class CuestionariosConRespuestasView(APIView):
     - Si no tiene respuestas → devolver el cuestionario activo de ese base_cuestionario
     Con el estado de finalización pero sin las preguntas.
     """
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, usuario_id):
         print(f"🔍 Consultando cuestionarios para usuario ID: {usuario_id}")
