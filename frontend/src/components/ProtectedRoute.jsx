@@ -1,9 +1,29 @@
 // ProtectedRoute.jsx
 import { useSelector } from "react-redux";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import DashboardSkeleton from "./DashboardSkeleton";
 
+const getDashboardPath = (userGroups) => {
+  if (!userGroups || userGroups.length === 0) {
+    return "/"; // Default to home if no groups
+  }
+  const lowerCaseGroups = userGroups.map(group => group.name.toLowerCase());
+
+  if (lowerCaseGroups.includes("candidatos")) {
+    return "/candidato/dashboard";
+  }
+  if (lowerCaseGroups.includes("empleador")) {
+    return "/empleador";
+  }
+  if (lowerCaseGroups.includes("personal")) {
+    return "/dashboard";
+  }
+
+  return "/";
+};
+
 function ProtectedRoute({ children, allowedRoles = [] }) {
+  const location = useLocation();
   const { isAuthenticated, loading, user } = useSelector((state) => ({
     isAuthenticated: state.auth.isAuthenticated,
     loading: state.auth.isLoading,
@@ -17,11 +37,19 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
 
   // Check if the user is authenticated and active. If not, redirect to home.
   if (!isAuthenticated || !user?.is_active) {
-    return <Navigate to="/" />;
+    return <Navigate to={`/login?redirect=${encodeURIComponent(location.pathname)}`} />;
+  }
+
+  const userGroups = user.groups || [];
+
+  const userDashboardPath = getDashboardPath(userGroups);
+  const isTryingToAccessGenericDashboard = location.pathname === "/dashboard" && userDashboardPath !== "/dashboard";
+  if (isTryingToAccessGenericDashboard) {
+    return <Navigate to={userDashboardPath} replace />;
   }
 
   // If user is staff, allow regardless of groups.
-  if (isAuthenticated && user.is_staff) {
+  if (user.is_staff) {
     return children;
   }
 
@@ -31,12 +59,12 @@ function ProtectedRoute({ children, allowedRoles = [] }) {
   }
 
   // Check if the user's groups contain any of the allowed roles.
-  const userGroups = user.groups.map((group) => group.name.toLowerCase());
+  const userGroupsLower = userGroups.map((group) => group.name.toLowerCase());
   const hasAccess = allowedRoles.some((role) =>
-    userGroups.includes(role.toLowerCase())
+    userGroupsLower.includes(role.toLowerCase())
   );
 
-  return isAuthenticated && hasAccess ? children : <Navigate to="/" />;
+  return hasAccess ? children : <Navigate to="/" />;
 }
 
 export default ProtectedRoute;

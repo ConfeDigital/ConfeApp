@@ -3,7 +3,7 @@ import { Box, Button, Divider, Typography, Paper, Alert, Collapse, CircularProgr
 import MyTextField from "../../components/forms/MyTextField";
 import MyPassField from "../../components/forms/MyPassField";
 import MyButton from "../../components/forms/MyButton";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser, checkAndFetchUser } from "../../features/auth/authSlice";
@@ -26,7 +26,9 @@ const Login = () => {
   const { instance } = useMsal();
   const { handleSubmit, control } = useForm({ resolver: yupResolver(schema) });
   const { message, error } = useSelector((state) => state.auth);
-  const [ loading, setLoading ] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const [searchParams] = useSearchParams();
 
   // Helper to format messages (if error is an object)
   const formatMessage = (msg) => {
@@ -40,8 +42,9 @@ const Login = () => {
   const submission = async (data) => {
     setLoading(true);
     try {
+      const redirectTo = searchParams.get('redirect') || '/dashboard';
       await dispatch(loginUser(data)).unwrap();
-      navigate("/dashboard");
+      navigate(redirectTo);
     } catch (err) {
       console.error("Login error:", err);
       setLoading(false);
@@ -50,13 +53,15 @@ const Login = () => {
   };
 
   const handleLogin = () => {
+    const redirectTo = searchParams.get('redirect') || '/dashboard';
+
     instance
       .loginPopup({ ...loginRequest })
       .then((response) => {
         console.log("Login Success:", response);
         instance.setActiveAccount(response.account);
         dispatch(checkAndFetchUser(instance));
-        navigate("/dashboard");
+        navigate(redirectTo);
       })
       .catch((error) => console.error("Login Error:", error));
   };
@@ -106,13 +111,13 @@ const Login = () => {
             </Box>
             <Box className="form-item" sx={{ mb: 2 }}>
               {loading ? (
-                <CircularProgress/>
+                <CircularProgress />
               ) : (
                 <MyButton label="Iniciar Sesión" type="submit" fullWidth />
               )}
             </Box>
             <Box className="form-item" sx={{ display: "flex", flexDirection: "column", gap: 1, alignItems: "center" }}>
-              <Link to="/register">¿No tienes una cuenta? Regístrate aquí</Link>
+              <Link to={{ pathname: "/register", search: searchParams.toString() }}>¿No tienes una cuenta? Regístrate aquí</Link>
               <Link to="/reset-password">¿Olvidaste tu contraseña? Haz clic aquí</Link>
             </Box>
           </form>

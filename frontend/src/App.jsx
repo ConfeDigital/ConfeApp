@@ -170,19 +170,10 @@ function App({ instance }) {
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="/login" element={<Login />} />
-                <Route
-                  path="/logout"
-                  element={<Logout instance={instance} />}
-                />
-                <Route
-                  path="/register"
-                  element={<RegisterAndLogout instance={instance} />}
-                />
+                <Route path="/logout" element={<Logout instance={instance} />} />
+                <Route path="/register" element={<RegisterAndLogout instance={instance} />} />
                 <Route path="/reset-password" element={<ResetPassword />} />
-                <Route
-                  path="/password/reset/confirm/:uid/:token"
-                  element={<ResetPasswordConfirm />}
-                />
+                <Route path="/password/reset/confirm/:uid/:token" element={<ResetPasswordConfirm />} />
                 <Route path="/activate/:uid/:token" element={<Activate />} />
                 <Route path="/info" element={<Info />} />
                 <Route path="/no-autorizado" element={<InActive />} />
@@ -195,18 +186,9 @@ function App({ instance }) {
                     </ProtectedRoute>
                   }
                 >
-                  <Route
-                    path="/candidato/perfil"
-                    element={<CandidateDatasheet />}
-                  />
-                  <Route
-                    path="/candidato/dashboard"
-                    element={<CandidateDashboard />}
-                  />
-                  <Route
-                    path="/candidato/preentrevista"
-                    element={<Preentrevista />}
-                  />
+                  <Route path="/candidato/perfil" element={<CandidateDatasheet />} />
+                  <Route path="/candidato/dashboard" element={<CandidateDashboard />} />
+                  <Route path="/candidato/preentrevista" element={<Preentrevista />} />
                 </Route>
 
                 <Route
@@ -221,18 +203,9 @@ function App({ instance }) {
                   }
                 >
                   <Route path="/empleador" element={<EmployerPanel />} />
-                  <Route
-                    path="/empleador/perfil"
-                    element={<EmployerProfile />}
-                  />
-                  <Route
-                    path="/empleador/empleo/:jobId"
-                    element={<JobCandidatesPage />}
-                  />
-                  <Route
-                    path="/configuracion-empleador"
-                    element={<Settings />}
-                  />
+                  <Route path="/empleador/perfil" element={<EmployerProfile />} />
+                  <Route path="/empleador/empleo/:jobId" element={<JobCandidatesPage />} />
+                  <Route path="/empleador/configuracion" element={<Settings />} />
                 </Route>
 
                 <Route
@@ -247,47 +220,15 @@ function App({ instance }) {
                   }
                 >
                   <Route path="/cuestionarios" element={<Cuestionarios />} />
-                  <Route
-                    path="/cargaMT"
-                    element={<CargaMasivaCuestionario />}
-                  />
-                  <Route
-                    path="/baseCuestionarios"
-                    element={<BaseCuestionarios />}
-                  />
-                  <Route
-                    path="/baseCuestionarios/:id"
-                    element={<CuestionarioDetail />}
-                  />
-                  \
-                  {/* <Route
-                    path="/baseCuestionarios/interfaz"
-                    element={<QuestionnaireInterface />}
-                  /> */}
-                  <Route
-                    path="/baseCuestionarios/:idBase/:idCuestionario"
-                    element={<QuestionnaireInterface />}
-                  />
-                  <Route
-                    path="/tablas-de-equivalencia"
-                    element={<TablasEquivalencia />}
-                  />
-                  <Route
-                    path="/tablas-de-equivalencia/:id"
-                    element={<TablaDetalle />}
-                  />
-                  <Route
-                    path="/panel-de-administracion"
-                    element={<AdminPanel />}
-                  />
-                  <Route
-                    path="/cargaMasiva"
-                    element={<CargaMasivaCandidatos />}
-                  />
-                  <Route
-                    path="/administracion-agencia"
-                    element={<AdminAgencia />}
-                  />
+                  <Route path="/cargaMT" element={<CargaMasivaCuestionario />} />
+                  <Route path="/baseCuestionarios" element={<BaseCuestionarios />} />
+                  <Route path="/baseCuestionarios/:id" element={<CuestionarioDetail />} />
+                  <Route path="/baseCuestionarios/:idBase/:idCuestionario" element={<QuestionnaireInterface />} />
+                  <Route path="/tablas-de-equivalencia" element={<TablasEquivalencia />} />
+                  <Route path="/tablas-de-equivalencia/:id" element={<TablaDetalle />} />
+                  <Route path="/panel-de-administracion" element={<AdminPanel />} />
+                  <Route path="/cargaMasiva" element={<CargaMasivaCandidatos />} />
+                  <Route path="/administracion-agencia" element={<AdminAgencia />} />
                 </Route>
 
                 <Route
@@ -321,61 +262,23 @@ function App({ instance }) {
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/candidatos" element={<CandidateConsult />} />
                   <Route path="/calendar" element={<Calendar />} />
-                  <Route
-                    path="/calendar-microsoft"
-                    element={<CalendarMicrosoft />}
-                  />
+                  <Route path="/calendar-microsoft" element={<CalendarMicrosoft />} />
                   <Route path="/candidatos/:uid" element={<Datasheet />} />
-                  <Route
-                    path="/candidatos/visualizar/:uid"
-                    element={<DatasheetReadOnly />}
-                  />
-
-                  <Route
-                    path="/candidatos/:uid/:cuestionarioId"
-                    element={<PaginaCuestionario />}
-                  />
-
-                  <Route
-                    path="/seguimiento-candidatos/:uid"
-                    element={<Seguimiento />}
-                  />
-                  <Route
-                    path="/seguimiento-candidatos"
-                    element={<NavegacionSeguimiento />}
-                  />
+                  <Route path="/candidatos/visualizar/:uid" element={<DatasheetReadOnly />} />
+                  <Route path="/candidatos/:uid/:cuestionarioId" element={<PaginaCuestionario />} />
+                  <Route path="/seguimiento-candidatos/:uid" element={<Seguimiento />} />
+                  <Route path="/seguimiento-candidatos" element={<NavegacionSeguimiento />} />
                   <Route path="/dashboard/*" element={<NotFound />} />
                   <Route path="/profile" element={<Profile />} />
-                  <Route
-                    path="/candidatos/crear"
-                    element={<CandidateCreate />}
-                  />
-                  <Route
-                    path="/candidatos/editar/:uid"
-                    element={<CandidateEdit />}
-                  />
-                  <Route
-                    path="/candidatos/historial-apoyos/:uid"
-                    element={<CandidateAidHistory />}
-                  />
-                  <Route
-                    path="/candidatos/historial-empleos/:uid"
-                    element={<CandidateJobHistory />}
-                  />
-                  <Route
-                    path="/candidatos/proyecto-vida/:uid"
-                    element={<ProyectoDeVidaSeguimiento />}
-                  />
+                  <Route path="/candidatos/crear" element={<CandidateCreate />} />
+                  <Route path="/candidatos/editar/:uid" element={<CandidateEdit />} />
+                  <Route path="/candidatos/historial-apoyos/:uid" element={<CandidateAidHistory />} />
+                  <Route path="/candidatos/historial-empleos/:uid" element={<CandidateJobHistory />} />
+                  <Route path="/candidatos/proyecto-vida/:uid" element={<ProyectoDeVidaSeguimiento />} />
                   <Route path="/discapacidades" element={<Disabilities />} />
-                  <Route
-                    path="/apoyos/evaluacion-diagnostica"
-                    element={<TechnicalAids />}
-                  />
+                  <Route path="/apoyos/evaluacion-diagnostica" element={<TechnicalAids />} />
                   <Route path="/apoyos/SIS" element={<SISAids />} />
-                  <Route
-                    path="/apoyos/cuadro-habilidades"
-                    element={<CHAids />}
-                  />
+                  <Route path="/apoyos/cuadro-habilidades" element={<CHAids />} />
                   <Route path="/configuracion" element={<Settings />} />
                   <Route path="/anuncios" element={<CommunicationForum />} />
                   <Route path="/comunicacion-centros" element={<CenterChat />} />
@@ -391,10 +294,7 @@ function App({ instance }) {
                     </ProtectedRoute>
                   }
                 >
-                  <Route
-                    path="/agencia-laboral"
-                    element={<AgenciaLaboralDashboard />}
-                  />
+                  <Route path="/agencia-laboral" element={<AgenciaLaboralDashboard />} />
                 </Route>
               </Routes>
               <SessionExpiredDialog

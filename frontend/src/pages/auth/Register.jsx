@@ -11,7 +11,7 @@ import {
 import MyTextField from "../../components/forms/MyTextField";
 import MyPassField from "../../components/forms/MyPassField";
 import MyButton from "../../components/forms/MyButton";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { useDispatch, useSelector } from "react-redux";
 import { registerUser } from "../../features/auth/authSlice";
@@ -50,6 +50,7 @@ const schema = yup.object({
 
 export const Register = () => {
   const dispatch = useDispatch();
+  const [searchParams] = useSearchParams();
   const { error, message } = useSelector((state) => state.auth);
   const { handleSubmit, control } = useForm({ resolver: yupResolver(schema) });
   const [ loading, setLoading ] = useState(false);
@@ -209,7 +210,7 @@ export const Register = () => {
                   alignItems: "center",
                 }}
               >
-                <Link to="/login">¿Ya tienes cuenta? Inicia sesión</Link>
+                <Link to={{ pathname: "/login", search: searchParams.toString() }}>¿Ya tienes cuenta? Inicia sesión</Link>
               </Grid>
             </Grid>
           </form>
