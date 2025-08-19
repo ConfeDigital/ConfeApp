@@ -634,7 +634,13 @@ class RespuestaUnlockedPathSerializer(serializers.ModelSerializer):
                 else:
                     datos_sis = obj.respuesta
 
-                subitems_ids = datos_sis.get("subitems", [])
+                subitems_data = datos_sis.get("subitems", [])
+                subitems_ids = []
+                for item in subitems_data:
+                    if isinstance(item, dict):
+                        subitems_ids.append(item.get('id'))
+                    else:
+                        subitems_ids.append(item)
 
                 # 🔹 Filtrar subitems desde la app discapacidad
                 subitems = SubItem.objects.filter(id__in=subitems_ids)
