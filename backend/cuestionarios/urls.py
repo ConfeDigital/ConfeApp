@@ -70,4 +70,8 @@ urlpatterns = [
     
     # Ruta para reportes de cuestionarios
     path('kiki/reportes/', views.ReporteCuestionariosView.as_view(), name='reporte_cuestionarios'),
+    
+    # Rutas para carga masiva de respuestas
+    path('carga-masiva-respuestas/', views.CargaMasivaRespuestasView.as_view(), name='carga_masiva_respuestas'),
+    path('validar-respuestas-excel/', views.ValidarRespuestasExcelView.as_view(), name='validar_respuestas_excel'),
 ]

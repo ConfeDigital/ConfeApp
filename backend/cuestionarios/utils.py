@@ -630,3 +630,221 @@ def get_resumen_cuestionarios_completo(usuario_id):
     
 
     return resumen_general
+
+def procesar_respuestas_excel(excel_file, cuestionario_nombre, nombre_column="nombre", overwrite=False):
+    """
+    Procesa un archivo Excel con respuestas a cuestionarios
+    
+    Args:
+        excel_file: Archivo Excel subido
+        cuestionario_nombre: Nombre del cuestionario
+        nombre_column: Nombre de la columna que contiene el nombre del usuario
+        overwrite: Si sobrescribir respuestas existentes
+    
+    Returns:
+        dict: Resultado del procesamiento con estadísticas
+    """
+    import pandas as pd
+    from .models import Cuestionario, Pregunta, Respuesta
+    from api.models import CustomUser
+    
+    try:
+        # Leer el archivo Excel
+        df = pd.read_excel(excel_file)
+        
+        # Validar que existe la columna de nombre
+        if nombre_column not in df.columns:
+            raise ValueError(f"La columna '{nombre_column}' no existe en el archivo")
+        
+        # Obtener el cuestionario por nombre
+        try:
+            cuestionario = Cuestionario.objects.get(nombre=cuestionario_nombre, activo=True)
+        except Cuestionario.DoesNotExist:
+            raise ValueError(f"No existe un cuestionario activo con nombre '{cuestionario_nombre}'")
+        
+        # Obtener todas las preguntas del cuestionario
+        preguntas = Pregunta.objects.filter(cuestionario=cuestionario)
+        pregunta_map = {pregunta.texto: pregunta for pregunta in preguntas}
+        
+        # Estadísticas
+        stats = {
+            'total_filas': len(df),
+            'usuarios_encontrados': 0,
+            'usuarios_no_encontrados': 0,
+            'respuestas_creadas': 0,
+            'respuestas_actualizadas': 0,
+            'respuestas_ignoradas': 0,
+            'errores': [],
+            'coincidencias_similitud': []  # Para trackear las coincidencias encontradas
+        }
+        
+        # Procesar cada fila
+        for index, row in df.iterrows():
+            try:
+                # Obtener el nombre del usuario
+                nombre_completo = row[nombre_column]
+                if pd.isna(nombre_completo) or not nombre_completo:
+                    stats['errores'].append(f"Fila {index + 2}: Nombre vacío o nulo")
+                    continue
+                
+                # Buscar el usuario por nombre completo usando similitud del 80%
+                from fuzzywuzzy import fuzz
+                
+                nombre_completo_clean = str(nombre_completo).strip()
+                nombre_parts = nombre_completo_clean.split()
+                
+                # Obtener todos los usuarios para comparar
+                todos_usuarios = CustomUser.objects.all()
+                mejor_coincidencia = None
+                mejor_score = 0
+                
+                for user in todos_usuarios:
+                    # Crear nombre completo del usuario en la base de datos
+                    user_nombre_completo = f"{user.first_name} {user.last_name}".strip()
+                    if user.second_last_name:
+                        user_nombre_completo += f" {user.second_last_name}"
+                    
+                    # Calcular similitud
+                    score = fuzz.ratio(nombre_completo_clean.lower(), user_nombre_completo.lower())
+                    
+                    # Si el score es mayor al 80% y es mejor que el anterior, actualizar
+                    if score >= 80 and score > mejor_score:
+                        mejor_score = score
+                        mejor_coincidencia = user
+                
+                if mejor_coincidencia:
+                    usuario = mejor_coincidencia
+                    stats['coincidencias_similitud'].append({
+                        'nombre_excel': nombre_completo_clean,
+                        'nombre_bd': f"{mejor_coincidencia.first_name} {mejor_coincidencia.last_name}",
+                        'similitud': mejor_score
+                    })
+                    print(f"DEBUG: Usuario encontrado con {mejor_score}% de similitud: '{nombre_completo_clean}' -> '{mejor_coincidencia.first_name} {mejor_coincidencia.last_name}'")
+                else:
+                    stats['usuarios_no_encontrados'] += 1
+                    stats['errores'].append(f"Fila {index + 2}: Usuario con nombre '{nombre_completo_clean}' no encontrado (mejor coincidencia < 80%)")
+                    continue
+                    
+                stats['usuarios_encontrados'] += 1
+                
+                # Procesar cada columna (excepto la de nombre)
+                for columna in df.columns:
+                    if columna == nombre_column:
+                        continue
+                    
+                    valor = row[columna]
+                    if pd.isna(valor) or valor == '':
+                        continue
+                    
+                    # Buscar la pregunta por texto
+                    pregunta = pregunta_map.get(columna)
+                    if not pregunta:
+                        stats['errores'].append(f"Fila {index + 2}: Pregunta '{columna}' no encontrada en el cuestionario")
+                        continue
+                    
+                    # Verificar si ya existe una respuesta
+                    respuesta_existente = Respuesta.objects.filter(
+                        cuestionario=cuestionario,
+                        pregunta=pregunta,
+                        usuario=usuario
+                    ).first()
+                    
+                    if respuesta_existente:
+                        if overwrite:
+                            # Actualizar respuesta existente
+                            respuesta_existente.respuesta = valor
+                            respuesta_existente.save()
+                            stats['respuestas_actualizadas'] += 1
+                        else:
+                            # Ignorar respuesta existente
+                            stats['respuestas_ignoradas'] += 1
+                    else:
+                        # Crear nueva respuesta
+                        Respuesta.objects.create(
+                            cuestionario=cuestionario,
+                            pregunta=pregunta,
+                            usuario=usuario,
+                            respuesta=valor
+                        )
+                        stats['respuestas_creadas'] += 1
+                        
+            except Exception as e:
+                stats['errores'].append(f"Fila {index + 2}: Error - {str(e)}")
+        
+        return stats
+        
+    except Exception as e:
+        raise ValueError(f"Error procesando el archivo: {str(e)}")
+
+def validar_formato_respuestas_excel(excel_file, cuestionario_nombre, nombre_column="nombre"):
+    """
+    Valida el formato del archivo Excel antes de procesarlo
+    
+    Args:
+        excel_file: Archivo Excel a validar
+        cuestionario_nombre: Nombre del cuestionario
+        nombre_column: Nombre de la columna de nombre
+    
+    Returns:
+        dict: Información de validación
+    """
+    import pandas as pd
+    from .models import Cuestionario, Pregunta
+    
+    try:
+        # Leer el archivo Excel
+        df = pd.read_excel(excel_file)
+        
+        # Validaciones básicas
+        validacion = {
+            'valido': True,
+            'errores': [],
+            'advertencias': [],
+            'info': {
+                'total_filas': len(df),
+                'total_columnas': len(df.columns),
+                'columnas_encontradas': list(df.columns),
+                'preguntas_cuestionario': [],
+                'preguntas_no_encontradas': []
+            }
+        }
+        
+        # Verificar que existe la columna de nombre
+        if nombre_column not in df.columns:
+            validacion['valido'] = False
+            validacion['errores'].append(f"La columna '{nombre_column}' no existe en el archivo")
+        
+        # Obtener el cuestionario por nombre
+        try:
+            cuestionario = Cuestionario.objects.get(nombre=cuestionario_nombre, activo=True)
+            validacion['info']['cuestionario'] = f"{cuestionario.nombre} (v{cuestionario.version})"
+        except Cuestionario.DoesNotExist:
+            validacion['valido'] = False
+            validacion['errores'].append(f"No existe un cuestionario activo con nombre '{cuestionario_nombre}'")
+            return validacion
+        
+        # Obtener preguntas del cuestionario
+        preguntas = Pregunta.objects.filter(cuestionario=cuestionario)
+        pregunta_textos = [p.texto for p in preguntas]
+        validacion['info']['preguntas_cuestionario'] = pregunta_textos
+        
+        # Verificar qué columnas corresponden a preguntas
+        for columna in df.columns:
+            if columna != nombre_column and columna not in pregunta_textos:
+                validacion['info']['preguntas_no_encontradas'].append(columna)
+                validacion['advertencias'].append(f"La columna '{columna}' no corresponde a ninguna pregunta del cuestionario")
+        
+        # Verificar qué preguntas no están en el Excel
+        preguntas_faltantes = [p for p in pregunta_textos if p not in df.columns]
+        if preguntas_faltantes:
+            validacion['advertencias'].append(f"Las siguientes preguntas del cuestionario no están en el Excel: {', '.join(preguntas_faltantes)}")
+        
+        return validacion
+        
+    except Exception as e:
+        return {
+            'valido': False,
+            'errores': [f"Error validando el archivo: {str(e)}"],
+            'advertencias': [],
+            'info': {}
+        }

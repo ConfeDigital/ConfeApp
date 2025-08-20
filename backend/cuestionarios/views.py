@@ -41,6 +41,7 @@ from .serializers import (
     CuestionarioDesbloqueosSerializer, BaseCuestionariosSerializer,
     RespuestaDesbloqueadaSerializer, RespuestaUnlockedPathSerializer,
     RespuestaSISSerializer, ResumenSISSerializer, ReporteCuestionariosSerializer,
+    BulkRespuestasUploadSerializer, RespuestaBulkSerializer,
     PreguntaImagenSerializer,
 )
 
@@ -50,7 +51,9 @@ from .utils import (
     descargar_plantilla_cuestionario,
     get_resumen_sis,
     get_user_evaluation_summary,
-    validar_columnas_excel
+    validar_columnas_excel,
+    procesar_respuestas_excel,
+    validar_formato_respuestas_excel
 )
 
 
@@ -1755,3 +1758,139 @@ class CuestionariosConRespuestasView(APIView):
         
         print(f"✅ Total base_cuestionarios procesados: {len(resultado)}")
         return Response(resultado, status=status.HTTP_200_OK)
+
+class CargaMasivaRespuestasView(APIView):
+    """
+    Vista para carga masiva de respuestas a cuestionarios
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        """
+        Procesa un archivo Excel con respuestas a cuestionarios
+        """
+        print("DEBUG: Iniciando procesamiento de carga masiva")
+        try:
+            # Validar datos de entrada
+            print("DEBUG: Validando datos de entrada")
+            serializer = BulkRespuestasUploadSerializer(data=request.data)
+            if not serializer.is_valid():
+                print("DEBUG: Error en validación del serializer:", serializer.errors)
+                return Response({
+                    'error': 'Datos inválidos',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            excel_file = serializer.validated_data['excel_file']
+            cuestionario_nombre = serializer.validated_data['cuestionario_nombre']
+            nombre_column = serializer.validated_data['nombre_column']
+            overwrite = serializer.validated_data['overwrite']
+            
+            print(f"DEBUG: Datos recibidos - cuestionario: {cuestionario_nombre}, columna: {nombre_column}, overwrite: {overwrite}")
+            
+            # Validar formato del archivo
+            validacion = validar_formato_respuestas_excel(
+                excel_file, 
+                cuestionario_nombre, 
+                nombre_column
+            )
+            
+            if not validacion['valido']:
+                return Response({
+                    'error': 'Archivo inválido',
+                    'validation': validacion
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Procesar el archivo
+            print("DEBUG: Iniciando procesamiento del archivo")
+            stats = procesar_respuestas_excel(
+                excel_file,
+                cuestionario_nombre,
+                nombre_column,
+                overwrite
+            )
+            
+            print("DEBUG: Procesamiento completado, estadísticas:", stats)
+            return Response({
+                'success': True,
+                'message': 'Archivo procesado correctamente',
+                'stats': stats,
+                'validation': validacion
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': 'Error procesando el archivo',
+                'details': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    
+    def get(self, request):
+        """
+        Obtiene información sobre cuestionarios disponibles para carga masiva
+        """
+        try:
+            from .models import Cuestionario
+            
+            cuestionarios = Cuestionario.objects.filter(activo=True).select_related('base_cuestionario')
+            
+            cuestionarios_info = []
+            for cuestionario in cuestionarios:
+                preguntas = cuestionario.preguntas.all()
+                cuestionarios_info.append({
+                    'id': cuestionario.id,
+                    'nombre': cuestionario.nombre,
+                    'version': cuestionario.version,
+                    'base_cuestionario': cuestionario.base_cuestionario.nombre,
+                    'total_preguntas': preguntas.count(),
+                    'preguntas': [p.texto for p in preguntas]
+                })
+            
+            return Response({
+                'cuestionarios': cuestionarios_info
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': 'Error obteniendo información de cuestionarios',
+                'details': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class ValidarRespuestasExcelView(APIView):
+    """
+    Vista para validar el formato de un archivo Excel antes de procesarlo
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        """
+        Valida el formato de un archivo Excel con respuestas
+        """
+        try:
+            # Validar datos de entrada
+            serializer = BulkRespuestasUploadSerializer(data=request.data)
+            if not serializer.is_valid():
+                return Response({
+                    'error': 'Datos inválidos',
+                    'details': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            excel_file = serializer.validated_data['excel_file']
+            cuestionario_nombre = serializer.validated_data['cuestionario_nombre']
+            nombre_column = serializer.validated_data['nombre_column']
+            
+            # Validar formato del archivo
+            validacion = validar_formato_respuestas_excel(
+                excel_file, 
+                cuestionario_nombre, 
+                nombre_column
+            )
+            
+            return Response({
+                'validation': validacion
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'error': 'Error validando el archivo',
+                'details': str(e)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
