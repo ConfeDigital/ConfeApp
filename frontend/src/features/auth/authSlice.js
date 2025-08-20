@@ -43,11 +43,6 @@ export const loginUser = createAsyncThunk(
         user: userResponse.data,
       };
     } catch (error) {
-      // If error.response is undefined, use error.message
-      // const errMsg =
-      //   error.response && error.response.data
-      //     ? error.response.data
-      //     : error.message || "Error en el inicio de sesión";
       const errMsg = "Email o contraseña son incorrectos";
       return thunkAPI.rejectWithValue(errMsg);
     }
@@ -257,6 +252,11 @@ const authSlice = createSlice({
     setLoading(state) {
       state.isLoading = true;
     },
+    // New reducer to clear feedback messages and errors
+    clearFeedback: (state) => {
+      state.error = null;
+      state.message = "";
+    },
   },
   extraReducers: (builder) => {
     // Update user attributes
@@ -356,5 +356,6 @@ export const {
   setUnauthenticated,
   setUser,
   setLoading,
+  clearFeedback, // Make sure to export the new action
 } = authSlice.actions;
 export default authSlice.reducer;

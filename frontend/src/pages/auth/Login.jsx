@@ -14,6 +14,7 @@ import { useMsal } from "@azure/msal-react";
 import MicrosoftIcon from "@mui/icons-material/Microsoft";
 import { loginRequest } from "../../auth-config";
 import "../../styles/Form.css";
+import { use } from "react";
 
 const schema = yup.object({
   email: yup.string().email("Se espera una dirección de correo electrónico").required("El correo electrónico es obligatorio"),
@@ -25,10 +26,16 @@ const Login = () => {
   const dispatch = useDispatch();
   const { instance } = useMsal();
   const { handleSubmit, control } = useForm({ resolver: yupResolver(schema) });
-  const { message, error } = useSelector((state) => state.auth);
+  const { message, error, isAuthenticated } = useSelector((state) => state.auth);
   const [loading, setLoading] = useState(false);
 
   const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard");
+    }
+  }, [])
 
   // Helper to format messages (if error is an object)
   const formatMessage = (msg) => {

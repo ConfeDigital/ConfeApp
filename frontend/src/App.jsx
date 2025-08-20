@@ -63,6 +63,7 @@ import CandidateDatasheet from "./pages/candidatos/CandidateDatasheet";
 import CandidateDashboard from "./pages/candidatos/CandidateDashboard";
 import Preentrevista from "./pages/cuestionarios/Preentrevista";
 import CargaMasivaCandidatos from "./pages/scenes/cargaMasivaCandidatos";
+import CargaMasivaRespuestas from "./pages/scenes/CargaMasivaRespuestas";
 import CandidateAidHistory from "./pages/scenes/CandidateAidHistory";
 import CandidateJobHistory from "./pages/scenes/CandidateJobHistory";
 import TablasEquivalencia from "./pages/tablas_de_equivalencia/TablasEquivalencia";
@@ -228,6 +229,10 @@ function App({ instance }) {
                   <Route path="/tablas-de-equivalencia/:id" element={<TablaDetalle />} />
                   <Route path="/panel-de-administracion" element={<AdminPanel />} />
                   <Route path="/cargaMasiva" element={<CargaMasivaCandidatos />} />
+                  <Route
+                    path="/carga-masiva-respuestas"
+                    element={<CargaMasivaRespuestas />}
+                  />
                   <Route path="/administracion-agencia" element={<AdminAgencia />} />
                 </Route>
 

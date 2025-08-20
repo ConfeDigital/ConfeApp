@@ -816,3 +816,56 @@ class ReporteCuestionariosSerializer(serializers.ModelSerializer):
             'valor_original': obj.respuesta
         }
     
+
+class BulkRespuestasUploadSerializer(serializers.Serializer):
+    """
+    Serializer para carga masiva de respuestas a cuestionarios
+    """
+    # Campo para el archivo Excel
+    excel_file = serializers.FileField(
+        help_text="Archivo Excel con respuestas a cuestionarios"
+    )
+    
+    # Campo para especificar el cuestionario por nombre
+    cuestionario_nombre = serializers.CharField(
+        help_text="Nombre del cuestionario al que pertenecen las respuestas"
+    )
+    
+    # Campo para especificar la columna del nombre del usuario
+    nombre_column = serializers.CharField(
+        default="nombre",
+        help_text="Nombre de la columna que contiene el nombre completo del usuario"
+    )
+    
+    # Campo para especificar si sobrescribir respuestas existentes
+    overwrite = serializers.BooleanField(
+        default=False,
+        help_text="Si es True, sobrescribe respuestas existentes. Si es False, las ignora."
+    )
+
+class RespuestaBulkSerializer(serializers.ModelSerializer):
+    """
+    Serializer para crear respuestas individuales en la carga masiva
+    """
+    class Meta:
+        model = Respuesta
+        fields = ['cuestionario', 'pregunta', 'usuario', 'respuesta']
+    
+    def validate_respuesta(self, value):
+        """
+        Validar que la respuesta sea un formato válido
+        """
+        if value is None:
+            return value
+        
+        # Si es una cadena, intentar convertirla a JSON
+        if isinstance(value, str):
+            try:
+                import json
+                return json.loads(value)
+            except json.JSONDecodeError:
+                # Si no es JSON válido, mantener como string
+                return value
+        
+        return value
+    

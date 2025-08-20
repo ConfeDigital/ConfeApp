@@ -1,5 +1,7 @@
 // ProtectedRoute.jsx
-import { useSelector } from "react-redux";
+import { useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { clearFeedback } from "../features/auth/authSlice";
 import { Navigate, useLocation } from "react-router-dom";
 import DashboardSkeleton from "./DashboardSkeleton";
 
@@ -23,12 +25,27 @@ const getDashboardPath = (userGroups) => {
 };
 
 function ProtectedRoute({ children, allowedRoles = [] }) {
+  const dispatch = useDispatch();
   const location = useLocation();
-  const { isAuthenticated, loading, user } = useSelector((state) => ({
+  const { isAuthenticated, loading, user, message, error } = useSelector((state) => ({
     isAuthenticated: state.auth.isAuthenticated,
     loading: state.auth.isLoading,
     user: state.auth.user,
+    message: state.auth.message,
+    error: state.auth.error
   }));
+
+  useEffect(() => {
+    if (message || error) {
+      // Set a timer to clear the message/error after 5 seconds
+      const timer = setTimeout(() => {
+        dispatch(clearFeedback());
+      }, 5000); // 5000 milliseconds = 5 seconds
+
+      // Cleanup function to clear the timer if the component unmounts
+      return () => clearTimeout(timer);
+    }
+  }, [message, error, dispatch]);
 
   // While loading or if user data is not fully available, show skeleton.
   if (loading || (isAuthenticated && user === null)) {
