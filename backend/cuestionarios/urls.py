@@ -43,7 +43,7 @@ urlpatterns = [
     path('descargar-plantilla/', views.DescargarPlantillaCuestionarios.as_view(), name='descargar_plantilla'),
     path('validar-columnas-excel/', views.validar_columnas_excel_view, name='validar_columnas'),
 
-    path('usuario/<int:usuario_id>/respuestas-desbloqueadas/', views.RespuestasUsuarioDesbloqueadasView.as_view(), name='respuestas_desbloqueadas'),
+    path('usuario/<uuid:usuario_id>/respuestas-desbloqueadas/', views.RespuestasUsuarioDesbloqueadasView.as_view(), name='respuestas_desbloqueadas'),
     path('usuario/respuestas-unlocked-path/', views.RespuestasUnlockedPathView.as_view(), name='respuestas_unlocked_path'),
     path('preentrevista-activo/', views.CuestionarioPreentrevistaActivo.as_view(), name='preentrevista-activo'),
     
@@ -57,10 +57,10 @@ urlpatterns = [
     path('resumen-ch/', views.ResumenCHView.as_view(), name='resumen-ch'),
 
 # Para control de versiones de cuestionarios
-    path('usuario/<int:usuario_id>/progreso-cuestionarios/', views.CuestionariosPorUsuarioView.as_view(), name='progreso_cuestionarios_usuario'),
+    path('usuario/<uuid:usuario_id>/progreso-cuestionarios/', views.CuestionariosPorUsuarioView.as_view(), name='progreso_cuestionarios_usuario'),
 
     # Nueva URL para cuestionarios con respuestas del usuario
-    path('usuario/<int:usuario_id>/cuestionarios-con-respuestas/', views.CuestionariosConRespuestasView.as_view(), name='cuestionarios_con_respuestas'),
+    path('usuario/<uuid:usuario_id>/cuestionarios-con-respuestas/', views.CuestionariosConRespuestasView.as_view(), name='cuestionarios_con_respuestas'),
 
     path('ver-imagen-pregunta/<int:pregunta_id>/', views.ver_imagen_pregunta, name='ver_imagen_pregunta'),
     path('subir-imagen-pregunta/<int:pregunta_id>/', PreguntaImagenUploadAPIView.as_view(), name='subir_imagen_pregunta'),

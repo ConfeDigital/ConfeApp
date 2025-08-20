@@ -55,12 +55,12 @@ function DashboardCandidato() {
   };
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh", background: 'linear-gradient(60deg, rgba(2, 0, 36, 1) 0%, rgba(17, 68, 129, 1) 35%, rgba(0, 212, 255, 1) 100%)' }}>
       <NavBar /> {/* Your navigation bar */}
 
       <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 4 }, maxWidth: 1200, mx: "auto", width: "100%" }}>
         {/* Welcome Section */}
-        <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 4, textAlign: "center", color: "primary.main" }}>
+        <Typography variant="h4" component="h1" gutterBottom sx={{ mb: 4, textAlign: "center", color: "white" }}>
           ¡Bienvenido/a al Panel de Candidato!
         </Typography>
 

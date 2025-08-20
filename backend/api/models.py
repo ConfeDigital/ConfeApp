@@ -1,3 +1,4 @@
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.base_user import BaseUserManager
@@ -20,6 +21,8 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 class CustomUser(AbstractUser):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+
     email = models.EmailField(max_length=200, unique=True)
     username = models.CharField(max_length=200, null=True, blank=True)
     second_last_name = models.CharField(max_length=200, null=True, blank=True, verbose_name="Apellido Materno")
