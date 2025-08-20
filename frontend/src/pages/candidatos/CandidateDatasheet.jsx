@@ -61,10 +61,10 @@ const CandidateDatasheet = () => {
   );
 
   return (
-    <Box>
+    <Box sx={{ background: 'linear-gradient(60deg, rgba(2, 0, 36, 1) 0%, rgba(17, 68, 129, 1) 35%, rgba(0, 212, 255, 1) 100%)', height: "100%" }}>
       <NavBar />
-      <Box m="20px">
-        <Header title="Tu Expediente" />
+      <Box sx={{ m: "20px" }}>
+        <Header title="Tu Expediente" titleColor="white" />
         <Paper
           elevation={3}
           sx={{ p: { xs: "20px", md: "40px" }, borderRadius: "12px" }}
