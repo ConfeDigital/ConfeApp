@@ -18,7 +18,17 @@ class CustomUserManager(BaseUserManager):
     def create_superuser(self,email, password=None, **extra_fields): 
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        return self.create_user(email, password, **extra_fields)
+        
+        user = self.create_user(email, password, **extra_fields)
+
+        try:
+            personal_group = Group.objects.get(name='personal')
+            user.groups.add(personal_group)
+            user.save()
+        except Group.DoesNotExist:
+            print("Warning: The 'personal' group does not exist.")
+            
+        return user
 
 class CustomUser(AbstractUser):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
