@@ -74,6 +74,7 @@ const Sidebar = forwardRef((props, ref) => {
         '/baseCuestionarios': 'Base Cuestionarios',
         '/tablas-de-equivalencia': 'Tablas de equivalencia',
         '/cargaMasiva': 'Carga Masiva Candidatos',
+        '/carga-masiva-respuestas': 'Carga Masiva Respuestas',
         // '/agencia-laboral': 'Gestión Agencia',
         // Add more mappings for your routes
       };
@@ -247,6 +248,12 @@ const Sidebar = forwardRef((props, ref) => {
                 <Item
                   title="Carga Masiva Candidatos"
                   to="/cargaMasiva"
+                  icon={<UploadFileTwoTone />}
+                  selected={selected}
+                />
+                <Item
+                  title="Carga Masiva Respuestas"
+                  to="/carga-masiva-respuestas"
                   icon={<UploadFileTwoTone />}
                   selected={selected}
                 />
