@@ -339,18 +339,22 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
             except Cycle.DoesNotExist:
                 pass
             
-        # Create emergency contacts (handled as before)
+        # Create emergency contacts (corrected logic)
+        created_contacts = []
         for contact_data in emergency_contacts_data:
             contact_data.pop("id", None)  # Remove id if present
             contact_domicile_data = contact_data.pop('domicile', None)
-            if contact_data.get('lives_at_same_address'):
-                contact_domicile = None
-            elif contact_domicile_data and any(contact_domicile_data.values()):
-                contact_domicile = Domicile.objects.create(**contact_domicile_data)
-            else:
-                contact_domicile = None
+            
+            contact_domicile = None
+            if not contact_data.get('lives_at_same_address') and contact_domicile_data and any(contact_domicile_data.values()):
+                 contact_domicile = Domicile.objects.create(**contact_domicile_data)
+            
             contact = EmergencyContact.objects.create(domicile=contact_domicile, **contact_data)
-            user_profile.emergency_contacts.set([contact])
+            created_contacts.append(contact)
+
+        # Attach all created contacts at once
+        if created_contacts:
+            user_profile.emergency_contacts.set(created_contacts)
     
         # --- NEW: Handle medications ---
         # medications_data is expected to be a list of dictionaries
@@ -476,23 +480,31 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
             profile.save()
 
         # Update emergency contacts (as before)
+        # Update emergency contacts (corrected logic)
         if 'emergency_contacts' in validated_data:
             emergency_contacts_data = validated_data.pop('emergency_contacts')
             if isinstance(emergency_contacts_data, str):
                 import json
                 emergency_contacts_data = json.loads(emergency_contacts_data)
+            
+            # First, clear all existing emergency contacts for the profile
             profile.emergency_contacts.all().delete()
+            
+            created_contacts = []
             for contact_data in emergency_contacts_data:
                 contact_data.pop("id", None)
                 contact_domicile_data = contact_data.pop('domicile', None)
-                if contact_data.get('lives_at_same_address'):
-                    contact_domicile = None
-                elif contact_domicile_data and any(contact_domicile_data.values()):
+                
+                contact_domicile = None
+                if not contact_data.get('lives_at_same_address') and contact_domicile_data and any(contact_domicile_data.values()):
                     contact_domicile = Domicile.objects.create(**contact_domicile_data)
-                else:
-                    contact_domicile = None
+                
                 contact = EmergencyContact.objects.create(domicile=contact_domicile, **contact_data)
-                profile.emergency_contacts.set([contact])
+                created_contacts.append(contact)
+            
+            # Then, set the relationship with the newly created contacts
+            if created_contacts:
+                profile.emergency_contacts.set(created_contacts)
 
         # --- NEW: Update medications if provided ---
         if 'medications' in validated_data:
