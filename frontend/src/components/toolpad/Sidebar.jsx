@@ -15,6 +15,7 @@ import { UploadFileTwoTone } from "@mui/icons-material";
 import DynamicFormOutlinedIcon from '@mui/icons-material/DynamicFormOutlined';
 import ForumOutlinedIcon from '@mui/icons-material/ForumOutlined';
 import SpeakerNotesOutlinedIcon from '@mui/icons-material/SpeakerNotesOutlined';
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
 import { useSelector } from "react-redux";
 
 const Item = ({ title, to, icon, selected }) => { // Removed setSelected prop
@@ -75,7 +76,8 @@ const Sidebar = forwardRef((props, ref) => {
         '/tablas-de-equivalencia': 'Tablas de equivalencia',
         '/cargaMasiva': 'Carga Masiva Candidatos',
         '/carga-masiva-respuestas': 'Carga Masiva Respuestas',
-        // '/agencia-laboral': 'Gestión Agencia',
+        '/agencia-laboral': 'Agencia Laboral',
+        '/anuncios': 'Anuncios', 
         // Add more mappings for your routes
       };
       
@@ -90,6 +92,8 @@ const Sidebar = forwardRef((props, ref) => {
         setSelected('Consulta General');
       } else if (pathname.startsWith('/seguimiento-candidatos/')) {
         setSelected('Seguimiento');
+      }else if (pathname.startsWith('/agencia-laboral')){
+        setSelected('Agencia Laboral');
       } else {
         // Optionally set a default if no match is found (e.g., 'Inicio')
         setSelected(null);
@@ -218,14 +222,15 @@ const Sidebar = forwardRef((props, ref) => {
                 selected={selected}
               />
             </SubMenu>
-            {/* <Item
-              title="Seguimiento"
-              to="/seguimiento-candidatos"
-              icon={<FollowTheSignsIcon />}
-              selected={selected}
-            /> */}
 
-            {/* Items available to admin (or staff) */}
+            {hasGroup("agencia_laboral") && (
+              <Item
+                title="Agencia Laboral"
+                to="/agencia-laboral/administracion"
+                icon={<BusinessCenterOutlinedIcon />}
+                selected={selected}
+              />
+            )}
 
             {hasGroup("admin") && (
               <>
@@ -260,15 +265,6 @@ const Sidebar = forwardRef((props, ref) => {
               </>
             )}
 
-            {/* Agencia submenu: Only show if user is in "agencia_laboral" group (or staff) */}
-            {/* {hasGroup("agencia_laboral") && (
-              <Item
-                title="Agencia Laboral"
-                to="/agencia-laboral"
-                icon={<WorkOutlineIcon />}
-                selected={selected}
-              />
-            )} */}
             <Item
               title="Anuncios"
               to="/anuncios"

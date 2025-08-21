@@ -11,7 +11,7 @@ class LocationViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Location.objects.select_related('company').all()
-        if not self.request.user.is_staff:
+        if not self.request.user.is_staff and not self.request.user.groups.filter(name='agencia_laboral').exists():
             qs = qs.filter(company=self.request.user.employer.company)
         return qs
 
@@ -23,7 +23,7 @@ class CompanyViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Company.objects.all()
-        if not self.request.user.is_staff:
+        if not self.request.user.is_staff and not self.request.user.groups.filter(name='agencia_laboral').exists():
             # employer only sees their own company
             qs = qs.filter(pk=self.request.user.employer.company_id)
         return qs
@@ -48,7 +48,7 @@ class EmployerViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Employer.objects.select_related('user','company').all()
-        if not self.request.user.is_staff:
+        if not self.request.user.is_staff and not self.request.user.groups.filter(name='agencia_laboral').exists():
             qs = qs.filter(company=self.request.user.employer.company)
         return qs
     

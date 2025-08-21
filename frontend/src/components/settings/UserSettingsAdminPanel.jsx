@@ -461,10 +461,10 @@ export default function UserSettingsAdminPanel() {
                                     <Checkbox checked />
                                     <ListItemText primary="Personal" />
                                 </MenuItem>
-                                {/* <MenuItem value="agencia_laboral">
+                                <MenuItem value="agencia_laboral">
                                     <Checkbox checked={formData.groups_names.includes('agencia_laboral')} />
                                     <ListItemText primary="Agencia Laboral" />
-                                </MenuItem> */}
+                                </MenuItem>
                                 <MenuItem value="gerente" disabled={(hasGroup(editingUser, "gerente") && !currentUser.is_staff)}>
                                     <Checkbox checked={formData.groups_names.includes('gerente')} />
                                     <ListItemText primary="Gerente" />

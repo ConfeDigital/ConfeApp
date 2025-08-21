@@ -229,11 +229,7 @@ function App({ instance }) {
                   <Route path="/tablas-de-equivalencia/:id" element={<TablaDetalle />} />
                   <Route path="/panel-de-administracion" element={<AdminPanel />} />
                   <Route path="/cargaMasiva" element={<CargaMasivaCandidatos />} />
-                  <Route
-                    path="/carga-masiva-respuestas"
-                    element={<CargaMasivaRespuestas />}
-                  />
-                  <Route path="/administracion-agencia" element={<AdminAgencia />} />
+                  <Route path="/carga-masiva-respuestas" element={<CargaMasivaRespuestas />} />
                 </Route>
 
                 <Route
@@ -299,7 +295,9 @@ function App({ instance }) {
                     </ProtectedRoute>
                   }
                 >
-                  <Route path="/agencia-laboral" element={<AgenciaLaboralDashboard />} />
+                  <Route path="/agencia-laboral/dashboard" element={<AgenciaLaboralDashboard />} />
+                  <Route path="/agencia-laboral/empleo/:jobId" element={<JobCandidatesPage />} />
+                  <Route path="/agencia-laboral/administracion" element={<AdminAgencia />} />
                 </Route>
               </Routes>
               <SessionExpiredDialog

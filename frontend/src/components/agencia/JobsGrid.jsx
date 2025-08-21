@@ -1,19 +1,20 @@
 // components/agencia/JobsDataGrid.jsx
 import React, { useState } from 'react';
 import { DataGrid, GridToolbarContainer, GridToolbarQuickFilter, GridToolbar } from '@mui/x-data-grid';
-import { IconButton, Tooltip, Typography, Box, ToggleButton, ToggleButtonGroup, CircularProgress, Button } from '@mui/material';
-import { Edit, Delete, Map as MapIcon, GridOn as GridIcon } from '@mui/icons-material';
+import { Tooltip, Typography, Box, ToggleButton, ToggleButtonGroup, CircularProgress, Button } from '@mui/material';
+import { Map as MapIcon, GridOn as GridIcon } from '@mui/icons-material';
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const mapContainerStyle = { width: '100%', height: '64vh' };
 const defaultCenter = { lat: 19.43, lng: -99.13 };  // fallback center
 
-export default function JobsDataGrid({ rows, onEdit, onDelete, companyNameVisibility }) {
+export default function JobsDataGrid({ rows, companyNameVisibility }) {
   const [view, setView] = useState('grid');
   const [selected, setSelected] = useState(null);
 
   const navigate = useNavigate();
+  const location = useLocation();
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
@@ -58,27 +59,6 @@ export default function JobsDataGrid({ rows, onEdit, onDelete, companyNameVisibi
     },
     { field: 'job_description', headerName: 'Descripción', flex: 1.5, minWidth: 250 },
     { field: 'vacancies', headerName: 'Vacantes', type: 'number', width: 100 },
-    // {
-    //   field: 'actions',
-    //   headerName: 'Acciones',
-    //   width: 100,
-    //   sortable: false,
-    //   filterable: false,
-    //   renderCell: (params) => (
-    //     <>
-    //       <Tooltip title="Editar">
-    //         <IconButton onClick={() => onEdit(params.row)}>
-    //           <Edit color="primary" />
-    //         </IconButton>
-    //       </Tooltip>
-    //       <Tooltip title="Eliminar">
-    //         <IconButton onClick={() => onDelete(params.row.id)}>
-    //           <Delete color="error" />
-    //         </IconButton>
-    //       </Tooltip>
-    //     </>
-    //   )
-    // }
   ];
 
   function CustomToolbar() {
@@ -113,7 +93,12 @@ export default function JobsDataGrid({ rows, onEdit, onDelete, companyNameVisibi
     .filter(Boolean);
 
   const handleRowClick = (params) => {
-    navigate(`/empleador/empleo/${params.row.id}`);
+    if(location.pathname === '/empleador'){
+      navigate(`/empleador/empleo/${params.row.id}`);
+    } else {
+      navigate(`/agencia-laboral/empleo/${params.row.id}`);
+    }
+    
   };
 
   if (view === 'map') {
@@ -151,20 +136,14 @@ export default function JobsDataGrid({ rows, onEdit, onDelete, companyNameVisibi
             >
               <Box>
                 <Typography><strong>{selected.name}</strong></Typography>
-                {/* <Button
-                  size="small"
-                  onClick={() => {
-                    const job = rows.find(r => r.id === selected.id);
-                    onEdit(job);
-                  }}
-                  endIcon={<Edit/>}
-                >
-                  Editar
-                </Button> */}
                 <Button
                   size="small"
                   onClick={() => {
-                    navigate(`/empleador/empleo/${selected.id}`);
+                    if(location.pathname === '/empleador'){
+                      navigate(`/empleador/empleo/${selected.id}`);
+                    } else {
+                      navigate(`/agencia-laboral/empleo/${selected.id}`);
+                    }
                   }}
                 >
                   Ver Empleo

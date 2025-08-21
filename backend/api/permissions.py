@@ -141,7 +141,7 @@ class IsEmployer(permissions.BasePermission):
     Only staff or users in the 'empleador' group (i.e. has an Employer)
     """
     def has_permission(self, request, view):
-        return request.user.is_staff or hasattr(request.user, 'employer')
+        return request.user.is_staff or hasattr(request.user, 'employer') or request.user.groups.filter(name='agencia_laboral').exists()
     
 class IsEmployerOrReadOnly(permissions.BasePermission):
     """
@@ -156,7 +156,7 @@ class IsEmployerOrReadOnly(permissions.BasePermission):
 
         # For other methods (POST, PUT, PATCH, DELETE),
         # require staff status or an 'employer' attribute
-        return request.user.is_staff or hasattr(request.user, 'employer')
+        return request.user.is_staff or hasattr(request.user, 'employer') or request.user.groups.filter(name='agencia_laboral').exists()
 
 class WorksInSameCompany(permissions.BasePermission):
     """

@@ -13,7 +13,6 @@ import ArrowBackIosNewIcon from '@mui/icons-material/ArrowBackIosNew';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ManageAccountsOutlinedIcon from '@mui/icons-material/ManageAccountsOutlined';
 import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettingsOutlined';
-import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
 // NEW: Import the CheckCircleOutlineIcon for the "mark as read" button
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
@@ -261,10 +260,6 @@ const Topbar = () => {
               <MenuItem onClick={handleMenuClose} component={Link} to="/panel-de-administracion">
                 <AdminPanelSettingsOutlinedIcon sx={{ mr: 1 }} />
                 Panel de Administración
-              </MenuItem>
-              <MenuItem onClick={handleMenuClose} component={Link} to="/administracion-agencia">
-                <BusinessCenterOutlinedIcon sx={{ mr: 1 }} />
-                Administración de Agencia
               </MenuItem>
             </>
           )}
