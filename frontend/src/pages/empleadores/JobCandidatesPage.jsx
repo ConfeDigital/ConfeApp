@@ -1,6 +1,6 @@
 // src/pages/JobCandidatesPage.jsx
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import axios from '../../api'; // Assuming your axios instance is configured
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
@@ -54,6 +54,7 @@ const JobCandidatesPage = () => {
     useDocumentTitle('Candidatos Asignados al Empleo');
     const theme = useTheme();
     const navigate = useNavigate();
+    const location = useLocation();
     const { jobId } = useParams(); // Get the job ID from the URL
 
     const [jobData, setJobData] = useState(null);
@@ -255,7 +256,17 @@ const JobCandidatesPage = () => {
 
     // Button to navigate back to the jobs page
     const actionBtn = (
-        <Button variant="outlined" onClick={() => navigate('/empleador')}>
+        <Button 
+            variant="outlined" 
+            onClick={() => {
+                if (location.pathname === `/empleador/empleo/${jobId}` ) {
+                    navigate('/empleador');
+                } else {
+                    navigate('/agencia-laboral/administracion');
+                }
+                console.log(location.pathname)
+            }
+        }>
             Volver a Empleos
         </Button>
     );

@@ -39,7 +39,10 @@ class Job(models.Model):
     vacancies = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
-        return f"{self.company.name} - {self.name}"
+        if self.company:
+            return f"{self.company.name} - {self.name}"
+        else:
+            return f"Sin compañía - {self.name}"
 
 class Employer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, primary_key=True)
@@ -47,5 +50,8 @@ class Employer(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     
     def __str__(self):
-        company_name_str = f"{self.company.name} - " if self.company else ""
-        return f"{company_name_str} - {self.user.first_name} {self.user.last_name}"
+        if self.company:
+            company_name_str = f"{self.company.name} - " if self.company else ""
+            return f"{company_name_str} - {self.user.first_name} {self.user.last_name}"
+        else:
+            return f"Sin compañia - {self.user.first_name} {self.user.last_name}"

@@ -181,7 +181,7 @@ class UserProfile(models.Model):
 
     emergency_contacts = models.ManyToManyField(EmergencyContact, blank=True)
 
-    agency_state = models.CharField(max_length=3, choices=AGENCY_STATE_CHOICES, default='Bol', null=True, blank=True)
+    agency_state = models.CharField(max_length=3, choices=AGENCY_STATE_CHOICES, default='Bol')
     current_job = models.ForeignKey(Job, on_delete=models.SET_NULL, null=True, blank=True)
 
     history = HistoricalRecords()

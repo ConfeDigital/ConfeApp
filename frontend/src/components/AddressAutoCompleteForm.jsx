@@ -202,7 +202,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
               name={`${prefix}.address_PC`}
               control={control}
               render={({ field }) => (
-                <TextField {...field} disabled={!addressLat || !addressLng || disabled} fullWidth label="Código Postal" margin="dense" error={!!errors?.address_PC} helperText={errors?.address_PC?.message} />
+                <TextField {...field} disabled={!addressLat || !addressLng || disabled} fullWidth label="Código Postal" margin="dense" error={!!errors?.address_PC} helperText={errors?.address_PC?.message} slotProps={{ htmlInput: { maxLength: 5 } }}/>
               )}
             />
           </Grid>
