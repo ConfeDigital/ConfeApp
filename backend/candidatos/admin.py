@@ -9,8 +9,15 @@ class CycleAdmin(admin.ModelAdmin):
 class CandidateAdmin(admin.ModelAdmin):
     list_display = ['user.id', 'user.email', 'user.username']
 
+class UserProfileInline(admin.TabularInline):
+    model = EmergencyContact.userprofile_set.through
+    extra = 1
+    verbose_name = "Related User"
+    verbose_name_plural = "Related Users"
+
 class EmergencyContactAdmin(admin.ModelAdmin):
     list_display = ['id', 'first_name', 'last_name', 'second_last_name']
+    inlines = [UserProfileInline] # Add the inline here
 
 class DomicileAdmin(admin.ModelAdmin):
     list_display = ['id', 'address_road', 'address_number']
