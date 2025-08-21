@@ -2,8 +2,8 @@ import * as yup from 'yup';
 
 // Schema for individual medication entries
 const medicationSchema = yup.object().shape({
-  name: yup.string().required('El nombre del medicamento es obligatorio'),
-  dose: yup.string().nullable(),
+  name: yup.string().max(100, 'El nombre del medicamento es demasiado largo').required('El nombre del medicamento es obligatorio'),
+  dose: yup.string().max(100, 'La dosis es demasiado larga').nullable(),
   reason: yup.string().nullable(),
 });
 
