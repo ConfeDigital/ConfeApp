@@ -151,7 +151,7 @@ function DashboardCandidato() {
           </Grid>
 
           {/* File Upload Card */}
-          <Grid item xs={12} md={6}>
+          {/* <Grid item xs={12} md={6}>
             <Card
               elevation={4}
               sx={{
@@ -202,7 +202,7 @@ function DashboardCandidato() {
                 </Box>
               </CardContent>
             </Card>
-          </Grid>
+          </Grid> */}
         </Grid>
       </Box>
 
