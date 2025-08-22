@@ -177,7 +177,7 @@ class UserProfile(models.Model):
         #validators=[RegexValidator(r'^\+?1?\d{9,15}$', 'Enter a valid phone number.')]
     )
     
-    domicile = models.ForeignKey(Domicile, on_delete=models.SET_NULL, null=True, blank=True)
+    domicile = models.OneToOneField(Domicile, on_delete=models.SET_NULL, null=True, blank=True)
 
     emergency_contacts = models.ManyToManyField(EmergencyContact, blank=True)
 
@@ -212,29 +212,11 @@ class TAidCandidateHistory(models.Model):
     comments = models.TextField(null=True, blank=True)
 
     class Meta:
-        verbose_name = 'Technical(Evaluación Diagnóstica) Aid History'
+        verbose_name = 'Aid History - Technical(Evaluación Diagnóstica)'
 
     def __str__(self):
         return f"{self.candidate.user.first_name} {self.candidate.user.last_name} {self.candidate.user.second_last_name} - ({self.start_date} to {self.end_date or 'Present'})"
 
-# class SISAidCandidateHistory(models.Model):
-#     candidate = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
-#     aid = models.ForeignKey(SISHelp, on_delete=models.SET_NULL, null=True, blank=True)
-
-#     is_active = models.BooleanField(default=True)
-#     start_date = models.DateField(null=True, blank=True)
-#     end_date = models.DateField(null=True, blank=True)
-
-#     is_successful = models.BooleanField(null=True)
-#     comments = models.TextField(null=True, blank=True)
-
-#     class Meta:
-#         verbose_name = 'SIS Aid History'
-    
-#     def __str__(self):
-#         return f"{self.candidate.user.first_name} {self.candidate.user.last_name} {self.candidate.user.second_last_name} - {self.aid.sis_aid.sub_item} ({self.start_date} to {self.end_date or 'Present'})"
-
-############################  Prueba de cambio de Kaki a Kuki #############################
 
 class SISAidCandidateHistory(models.Model):
     candidate = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
@@ -272,7 +254,7 @@ class SISAidCandidateHistory(models.Model):
     history = HistoricalRecords()
 
     class Meta:
-        verbose_name = 'SIS Aid History'
+        verbose_name = 'Aid History - SIS'
         # ordering = ['-fecha_sesion']
         indexes = [
             models.Index(fields=['candidate']),
@@ -306,7 +288,7 @@ class CHAidCandidateHistory(models.Model):
     comments = models.TextField(null=True, blank=True)
 
     class Meta:
-        verbose_name = 'CH(Cuadro de Habilidades) Aid History'
+        verbose_name = 'Aid History - Cuadro de Habilidades'
     
     def __str__(self):
         return f"{self.candidate.user.first_name} {self.candidate.user.last_name} {self.candidate.user.second_last_name} - ({self.start_date} to {self.end_date or 'Present'})"
