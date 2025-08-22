@@ -4,10 +4,30 @@ from simple_history.admin import SimpleHistoryAdmin # type: ignore
 
 # Register your models here.
 class CycleAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name']
+    list_display = ['name', 'start_date', 'end_date', 'center']
+    list_filter = ['center']
 
-class CandidateAdmin(admin.ModelAdmin):
-    list_display = ['user.id', 'user.email', 'user.username']
+class CandidateAdmin(SimpleHistoryAdmin):
+    list_display = [
+        'user_id', 
+        'user_email', 
+        'full_name', 
+        'cycle',
+    ]
+    list_filter = ['user__center', 'cycle'] # Corrected: use a double-underscore lookup
+    search_fields = ('user_email', 'full_name',)
+
+    def user_id(self, obj):
+        return obj.user.id
+    user_id.short_description = 'User ID'
+
+    def user_email(self, obj):
+        return obj.user.email
+    user_email.short_description = 'Email'
+
+    def full_name(self, obj):
+        return f"{obj.user.first_name} {obj.user.last_name} {obj.user.second_last_name or ''}".strip()
+    full_name.short_description = 'Full Name'
 
 class UserProfileInline(admin.TabularInline):
     model = EmergencyContact.userprofile_set.through
@@ -16,11 +36,24 @@ class UserProfileInline(admin.TabularInline):
     verbose_name_plural = "Related Users"
 
 class EmergencyContactAdmin(admin.ModelAdmin):
-    list_display = ['id', 'first_name', 'last_name', 'second_last_name']
-    inlines = [UserProfileInline] # Add the inline here
+    list_display = ['id', 'full_name', 'candidate_list', 'relationship']
+    list_filter = []
+    inlines = [UserProfileInline]
+
+    def full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name} {obj.second_last_name or ''}".strip()
+    full_name.short_description = 'Full Name'
+
+    def candidate_list(self, obj):
+        return ", ".join([profile.user.email for profile in obj.userprofile_set.all()])
+    candidate_list.short_description = "Related Candidates"
 
 class DomicileAdmin(admin.ModelAdmin):
-    list_display = ['id', 'address_road', 'address_number']
+    list_display = ['id', 'address_road', 'address_number', 'address_municip', 'address_city', 'user_email']
+
+    def user_email(self, obj):
+        return obj.userprofile.user.email
+    user_email.short_description = 'Candidate'
 
 @admin.register(SISAidCandidateHistory)
 class SISAidCandidateHistoryAdmin(admin.ModelAdmin):
@@ -40,10 +73,15 @@ class SISAidCandidateHistoryAdmin(admin.ModelAdmin):
     search_fields = ('candidate__user__email', 'item', 'subitem', 'aid__sis_aid__descripcion')
     ordering = ('-start_date',)
 
+class JobHistoryAdmin(admin.ModelAdmin):
+    list_display = ('candidate', 'job', 'start_date', 'end_date')
+    list_filter = ('job', 'start_date', 'end_date')
+    search_fields = ('candidate__user__email', 'candidate__user__first_name', 'candidate__user__last_name', 'candidate__user__second_last_name', 'job__name')
+
 admin.site.register(Cycle, CycleAdmin)
-admin.site.register(UserProfile, SimpleHistoryAdmin)
+admin.site.register(UserProfile, CandidateAdmin)
 admin.site.register(EmergencyContact, EmergencyContactAdmin)
 admin.site.register(Domicile, DomicileAdmin)
 admin.site.register(TAidCandidateHistory)
 admin.site.register(CHAidCandidateHistory)
-admin.site.register(JobHistory)
+admin.site.register(JobHistory, JobHistoryAdmin)
