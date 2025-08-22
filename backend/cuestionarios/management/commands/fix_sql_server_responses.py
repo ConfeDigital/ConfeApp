@@ -95,9 +95,9 @@ class Command(BaseCommand):
             if respuesta == "":
                 return ""
             
-            # Si es un número, mantener como número
+            # Si es un número, convertir a string para SQL Server
             if isinstance(respuesta, (int, float)):
-                return respuesta
+                return str(respuesta)
             
             # Si es un booleano, mantener como booleano
             if isinstance(respuesta, bool):
