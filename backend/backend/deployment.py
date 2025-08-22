@@ -126,16 +126,37 @@ DATABASES = {
     }
 }
 
-# --- Configuración de Redis Cache y Channels (sin cambios) ---
-REDISCACHE_HOST = os.environ.get('REDISCACHE_HOST')
-REDISCACHE_PORT = os.environ.get('REDISCACHE_PORT', 6379)
-REDISCACHE_PASSWORD = os.environ.get('REDISCACHE_PASSWORD')
+# --- Configuración de Redis Cache y Channels (usando la nueva variable de conexión) ---
+AZURE_REDIS_CONNECTIONSTRING = os.environ.get('AZURE_REDIS_CONNECTIONSTRING')
 
-if REDISCACHE_HOST and REDISCACHE_PASSWORD:
+if AZURE_REDIS_CONNECTIONSTRING:
+    # Parse Azure Redis connection string (e.g., "host:port,password=...,ssl=True")
+    redis_parts = AZURE_REDIS_CONNECTIONSTRING.split(',')
+    
+    redis_host_port = redis_parts[0]
+    redis_host = redis_host_port.split(':')[0]
+    redis_port = redis_host_port.split(':')[1]
+    
+    redis_password = ""
+    ssl_enabled = False
+
+    for part in redis_parts[1:]:
+        if part.strip().lower().startswith('password='):
+            redis_password = part.split('=', 1)[1].strip()
+        elif part.strip().lower().startswith('ssl=true'):
+            ssl_enabled = True
+
+    # Construct a redis:// URL for Django
+    protocol = "rediss" if ssl_enabled else "redis"
+    REDIS_URL = f"{protocol}://:{redis_password}@{redis_host}:{redis_port}/1"
+    
+    # Log the constructed URL for debugging (without the full password)
+    logger.info(f"DEBUGGING: Redis URL constructed: {protocol}://:***@{redis_host}:{redis_port}/1")
+    
     CACHES = {
         'default': {
             'BACKEND': 'django_redis.cache.RedisCache',
-            'LOCATION': f'redis://:{REDISCACHE_PASSWORD}@{REDISCACHE_HOST}:{REDISCACHE_PORT}/1',
+            'LOCATION': REDIS_URL,
             'OPTIONS': {
                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
             },
@@ -147,8 +168,7 @@ if REDISCACHE_HOST and REDISCACHE_PASSWORD:
         'default': {
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
-                'hosts': [(REDISCACHE_HOST, REDISCACHE_PORT)],
-                'password': REDISCACHE_PASSWORD,
+                'hosts': [REDIS_URL],
             },
         },
     }
