@@ -201,6 +201,54 @@ class RespuestasGuardadas(APIView):
         
         return respuesta
 
+    def validar_respuesta_para_sql_server(self, respuesta):
+        """Valida y limpia la respuesta para compatibilidad con Microsoft SQL Server"""
+        try:
+            # Si la respuesta es None, devolver None
+            if respuesta is None:
+                return None
+            
+            # Si es un string vacío, devolver string vacío
+            if respuesta == "":
+                return ""
+            
+            # Si es un número, mantener como número
+            if isinstance(respuesta, (int, float)):
+                return respuesta
+            
+            # Si es un booleano, mantener como booleano
+            if isinstance(respuesta, bool):
+                return respuesta
+            
+            # Si es una lista, validar que contenga solo tipos básicos
+            if isinstance(respuesta, list):
+                lista_validada = []
+                for item in respuesta:
+                    if isinstance(item, (str, int, float, bool)):
+                        lista_validada.append(item)
+                    else:
+                        lista_validada.append(str(item))
+                return lista_validada
+            
+            # Si es un diccionario, validar que contenga solo tipos básicos
+            if isinstance(respuesta, dict):
+                dict_validado = {}
+                for key, value in respuesta.items():
+                    if isinstance(key, str):
+                        if isinstance(value, (str, int, float, bool, list)):
+                            dict_validado[key] = value
+                        else:
+                            dict_validado[key] = str(value)
+                return dict_validado
+            
+            # Para cualquier otro tipo, convertir a string
+            return str(respuesta)
+            
+        except Exception as e:
+            print(f"Error validando respuesta para SQL Server: {e}")
+            # En caso de error, devolver string vacío
+            return ""
+
     def post(self, request):
         """Guarda la respuesta del usuario y desbloquea preguntas si es necesario"""
         data = request.data
@@ -245,20 +293,35 @@ class RespuestasGuardadas(APIView):
 
             # Process response according to type for Azure SQL compatibility
             try:
-                # Para ciertos tipos, guardar el valor simple en lugar de procesarlo
-                if pregunta.tipo in ['numero', 'multiple', 'dropdown', 'binaria', 'imagen']:
-                    if pregunta.tipo == 'numero':
-                        respuesta_procesada = float(respuesta_limpia) if respuesta_limpia else 0
-                    elif pregunta.tipo in ['multiple', 'dropdown']:
-                        respuesta_procesada = int(respuesta_limpia) if respuesta_limpia else 0
-                    elif pregunta.tipo == 'binaria':
-                        respuesta_procesada = respuesta_limpia in [True, 'true', '1', 'sí', 'si']
-                    elif pregunta.tipo == 'imagen':
-                        respuesta_procesada = float(respuesta_limpia) if respuesta_limpia else 0
-                    else:
+                # Para Azure SQL Server, simplificar el procesamiento y evitar objetos complejos
+                if pregunta.tipo == 'numero':
+                    respuesta_procesada = float(respuesta_limpia) if respuesta_limpia else 0
+                elif pregunta.tipo in ['multiple', 'dropdown']:
+                    respuesta_procesada = int(respuesta_limpia) if respuesta_limpia else 0
+                elif pregunta.tipo == 'binaria':
+                    respuesta_procesada = respuesta_limpia in [True, 'true', '1', 'sí', 'si']
+                elif pregunta.tipo == 'imagen':
+                    respuesta_procesada = float(respuesta_limpia) if respuesta_limpia else 0
+                elif pregunta.tipo == 'checkbox':
+                    # Para checkbox, mantener como array simple
+                    if isinstance(respuesta_limpia, list):
                         respuesta_procesada = respuesta_limpia
+                    elif isinstance(respuesta_limpia, str):
+                        try:
+                            respuesta_procesada = json.loads(respuesta_limpia)
+                        except json.JSONDecodeError:
+                            respuesta_procesada = [respuesta_limpia]
+                    else:
+                        respuesta_procesada = [respuesta_limpia] if respuesta_limpia else []
+                elif pregunta.tipo == 'abierta':
+                    # Para preguntas abiertas, mantener como string simple
+                    respuesta_procesada = str(respuesta_limpia) if respuesta_limpia else ""
+                elif pregunta.tipo in ['fecha', 'fecha_hora']:
+                    # Para fechas, mantener como string ISO
+                    respuesta_procesada = str(respuesta_limpia) if respuesta_limpia else ""
                 else:
-                    respuesta_procesada = procesar_respuesta_para_tipo(respuesta_limpia, pregunta.tipo)
+                    # Para otros tipos, usar procesamiento simplificado
+                    respuesta_procesada = procesar_respuesta_simplificada(respuesta_limpia, pregunta.tipo)
                 print(f"Respuesta procesada para guardar: {respuesta_procesada}")
             except Exception as e:
                 print(f"Error procesando respuesta: {e}")
@@ -270,11 +333,16 @@ class RespuestasGuardadas(APIView):
             # Use transaction to ensure atomicity
             with transaction.atomic():
                 try:
+                    # Validar que la respuesta sea compatible con Microsoft SQL Server
+                    respuesta_validada = self.validar_respuesta_para_sql_server(respuesta_procesada)
+                    print(f"Respuesta validada para SQL Server: {respuesta_validada}")
+                    print(f"Tipo de respuesta validada: {type(respuesta_validada)}")
+                    
                     respuesta_obj, created = Respuesta.objects.update_or_create(
                         usuario=usuario,
                         cuestionario=cuestionario,
                         pregunta=pregunta,
-                        defaults={'respuesta': respuesta_procesada}
+                        defaults={'respuesta': respuesta_validada}
                     )
                     print(f"Respuesta guardada: {created}")
                     
@@ -1464,6 +1532,73 @@ class ReporteCuestionariosView(APIView):
         
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+def procesar_respuesta_simplificada(respuesta, tipo):
+    """Procesa la respuesta de forma simplificada para compatibilidad con Microsoft SQL Server"""
+    
+    # Para Azure SQL Server, evitar objetos complejos y usar tipos básicos
+    if tipo == 'abierta':
+        return str(respuesta) if respuesta else ""
+    
+    elif tipo == 'numero':
+        try:
+            return float(respuesta) if respuesta else 0
+        except (ValueError, TypeError):
+            return 0
+    
+    elif tipo == 'imagen':
+        try:
+            return float(respuesta) if respuesta else 0
+        except (ValueError, TypeError):
+            return 0
+    
+    elif tipo == 'checkbox':
+        if isinstance(respuesta, list):
+            return respuesta
+        elif isinstance(respuesta, str):
+            try:
+                return json.loads(respuesta)
+            except json.JSONDecodeError:
+                return [respuesta] if respuesta else []
+        else:
+            return [respuesta] if respuesta else []
+    
+    elif tipo in ['multiple', 'dropdown']:
+        try:
+            return int(respuesta) if respuesta else 0
+        except (ValueError, TypeError):
+            return 0
+    
+    elif tipo == 'binaria':
+        if isinstance(respuesta, bool):
+            return respuesta
+        elif isinstance(respuesta, str):
+            return respuesta.lower() in ['true', '1', 'sí', 'si', 'yes']
+        else:
+            return bool(respuesta)
+    
+    elif tipo == 'fecha':
+        return str(respuesta) if respuesta else ""
+    
+    elif tipo == 'fecha_hora':
+        return str(respuesta) if respuesta else ""
+    
+    # Para tipos complejos, mantener solo información esencial
+    elif tipo in ['sis', 'sis2', 'canalizacion', 'canalizacion_centro', 'ch', 'ed', 'meta', 
+                  'datos_personales', 'datos_domicilio', 'datos_medicos', 'contactos', 
+                  'tipo_discapacidad']:
+        if isinstance(respuesta, dict):
+            # Simplificar objetos complejos para evitar problemas de serialización
+            return {
+                'tipo': tipo,
+                'datos': str(respuesta)[:1000]  # Limitar tamaño para evitar problemas
+            }
+        else:
+            return str(respuesta) if respuesta else ""
+    
+    # Para cualquier otro tipo, convertir a string
+    else:
+        return str(respuesta) if respuesta else ""
 
 def procesar_respuesta_para_tipo(respuesta, tipo):
     """Procesa la respuesta según el tipo para asegurar compatibilidad con Azure SQL"""

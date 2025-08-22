@@ -94,6 +94,10 @@ const PopupPrecargaCuestionario = ({
         "📩 Respuesta recibida del backend (mostrar):",
         response.data
       );
+      console.log(
+        "🔍 Estructura de preguntas precargadas:",
+        JSON.stringify(response.data, null, 2)
+      );
       setMessage({ type: "success", text: "Archivo analizado con éxito." });
       setPreguntasPrecargadas(response.data);
       setErroresPrecarga(response.data.errores || []);
@@ -313,14 +317,34 @@ const PopupPrecargaCuestionario = ({
                         <td
                           style={{ border: "1px solid #ccc", padding: "8px" }}
                         >
-                          {Array.isArray(pregunta.desbloqueo) &&
+                          {pregunta.desbloqueo &&
+                          Array.isArray(pregunta.desbloqueo) &&
                           pregunta.desbloqueo.length > 0
                             ? pregunta.desbloqueo
                                 .map((d) => {
                                   console.log("🔍 d encontrado:", d);
-                                  return `Pregunta ${d.pregunta_id + 1} - ${
-                                    d.opcion
-                                  }`;
+                                  console.log(
+                                    "🔍 d.pregunta_id:",
+                                    d.pregunta_id
+                                  );
+                                  console.log("🔍 d.valor:", d.valor);
+                                  console.log("🔍 d.opcion:", d.opcion);
+                                  console.log(
+                                    "🔍 d.descripcion:",
+                                    d.descripcion
+                                  );
+
+                                  const preguntaId =
+                                    d.pregunta_id !== undefined &&
+                                    d.pregunta_id !== null
+                                      ? d.pregunta_id
+                                      : 0;
+                                  const valor =
+                                    d.valor || d.opcion || "Sin opción";
+
+                                  return `Pregunta ${
+                                    preguntaId + 1
+                                  } - ${valor}`;
                                 })
                                 .join(", ")
                             : "-"}
