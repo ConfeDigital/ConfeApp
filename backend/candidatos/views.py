@@ -597,6 +597,14 @@ class DatosMedicosMeAPIView(APIView):
         serializer.save()
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    def patch(self, request):
+        perfil = get_object_or_404(UserProfile, user=self.request.user)
+        # Use partial=True to allow partial updates
+        serializer = DatosMedicosSerializer(perfil, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 class CandidateAppointmentsView(generics.ListAPIView):
     serializer_class = AppointmentSerializer
     permission_classes = [IsAuthenticated, IsInSameCenter]  # O ajusta a IsAuthenticated si lo deseas

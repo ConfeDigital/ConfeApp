@@ -1106,6 +1106,7 @@ class DatosMedicosSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
         fields = [
+            "stage",
             "has_disability_certificate",
             "has_interdiction_judgment",
             "receives_pension",
