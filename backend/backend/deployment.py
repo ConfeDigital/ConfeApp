@@ -20,7 +20,7 @@ def get_container_ip():
         return None
 
 # --- Configuración del Host y CSRF ---
-base_allowed_hosts = [os.environ['WEBSITE_HOSTNAME'], 'localhost', '127.0.0.1']
+base_allowed_hosts = [os.environ['WEBSITE_HOSTNAME'], 'localhost', '127.0.0.1', 'api.institucionconfe.org.mx']
 
 # Add container IP dynamically
 container_ip = get_container_ip()
@@ -29,7 +29,7 @@ if container_ip:
 
 ALLOWED_HOSTS = base_allowed_hosts
 
-CSRF_TRUSTED_ORIGINS = ['https://'+os.environ['WEBSITE_HOSTNAME']]
+CSRF_TRUSTED_ORIGINS = ['https://'+os.environ['WEBSITE_HOSTNAME'], 'https://api.institucionconfe.org.mx']
 DEBUG = False
 SECRET_KEY = os.environ['MY_SECRET_KEY']
 
