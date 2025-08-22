@@ -212,9 +212,10 @@ class RespuestasGuardadas(APIView):
             if respuesta == "":
                 return ""
             
-            # Si es un número, mantener como número
+            # Para Microsoft SQL Server, asegurar que los valores numéricos sean JSON válidos
             if isinstance(respuesta, (int, float)):
-                return respuesta
+                # Convertir a string para evitar problemas con CHECK constraints
+                return str(respuesta)
             
             # Si es un booleano, mantener como booleano
             if isinstance(respuesta, bool):
@@ -295,13 +296,16 @@ class RespuestasGuardadas(APIView):
             try:
                 # Para Azure SQL Server, simplificar el procesamiento y evitar objetos complejos
                 if pregunta.tipo == 'numero':
-                    respuesta_procesada = float(respuesta_limpia) if respuesta_limpia else 0
+                    valor = float(respuesta_limpia) if respuesta_limpia else 0
+                    respuesta_procesada = str(valor)  # Convertir a string para SQL Server
                 elif pregunta.tipo in ['multiple', 'dropdown']:
-                    respuesta_procesada = int(respuesta_limpia) if respuesta_limpia else 0
+                    valor = int(respuesta_limpia) if respuesta_limpia else 0
+                    respuesta_procesada = str(valor)  # Convertir a string para SQL Server
                 elif pregunta.tipo == 'binaria':
                     respuesta_procesada = respuesta_limpia in [True, 'true', '1', 'sí', 'si']
                 elif pregunta.tipo == 'imagen':
-                    respuesta_procesada = float(respuesta_limpia) if respuesta_limpia else 0
+                    valor = float(respuesta_limpia) if respuesta_limpia else 0
+                    respuesta_procesada = str(valor)  # Convertir a string para SQL Server
                 elif pregunta.tipo == 'checkbox':
                     # Para checkbox, mantener como array simple
                     if isinstance(respuesta_limpia, list):
@@ -1542,15 +1546,17 @@ def procesar_respuesta_simplificada(respuesta, tipo):
     
     elif tipo == 'numero':
         try:
-            return float(respuesta) if respuesta else 0
+            valor = float(respuesta) if respuesta else 0
+            return str(valor)  # Convertir a string para SQL Server
         except (ValueError, TypeError):
-            return 0
+            return "0"
     
     elif tipo == 'imagen':
         try:
-            return float(respuesta) if respuesta else 0
+            valor = float(respuesta) if respuesta else 0
+            return str(valor)  # Convertir a string para SQL Server
         except (ValueError, TypeError):
-            return 0
+            return "0"
     
     elif tipo == 'checkbox':
         if isinstance(respuesta, list):
@@ -1565,9 +1571,10 @@ def procesar_respuesta_simplificada(respuesta, tipo):
     
     elif tipo in ['multiple', 'dropdown']:
         try:
-            return int(respuesta) if respuesta else 0
+            valor = int(respuesta) if respuesta else 0
+            return str(valor)  # Convertir a string para SQL Server
         except (ValueError, TypeError):
-            return 0
+            return "0"
     
     elif tipo == 'binaria':
         if isinstance(respuesta, bool):

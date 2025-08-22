@@ -126,7 +126,7 @@ function Preentrevista() {
   useEffect(() => {
     if(!candidato) return;
     if(candidato.stage == "Reg"){
-      api.patch(`/api/candidatos/editar/${uid}/`, {stage: "Pre"});
+      api.patch(`/api/candidatos/me/datos-medicos/`, {stage: "Pre"});
     }
   }, [candidato]);
 
