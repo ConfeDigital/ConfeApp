@@ -142,4 +142,4 @@ class PostalCode(TimeStampedModel):
         return self.get_c_tipo_asenta_display()
 
     def __str__(self):
-        return "{}, {}, {}".format(self.d_codigo, self.D_mnpio, self.d_estado)
+        return "{}, {}, {}, {}".format(self.d_codigo, self.D_mnpio, self.d_estado, self.d_asenta)

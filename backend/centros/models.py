@@ -23,7 +23,7 @@ class Location(models.Model):
 class Center(models.Model):
     name = models.CharField(max_length=255, unique=True)
 
-    location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)
+    location = models.OneToOneField(Location, on_delete=models.SET_NULL, null=True, blank=True)
 
     CENTER_TYPE_CHOICES = [
         ('Con', 'Confe'),
