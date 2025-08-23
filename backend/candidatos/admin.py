@@ -73,6 +73,28 @@ class SISAidCandidateHistoryAdmin(admin.ModelAdmin):
     search_fields = ('candidate__user__email', 'item', 'subitem', 'aid__sis_aid__descripcion')
     ordering = ('-start_date',)
 
+class TAidCandidateHistoryAdmin(admin.ModelAdmin):
+    list_display = (
+        'id',
+        'candidate',
+        'aid',
+        'impediment_list',
+        'is_active',
+        'start_date',
+        'end_date',
+        'is_successful',
+    )
+    list_filter = ('is_active', 'is_successful')
+    search_fields = ('candidate__user__email', 'aid')
+    ordering = ('-start_date',)
+
+    def impediment_list(self, obj):
+        if obj.aid:
+            return ", ".join([impediment.name for impediment in obj.aid.impediments.all()])
+        return "N/A"
+    
+    impediment_list.short_description = "Related Impediments"
+
 class JobHistoryAdmin(admin.ModelAdmin):
     list_display = ('candidate', 'job', 'start_date', 'end_date')
     list_filter = ('job', 'start_date', 'end_date')
@@ -82,6 +104,6 @@ admin.site.register(Cycle, CycleAdmin)
 admin.site.register(UserProfile, CandidateAdmin)
 admin.site.register(EmergencyContact, EmergencyContactAdmin)
 admin.site.register(Domicile, DomicileAdmin)
-admin.site.register(TAidCandidateHistory)
+admin.site.register(TAidCandidateHistory, TAidCandidateHistoryAdmin)
 admin.site.register(CHAidCandidateHistory)
 admin.site.register(JobHistory, JobHistoryAdmin)
