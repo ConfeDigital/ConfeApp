@@ -1,10 +1,10 @@
 import React, { useEffect, useState, useRef } from 'react';
 import {
-    Box, Typography, TextField, Button, Paper, Card, CardContent, 
+    Box, Typography, TextField, Button, Paper, Card, CardContent,
     Avatar, Chip, IconButton, Dialog, DialogTitle, DialogContent,
     DialogActions, Divider, Menu, MenuItem, List, ListItem,
     ListItemIcon, ListItemText, Badge, Fab, Grid, Tooltip,
-    Alert, LinearProgress
+    Alert, LinearProgress, InputAdornment, Select, FormControl, InputLabel
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -13,6 +13,7 @@ import {
     Message as MessageIcon,
     PushPin as PinIcon,
     Lock as LockIcon,
+    LockOpen as LockOpenIcon,
     Edit as EditIcon,
     Delete as DeleteIcon,
     MoreVert as MoreVertIcon,
@@ -25,7 +26,10 @@ import {
     AccessTime as TimeIcon,
     Person as PersonIcon,
     Close as CloseIcon,
-    Fullscreen as FullscreenIcon
+    Fullscreen as FullscreenIcon,
+    ArrowBack as ArrowBackIcon,
+    Search as SearchIcon,
+    Visibility as VisibilityIcon
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import axios from '../../api';
@@ -39,7 +43,7 @@ function stringToColor(string) {
     const hue = hash % 360;
     const saturation = 40;
     const lightness = 65;
-    
+
     const hslToRgb = (h, s, l) => {
         h /= 360; s /= 100; l /= 100;
         let r, g, b;
@@ -49,20 +53,20 @@ function stringToColor(string) {
             const hue2rgb = (p, q, t) => {
                 if (t < 0) t += 1;
                 if (t > 1) t -= 1;
-                if (t < 1/6) return p + (q - p) * 6 * t;
-                if (t < 1/2) return q;
-                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                if (t < 1 / 6) return p + (q - p) * 6 * t;
+                if (t < 1 / 2) return q;
+                if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
                 return p;
             };
             const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
             const p = 2 * l - q;
-            r = hue2rgb(p, q, h + 1/3);
+            r = hue2rgb(p, q, h + 1 / 3);
             g = hue2rgb(p, q, h);
-            b = hue2rgb(p, q, h - 1/3);
+            b = hue2rgb(p, q, h - 1 / 3);
         }
         return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
     };
-    
+
     const [r, g, b] = hslToRgb(hue, saturation, lightness);
     const toHex = (c) => `00${c.toString(16)}`.slice(-2);
     return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
@@ -265,7 +269,7 @@ const FilePreview = ({ file, expanded = false }) => {
             default:
                 return (
                     <Alert severity="info" sx={{ mt: 2 }}>
-                        Preview not available for this file type. 
+                        Preview not available for this file type.
                         <Button onClick={handleDownload} sx={{ ml: 1 }}>Download to view</Button>
                     </Alert>
                 );
@@ -280,7 +284,7 @@ const FilePreview = ({ file, expanded = false }) => {
             sx={{
                 p: 2,
                 transition: 'all 0.2s ease',
-                '&:hover': { 
+                '&:hover': {
                     bgcolor: 'action.hover',
                     boxShadow: 2
                 }
@@ -296,11 +300,11 @@ const FilePreview = ({ file, expanded = false }) => {
                         {formatFileSize(file.file_size)} • {file.file_type.toUpperCase()}
                     </Typography>
                 </Box>
-                
+
                 <Box display="flex" gap={0.5}>
                     {canPreview && (
                         <Tooltip title={isExpanded ? "Hide preview" : "Show preview"}>
-                            <IconButton 
+                            <IconButton
                                 size="small"
                                 onClick={() => setIsExpanded(!isExpanded)}
                                 color={isExpanded ? "primary" : "default"}
@@ -324,7 +328,7 @@ const FilePreview = ({ file, expanded = false }) => {
 
 const FileGallery = ({ files, maxPreview = 2 }) => {
     const [showAll, setShowAll] = useState(false);
-    
+
     if (!files || files.length === 0) return null;
 
     const displayFiles = showAll ? files : files.slice(0, maxPreview);
@@ -336,7 +340,7 @@ const FileGallery = ({ files, maxPreview = 2 }) => {
                 <AttachFileIcon fontSize="small" />
                 Archivos adjuntos ({files.length})
             </Typography>
-            
+
             <Grid container spacing={2}>
                 {displayFiles.map((file) => (
                     <Grid item xs={12} key={file.id}>
@@ -370,26 +374,54 @@ const FileGallery = ({ files, maxPreview = 2 }) => {
     );
 };
 
-const TopicCard = ({ topic, onClick }) => {
+const TopicCard = ({ topic, onClick, currentUser, onUpdated }) => {
+    const [loading, setLoading] = useState(false);
     const centerColor = stringToColor(topic.author_center);
+
     const timeAgo = (date) => {
         const now = new Date();
         const past = new Date(date);
         const diffInHours = (now - past) / (1000 * 60 * 60);
-        
+
         if (diffInHours < 1) return 'Hace menos de 1h';
         if (diffInHours < 24) return `Hace ${Math.floor(diffInHours)}h`;
         if (diffInHours < 168) return `Hace ${Math.floor(diffInHours / 24)}d`;
         return past.toLocaleDateString();
     };
 
+    const handleTogglePin = async (e) => {
+        e.stopPropagation();
+        setLoading(true);
+        try {
+            const res = await axios.post(`/api/communications/forum/topics/${topic.id}/toggle_pin/`);
+            onUpdated(topic.id, { is_pinned: res.data.is_pinned });
+        } catch (err) {
+            console.error("Error toggling pin:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleToggleLock = async (e) => {
+        e.stopPropagation();
+        setLoading(true);
+        try {
+            const res = await axios.post(`/api/communications/forum/topics/${topic.id}/toggle_lock/`);
+            onUpdated(topic.id, { is_locked: res.data.is_locked });
+        } catch (err) {
+            console.error("Error toggling lock:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     return (
-        <Card 
-            sx={{ 
-                mb: 1, 
+        <Card
+            sx={{
+                mb: 1,
                 cursor: 'pointer',
                 transition: 'all 0.2s',
-                '&:hover': { 
+                '&:hover': {
                     elevation: 3,
                     transform: 'translateY(-1px)'
                 }
@@ -408,7 +440,7 @@ const TopicCard = ({ topic, onClick }) => {
                     >
                         {topic.author_center.charAt(0)}
                     </Avatar>
-                    
+
                     <Box flex={1} minWidth={0}>
                         <Box display="flex" alignItems="center" gap={1} mb={0.5}>
                             {topic.is_pinned && (
@@ -418,13 +450,13 @@ const TopicCard = ({ topic, onClick }) => {
                             )}
                             {topic.is_locked && (
                                 <Tooltip title="Cerrado">
-                                    <LockIcon color="disabled" fontSize="small" />
+                                    <LockIcon color="error" fontSize="small" />
                                 </Tooltip>
                             )}
-                            <Typography 
-                                variant="h6" 
+                            <Typography
+                                variant="h6"
                                 component="h3"
-                                sx={{ 
+                                sx={{
                                     fontWeight: 600,
                                     fontSize: '1.1rem',
                                     lineHeight: 1.3
@@ -433,11 +465,47 @@ const TopicCard = ({ topic, onClick }) => {
                             >
                                 {topic.title}
                             </Typography>
+
+                            {/* Admin quick actions */}
+                            {currentUser?.is_staff && (
+                                <Box ml="auto" display="flex" gap={1}>
+                                    <Tooltip title={topic.is_pinned ? "Desfijar" : "Fijar"}>
+                                        <span>
+                                            <IconButton 
+                                                size="small" 
+                                                onClick={handleTogglePin} 
+                                                disabled={loading}
+                                            >
+                                                <PinIcon 
+                                                    color={topic.is_pinned ? "primary" : "inherit"} 
+                                                    fontSize="small" 
+                                                />
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+
+                                    <Tooltip title={topic.is_locked ? "Abrir" : "Cerrar"}>
+                                        <span>
+                                            <IconButton 
+                                                size="small" 
+                                                onClick={handleToggleLock} 
+                                                disabled={loading}
+                                            >
+                                                {topic.is_locked ? (
+                                                    <LockIcon color="error" fontSize="small" />
+                                                ) : (
+                                                    <LockOpenIcon fontSize="small" />
+                                                )}
+                                            </IconButton>
+                                        </span>
+                                    </Tooltip>
+                                </Box>
+                            )}
                         </Box>
-                        
-                        <Typography 
-                            variant="body2" 
-                            color="text.secondary" 
+
+                        <Typography
+                            variant="body2"
+                            color="text.secondary"
                             sx={{
                                 display: '-webkit-box',
                                 WebkitLineClamp: 2,
@@ -462,9 +530,11 @@ const TopicCard = ({ topic, onClick }) => {
                                         <Chip
                                             key={index}
                                             icon={<FileIcon fileType={file.file_type} />}
-                                            label={file.original_name.length > 15 
-                                                ? file.original_name.substring(0, 15) + '...' 
-                                                : file.original_name}
+                                            label={
+                                                file.original_name.length > 15
+                                                    ? file.original_name.substring(0, 15) + '...'
+                                                    : file.original_name
+                                            }
                                             size="small"
                                             variant="outlined"
                                             sx={{ maxWidth: 150 }}
@@ -481,13 +551,13 @@ const TopicCard = ({ topic, onClick }) => {
                                 </Box>
                             </Box>
                         )}
-                        
+
                         <Box display="flex" alignItems="center" justifyContent="space-between">
                             <Box display="flex" alignItems="center" gap={2}>
                                 <Chip
                                     label={topic.author_center}
                                     size="small"
-                                    sx={{ 
+                                    sx={{
                                         bgcolor: centerColor + '20',
                                         color: centerColor,
                                         fontWeight: 500
@@ -497,10 +567,10 @@ const TopicCard = ({ topic, onClick }) => {
                                     por {topic.author_name}
                                 </Typography>
                             </Box>
-                            
+
                             <Box display="flex" alignItems="center" gap={1.5}>
                                 <Box display="flex" alignItems="center" gap={0.5}>
-                                    <ViewIcon fontSize="small" color="action" />
+                                    <VisibilityIcon fontSize="small" color="action" />
                                     <Typography variant="caption" color="text.secondary">
                                         {topic.views}
                                     </Typography>
@@ -526,12 +596,12 @@ const TopicCard = ({ topic, onClick }) => {
 const ReplyCard = ({ reply, canEdit, onEdit, onDelete }) => {
     const [menuAnchor, setMenuAnchor] = useState(null);
     const centerColor = stringToColor(reply.author_center);
-    
+
     const timeAgo = (date) => {
         const now = new Date();
         const past = new Date(date);
         const diffInHours = (now - past) / (1000 * 60 * 60);
-        
+
         if (diffInHours < 1) return 'Hace menos de 1h';
         if (diffInHours < 24) return `Hace ${Math.floor(diffInHours)}h`;
         if (diffInHours < 168) return `Hace ${Math.floor(diffInHours / 24)}d`;
@@ -551,7 +621,7 @@ const ReplyCard = ({ reply, canEdit, onEdit, onDelete }) => {
                     >
                         {reply.author_center.charAt(0)}
                     </Avatar>
-                    
+
                     <Box flex={1}>
                         <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
                             <Box>
@@ -563,7 +633,7 @@ const ReplyCard = ({ reply, canEdit, onEdit, onDelete }) => {
                                     {reply.is_edited && ' • editado'}
                                 </Typography>
                             </Box>
-                            
+
                             {canEdit && (
                                 <IconButton
                                     size="small"
@@ -573,18 +643,18 @@ const ReplyCard = ({ reply, canEdit, onEdit, onDelete }) => {
                                 </IconButton>
                             )}
                         </Box>
-                        
+
                         <Typography variant="body1" paragraph sx={{ whiteSpace: 'pre-wrap' }}>
                             {reply.content}
                         </Typography>
-                        
+
                         {reply.files && reply.files.length > 0 && (
                             <FileGallery files={reply.files} maxPreview={1} />
                         )}
                     </Box>
                 </Box>
             </CardContent>
-            
+
             <Menu
                 anchorEl={menuAnchor}
                 open={Boolean(menuAnchor)}
@@ -616,13 +686,16 @@ const CenterForum = () => {
     const [showReplyDialog, setShowReplyDialog] = useState(false);
     const [loading, setLoading] = useState(false);
     const [uploading, setUploading] = useState(false);
-    
+
     // Form states
     const [newTopicForm, setNewTopicForm] = useState({ title: '', description: '', files: [] });
     const [replyForm, setReplyForm] = useState({ content: '', files: [] });
     const [editingReply, setEditingReply] = useState(null);
-    
-    const user = useSelector((state) => state.auth.user);
+
+    const [searchQuery, setSearchQuery] = useState("");
+    const [sortBy, setSortBy] = useState("none");
+
+    const currentUser = useSelector((state) => state.auth.user);
     const fileInputRef = useRef();
     const replyFileInputRef = useRef();
 
@@ -664,7 +737,7 @@ const CenterForum = () => {
             const formData = new FormData();
             formData.append('title', newTopicForm.title);
             formData.append('description', newTopicForm.description);
-            
+
             newTopicForm.files.forEach((file) => {
                 formData.append('files', file);
             });
@@ -690,7 +763,7 @@ const CenterForum = () => {
             setUploading(true);
             const formData = new FormData();
             formData.append('content', replyForm.content);
-            
+
             replyForm.files.forEach((file) => {
                 formData.append('files', file);
             });
@@ -747,7 +820,7 @@ const CenterForum = () => {
 
     const handleDeleteReply = async (reply) => {
         if (!window.confirm('¿Estás seguro de que quieres eliminar esta respuesta?')) return;
-        
+
         try {
             await axios.delete(`api/communications/forum/replies/${reply.id}/`);
             fetchTopicDetail(selectedTopic.id);
@@ -758,30 +831,103 @@ const CenterForum = () => {
 
     // Topic List View
     if (!selectedTopic) {
+
+        // Filter first
+const filteredTopics = topics.filter((topic) =>
+    topic.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    topic.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    topic.author_center.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  // Then sort
+  const sortedTopics = [...filteredTopics].sort((a, b) => {
+    if (sortBy === "views") {
+      return b.views - a.views;
+    }
+    if (sortBy === "replies") {
+      return b.reply_count - a.reply_count;
+    }
+    return 0; // no sorting
+  });
+  
+
         return (
             <Box p={2}>
-                {/* <Box display="flex" justifyContent="right" alignItems="center" mb={3}>
-                    <Button
-                        variant="contained"
-                        startIcon={<AddIcon />}
-                        onClick={() => setShowNewTopic(true)}
-                        size="large"
-                    >
-                        Nuevo Tema
-                    </Button>
-                </Box> */}
+
+                {/* Search Bar */}
+                <Box display="flex" justifyContent={{ xs: "left", sm: "space-between" }} alignItems="center" mb={2}>
+  <Box width={{ sm: "60%", xs: "auto" }} display="flex" alignItems="center" gap={1}>
+    <TextField
+      fullWidth
+      placeholder="Buscar temas..."
+      slotProps={{
+        input: {
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon />
+            </InputAdornment>
+          ),
+        },
+      }}
+      variant="outlined"
+      size="small"
+      value={searchQuery}
+      onChange={(e) => setSearchQuery(e.target.value)}
+    />
+
+    <FormControl size="small" sx={{ minWidth: 150 }}>
+      <InputLabel>Ordenar por</InputLabel>
+      <Select
+        value={sortBy}
+        onChange={(e) => setSortBy(e.target.value)}
+        label="Ordenar por"
+      >
+        <MenuItem value="none">Reciente</MenuItem>
+        <MenuItem value="views">Más vistas</MenuItem>
+        <MenuItem value="replies">Más respuestas</MenuItem>
+      </Select>
+    </FormControl>
+  </Box>
+
+  <Box display={{ xs: "none", sm: "block" }}>
+    <Button
+      variant="contained"
+      startIcon={<AddIcon />}
+      onClick={() => setShowNewTopic(true)}
+    >
+      Nuevo Tema
+    </Button>
+  </Box>
+</Box>
+
 
                 {loading && <LinearProgress sx={{ mb: 2 }} />}
 
                 <Box>
-                    {topics.map((topic) => (
-                        <TopicCard
-                            key={topic.id}
-                            topic={topic}
-                            onClick={() => fetchTopicDetail(topic.id)}
-                        />
-                    ))}
-                </Box>
+  {sortedTopics.length > 0 ? (
+    sortedTopics.map((topic) => (
+        <TopicCard
+        key={topic.id}
+        topic={topic}
+        currentUser={currentUser}
+        onClick={() => fetchTopicDetail(topic.id)}
+        onUpdated={(id, changes) => {
+          setTopics((prev) =>
+            prev.map((t) => (t.id === id ? { ...t, ...changes } : t))
+          );
+          if (selectedTopic?.id === id) {
+            setSelectedTopic((prev) => ({ ...prev, ...changes }));
+          }
+        }}
+      />      
+    ))
+  ) : (
+    <Typography variant="body2" color="text.secondary" align="center" mt={2}>
+      No se encontraron temas.
+    </Typography>
+  )}
+</Box>
+
 
                 {/* New Topic Dialog */}
                 <Dialog
@@ -796,8 +942,8 @@ const CenterForum = () => {
                             fullWidth
                             label="Título"
                             value={newTopicForm.title}
-                            onChange={(e) => setNewTopicForm(prev => ({ 
-                                ...prev, title: e.target.value 
+                            onChange={(e) => setNewTopicForm(prev => ({
+                                ...prev, title: e.target.value
                             }))}
                             margin="normal"
                             variant="outlined"
@@ -808,13 +954,13 @@ const CenterForum = () => {
                             multiline
                             rows={4}
                             value={newTopicForm.description}
-                            onChange={(e) => setNewTopicForm(prev => ({ 
-                                ...prev, description: e.target.value 
+                            onChange={(e) => setNewTopicForm(prev => ({
+                                ...prev, description: e.target.value
                             }))}
                             margin="normal"
                             variant="outlined"
                         />
-                        
+
                         <Box mt={2}>
                             <Button
                                 startIcon={<AttachFileIcon />}
@@ -864,14 +1010,16 @@ const CenterForum = () => {
                     </DialogActions>
                 </Dialog>
 
-                <Fab
-                    color="primary"
-                    aria-label="add"
-                    sx={{ position: 'fixed', bottom: 16, right: 16 }}
-                    onClick={() => setShowNewTopic(true)}
-                >
-                    <AddIcon />
-                </Fab>
+                <Tooltip title="Nuevo Tema" >
+                    <Fab
+                        color="primary"
+                        aria-label="add"
+                        sx={{ position: 'fixed', bottom: 16, right: 16 }}
+                        onClick={() => setShowNewTopic(true)}
+                    >
+                        <AddIcon />
+                    </Fab>
+                </Tooltip>
             </Box>
         );
     }
@@ -882,7 +1030,7 @@ const CenterForum = () => {
         const now = new Date();
         const past = new Date(date);
         const diffInHours = (now - past) / (1000 * 60 * 60);
-        
+
         if (diffInHours < 1) return 'Hace menos de 1h';
         if (diffInHours < 24) return `Hace ${Math.floor(diffInHours)}h`;
         if (diffInHours < 168) return `Hace ${Math.floor(diffInHours / 24)}d`;
@@ -893,21 +1041,15 @@ const CenterForum = () => {
         <Box p={2}>
             {/* Header */}
             <Box display="flex" alignItems="center" gap={2} mb={3}>
-                <Button
-                    variant="outlined"
-                    onClick={() => setSelectedTopic(null)}
-                >
-                    ← Volver al Foro
-                </Button>
                 <Box flex={1}>
                     <Box display="flex" alignItems="center" gap={1} mb={0.5}>
                         {selectedTopic.is_pinned && (
                             <PinIcon color="primary" fontSize="small" />
                         )}
                         {selectedTopic.is_locked && (
-                            <LockIcon color="disabled" fontSize="small" />
+                            <LockIcon color="error" fontSize="small" />
                         )}
-                        <Typography variant="h5" fontWeight="bold">
+                        <Typography variant="h4" fontWeight="bold">
                             {selectedTopic.title}
                         </Typography>
                     </Box>
@@ -915,7 +1057,7 @@ const CenterForum = () => {
                         <Chip
                             label={selectedTopic.author_center}
                             size="small"
-                            sx={{ 
+                            sx={{
                                 bgcolor: centerColor + '20',
                                 color: centerColor,
                                 fontWeight: 500
@@ -932,6 +1074,13 @@ const CenterForum = () => {
                         </Box>
                     </Box>
                 </Box>
+                <Button
+                    variant="outlined"
+                    onClick={() => setSelectedTopic(null)}
+                    startIcon={<ArrowBackIcon />}
+                >
+                    Volver al Foro
+                </Button>
                 {!selectedTopic.is_locked && (
                     <Button
                         variant="contained"
@@ -951,7 +1100,7 @@ const CenterForum = () => {
                     <Typography variant="body1" paragraph sx={{ whiteSpace: 'pre-wrap' }}>
                         {selectedTopic.description}
                     </Typography>
-                    
+
                     {selectedTopic.files && selectedTopic.files.length > 0 && (
                         <FileGallery files={selectedTopic.files} maxPreview={3} />
                     )}
@@ -998,13 +1147,13 @@ const CenterForum = () => {
                         multiline
                         rows={4}
                         value={replyForm.content}
-                        onChange={(e) => setReplyForm(prev => ({ 
-                            ...prev, content: e.target.value 
+                        onChange={(e) => setReplyForm(prev => ({
+                            ...prev, content: e.target.value
                         }))}
                         margin="normal"
                         variant="outlined"
                     />
-                    
+
                     <Box mt={2}>
                         <Button
                             startIcon={<AttachFileIcon />}
@@ -1060,14 +1209,16 @@ const CenterForum = () => {
 
             {/* Fixed Reply Button */}
             {!selectedTopic.is_locked && (
-                <Fab
-                    color="primary"
-                    aria-label="reply"
-                    sx={{ position: 'fixed', bottom: 16, right: 16 }}
-                    onClick={() => setShowReplyDialog(true)}
-                >
-                    <ReplyIcon />
-                </Fab>
+                <Tooltip title="Responder">
+                    <Fab
+                        color="primary"
+                        aria-label="reply"
+                        sx={{ position: 'fixed', bottom: 16, right: 16 }}
+                        onClick={() => setShowReplyDialog(true)}
+                    >
+                        <ReplyIcon />
+                    </Fab>
+                </Tooltip>
             )}
         </Box>
     );

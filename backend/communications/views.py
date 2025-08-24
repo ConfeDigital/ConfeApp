@@ -28,7 +28,7 @@ class CommunicationPostViewSet(viewsets.ModelViewSet):
             personal_group = Group.objects.get(name='personal')
             recipients = User.objects.filter(groups=personal_group).exclude(id=self.request.user.id).distinct()
 
-            mensaje = f"Nuevo comunicado: {post.title}"
+            mensaje = f"Nuevo anuncio: {post.title}"
 
             for user in recipients:
                 send_notification_to_user(user.id, mensaje, link='/anuncios')
@@ -112,6 +112,13 @@ class ForumTopicViewSet(viewsets.ModelViewSet):
             
             # Update topic's updated_at timestamp
             topic.save(update_fields=['updated_at'])
+
+        try:
+            recepient = topic.author
+            if recepient.id != request.user.id:
+                send_notification_to_user(recepient.id, f"Nuevo mensaje en el foro: {topic.title} - Por: {request.user.first_name} {request.user.last_name}", link='/foro')
+        except User.DoesNotExist:
+            pass  # optionally log this
         
         serializer = ForumReplySerializer(reply, context={'request': request})
         return Response(serializer.data, status=status.HTTP_201_CREATED)

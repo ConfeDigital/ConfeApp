@@ -135,6 +135,7 @@ const WebSocketProvider = ({ instance, children }) => {
             link: notification.link,
             created_at: notification.created_at,
           }));
+          notificationSound.volume = 0.3;
           notificationSound.play().catch(e => console.error("Sound error:", e));
         }
       });
