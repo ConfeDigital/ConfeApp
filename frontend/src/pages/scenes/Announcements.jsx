@@ -30,7 +30,7 @@ const schema = yup.object().shape({
   message: yup.string().required('El mensaje es obligatorio'),
 });
 
-const CommunicationForum = () => {
+const Announcements = () => {
   useDocumentTitle('Anuncios');
   const isAdmin = useSelector((state) => state.auth.user?.is_staff);
 
@@ -182,4 +182,4 @@ const CommunicationForum = () => {
   );
 };
 
-export default CommunicationForum;
+export default Announcements;

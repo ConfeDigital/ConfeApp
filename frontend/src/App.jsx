@@ -76,8 +76,9 @@ import EmployerPanel from "./pages/empleadores/EmployerPanel";
 import EmployerProfile from "./pages/empleadores/EmployerProfile";
 import JobCandidatesPage from "./pages/empleadores/JobCandidatesPage";
 import QuestionnaireInterface from "./pages/cuestionarios/questionnaireInterface/QuestionnaireInterface";
-import CommunicationForum from "./pages/scenes/CommunicationForum";
+import Announcements from "./pages/scenes/Announcements";
 import CenterChat from "./pages/scenes/CenterChat";
+import CenterForum from "./pages/scenes/CenterForum";
 
 import { onSessionExpired } from "./components/session_expired/sessionExpiredEvent";
 import SessionExpiredDialog from "./components/session_expired/SessionExpiredDialog";
@@ -281,8 +282,9 @@ function App({ instance }) {
                   <Route path="/apoyos/SIS" element={<SISAids />} />
                   <Route path="/apoyos/cuadro-habilidades" element={<CHAids />} />
                   <Route path="/configuracion" element={<Settings />} />
-                  <Route path="/anuncios" element={<CommunicationForum />} />
+                  <Route path="/anuncios" element={<Announcements />} />
                   <Route path="/comunicacion-centros" element={<CenterChat />} />
+                  <Route path="/foro" element={<CenterForum />} />
                 </Route>
                 <Route
                   element={
