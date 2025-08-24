@@ -250,18 +250,21 @@ const Sidebar = forwardRef((props, ref) => {
                   />
                 </SubMenu>
 
-                <Item
-                  title="Carga Masiva Candidatos"
-                  to="/cargaMasiva"
+                <SubMenu
+                  label="Carga Masiva"
                   icon={<UploadFileTwoTone />}
-                  selected={selected}
-                />
-                <Item
-                  title="Carga Masiva Respuestas"
-                  to="/carga-masiva-respuestas"
-                  icon={<UploadFileTwoTone />}
-                  selected={selected}
-                />
+                >
+                  <Item
+                    title="Candidatos"
+                    to="/cargaMasiva"
+                    selected={selected}
+                  />
+                  <Item
+                    title="Respuestas"
+                    to="/carga-masiva-respuestas"
+                    selected={selected}
+                  />
+                </SubMenu>
               </>
             )}
 
@@ -272,12 +275,12 @@ const Sidebar = forwardRef((props, ref) => {
               selected={selected}
             />
 
-            {/* <Item
-              title="Comunicación Centros"
-              to="/comunicacion-centros"
+            <Item
+              title="Foro"
+              to="/foro"
               icon={<ForumOutlinedIcon />}
               selected={selected}
-            /> */}
+            />
           </Box>
         </Menu>
       </ProSidebar>
