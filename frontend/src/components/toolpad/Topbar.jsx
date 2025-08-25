@@ -207,7 +207,7 @@ const Topbar = () => {
         </Tooltip>
         
         <Tooltip title="Configuración">
-          <IconButton component={Link} to={hasGroup("personal") ? "/configuracion" : hasGroup("empleador") ? "/empleador/configuracion" : "/"} disabled>
+          <IconButton component={Link} to={hasGroup("personal") ? "/configuracion" : hasGroup("empleador") ? "/empleador/configuracion" : "/"} >
             <SettingsOutlinedIcon />
           </IconButton>
         </Tooltip>

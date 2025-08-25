@@ -4,6 +4,7 @@ import useMediaQuery from "@mui/material/useMediaQuery";
 import { esES as dataGridEsEs } from '@mui/x-data-grid/locales';
 import { esES as coreEsES } from '@mui/material/locale';
 import { esES } from '@mui/x-date-pickers/locales';
+import { THEME_MODE } from './constants'
 
 // color design tokens export
 export const tokens = (mode) => ({
@@ -263,8 +264,7 @@ export const themeSettings = (mode) => {
       palette: {
         mode: mode,
         ...(mode === "dark"
-          ? {
-              // palette values for dark mode
+          ? { // palette values for dark mode
               primary: {
                 main: colors.primary[400],
               },
@@ -282,14 +282,12 @@ export const themeSettings = (mode) => {
                 paper: colors.primaryBackground[500],
               },
             }
-          : {
-              // palette values for light mode
+          : { // palette values for light mode
               primary: {
                 main: colors.primary[500],
               },
               secondary: {
                 main: colors.blueGreenCEIL[500],
-                // light: colors.blueGreenCEIL[700],
               },
               neutral: {
                 dark: colors.grey[900],
@@ -335,7 +333,7 @@ export const themeSettings = (mode) => {
   export const useMode = () => {
     // 1. Read last‐saved or default to "system"
     const [mode, setMode] = useState(
-      () => localStorage.getItem("themeMode") || "system"
+      () => localStorage.getItem(THEME_MODE) || "system"
     );
   
     // 2. Watch system preference
@@ -344,7 +342,7 @@ export const themeSettings = (mode) => {
   
     // 3. Whenever mode changes, persist it
     useEffect(() => {
-      localStorage.setItem("themeMode", mode);
+      localStorage.setItem(THEME_MODE, mode);
     }, [mode]);
   
     // 4. Build theme off the _resolved_ mode
