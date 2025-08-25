@@ -31,7 +31,8 @@ class CommunicationPostViewSet(viewsets.ModelViewSet):
             mensaje = f"Nuevo anuncio: {post.title}"
 
             for user in recipients:
-                send_notification_to_user(user.id, mensaje, link='/anuncios')
+                if hasattr(user, 'notification_settings') and user.notification_settings.receive_announcement_notifications:
+                    send_notification_to_user(user.id, mensaje, link='/anuncios')
 
         except Group.DoesNotExist:
             pass  # optionally log this
@@ -116,7 +117,8 @@ class ForumTopicViewSet(viewsets.ModelViewSet):
         try:
             recepient = topic.author
             if recepient.id != request.user.id:
-                send_notification_to_user(recepient.id, f"Nuevo mensaje en el foro: {topic.title} - Por: {request.user.first_name} {request.user.last_name}", link='/foro')
+                if hasattr(recepient, 'notification_settings') and recepient.notification_settings.receive_forum_notifications:
+                    send_notification_to_user(recepient.id, f"Nuevo mensaje en el foro: {topic.title} - Por: {request.user.first_name} {request.user.last_name}", link='/foro')
         except User.DoesNotExist:
             pass  # optionally log this
         

@@ -1,71 +1,53 @@
 // src/pages/Settings.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box,
   Typography,
   Switch,
   FormControlLabel,
   Divider,
-  Select,
-  MenuItem,
-  TextField,
   Button,
   Paper,
-  Grid,
+  Grid2 as Grid,
   Snackbar,
   Alert,
-  IconButton,
-  InputAdornment,
   Dialog,
   DialogTitle,
   DialogContent,
   DialogContentText,
   DialogActions,
+  CircularProgress,
 } from "@mui/material";
 import {
   Save,
   Delete,
   Notifications,
-  Security,
-  Language,
   ColorLens,
-  Visibility,
-  VisibilityOff,
 } from "@mui/icons-material";
+import axios from "../../api";
 import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import { SOUND_ALERT, THEME_FAMILY } from "../../constants";
+
+// Define a default state object that matches the backend model's fields
+const defaultSettings = {
+  receive_notifications: true,
+  receive_forum_notifications: true,
+  receive_announcement_notifications: true,
+  receive_emails: true,
+  // This setting is only saved in local storage, not the backend
+  soundAlerts: true,
+  themeFamily: "confe", // local only
+};
 
 export default function Settings() {
   useDocumentTitle("Configuración");
 
-  // State for settings
-  const [settings, setSettings] = useState({
-    // General
-    language: "es",
-    darkMode: false,
-    notifications: true,
-
-    // Security
-    twoFactorAuth: false,
-    changePassword: false,
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
-
-    // Privacy
-    dataSharing: true,
-    analytics: true,
-
-    // Appearance
-    fontSize: "medium",
-    colorTheme: "default",
-
-    // Notification settings
-    emailNotifications: true,
-    soundAlerts: false,
-  });
+  // State for backend and local settings
+  const [settings, setSettings] = useState(defaultSettings);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // UI states
-  const [showPassword, setShowPassword] = useState(false);
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -73,99 +55,153 @@ export default function Settings() {
   });
   const [confirmDialog, setConfirmDialog] = useState(false);
 
+  // Fetch settings from the backend on component mount
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const response = await axios.get("/api/notifications/settings/");
+
+        // Local-only settings
+        const localSoundAlerts = JSON.parse(localStorage.getItem(SOUND_ALERT));
+        const localThemeFamily =
+          localStorage.getItem(THEME_FAMILY) || defaultSettings.themeFamily;
+
+        setSettings({
+          ...response.data,
+          soundAlerts:
+            localSoundAlerts !== null
+              ? localSoundAlerts
+              : defaultSettings.soundAlerts,
+          themeFamily: localThemeFamily,
+        });
+        setError(null);
+      } catch (err) {
+        console.error("Error fetching settings:", err);
+        setError(
+          "Error al cargar la configuración. Por favor, inténtelo de nuevo."
+        );
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSettings();
+  }, []);
+
   // Handle settings changes
   const handleChange = (event) => {
-    const { name, value, checked } = event.target;
-    setSettings({
-      ...settings,
-      [name]: event.target.type === "checkbox" ? checked : value,
+    const { name, checked } = event.target;
+    setSettings((prevSettings) => ({
+      ...prevSettings,
+      [name]: checked,
+    }));
+  };
+
+  // Handle theme family toggle
+  const toggleThemeFamily = () => {
+    setSettings((prev) => {
+      const nextFamily = prev.themeFamily === "confe" ? "alt" : "confe";
+      localStorage.setItem(THEME_FAMILY, nextFamily);
+      return { ...prev, themeFamily: nextFamily };
     });
   };
 
-  // Save settings
-  const saveSettings = () => {
-    // Here you would typically save to localStorage, context, or make an API call
-    localStorage.setItem("appSettings", JSON.stringify(settings));
-    setSnackbar({
-      open: true,
-      message: "Configuración guardada correctamente",
-      severity: "success",
-    });
+  // Save settings to backend and local storage
+  const saveSettings = async () => {
+    try {
+      // Separate backend settings from local-only settings
+      const { soundAlerts, themeFamily, ...backendSettings } = settings;
+
+      // Save backend settings via PATCH request
+      await axios.patch("/api/notifications/settings/", backendSettings);
+
+      // Save local-only settings
+      localStorage.setItem(SOUND_ALERT, JSON.stringify(soundAlerts));
+      localStorage.setItem(THEME_FAMILY, themeFamily);
+
+      setSnackbar({
+        open: true,
+        message: "Configuración guardada correctamente.",
+        severity: "success",
+      });
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      setSnackbar({
+        open: true,
+        message:
+          "Error al guardar la configuración. Por favor, inténtelo de nuevo.",
+        severity: "error",
+      });
+    }
   };
 
-  // Reset settings
-  const resetSettings = () => {
+  // Reset settings to default values
+  const resetSettings = async () => {
     setConfirmDialog(false);
-    // Reset to default values
-    const defaultSettings = {
-      language: "es",
-      darkMode: false,
-      notifications: true,
-      twoFactorAuth: false,
-      changePassword: false,
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-      dataSharing: true,
-      analytics: true,
-      fontSize: "medium",
-      colorTheme: "default",
-      emailNotifications: true,
-      soundAlerts: false,
-    };
-    setSettings(defaultSettings);
-    localStorage.setItem("appSettings", JSON.stringify(defaultSettings));
-    setSnackbar({
-      open: true,
-      message: "Configuración restablecida a valores predeterminados",
-      severity: "info",
-    });
+    try {
+      // Send a PATCH request with default backend values
+      const { soundAlerts, themeFamily, ...backendDefaults } = defaultSettings;
+      await axios.patch("/api/notifications/settings/", backendDefaults);
+
+      // Reset local-only settings
+      localStorage.setItem(
+        SOUND_ALERT,
+        JSON.stringify(defaultSettings.soundAlerts)
+      );
+      localStorage.setItem(THEME_FAMILY, defaultSettings.themeFamily);
+
+      setSettings(defaultSettings);
+      setSnackbar({
+        open: true,
+        message: "Configuración restablecida a valores predeterminados.",
+        severity: "info",
+      });
+    } catch (err) {
+      console.error("Error resetting settings:", err);
+      setSnackbar({
+        open: true,
+        message:
+          "Error al restablecer la configuración. Por favor, inténtelo de nuevo.",
+        severity: "error",
+      });
+    }
   };
 
   const closeSnackbar = () => {
     setSnackbar({ ...snackbar, open: false });
   };
 
+  if (isLoading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+        }}
+      >
+        <CircularProgress />
+        <Typography variant="h6" sx={{ ml: 2 }}>
+          Cargando...
+        </Typography>
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Box sx={{ p: 3, textAlign: "center" }}>
+        <Typography color="error">{error}</Typography>
+      </Box>
+    );
+  }
+
   return (
     <Box sx={{ width: "100%", minHeight: "100vh", p: 3 }}>
-      <Typography>
-        Esta página todavía no sirve, lo que estaba en configuración ahora esta
-        en configuración del centro, en el menú del usuario
-      </Typography>
-
       <Grid container spacing={3}>
-        {/* General Settings */}
-        <Grid item xs={12} md={6}>
-          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-            <Typography
-              variant="h6"
-              sx={{ display: "flex", alignItems: "center", mb: 2 }}
-            >
-              <Language sx={{ mr: 1 }} /> General
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Idioma
-              </Typography>
-              <Select
-                fullWidth
-                name="language"
-                value={settings.language}
-                onChange={handleChange}
-              >
-                <MenuItem value="es">Español</MenuItem>
-                {/* <MenuItem value="en">English</MenuItem>
-                <MenuItem value="fr">Français</MenuItem>
-                <MenuItem value="de">Deutsch</MenuItem> */}
-              </Select>
-            </Box>
-          </Paper>
-        </Grid>
-
         {/* Notification Settings */}
-        <Grid item xs={12} md={6}>
+        <Grid item xs={12} sm={6}>
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
             <Typography
               variant="h6"
@@ -178,31 +214,42 @@ export default function Settings() {
             <FormControlLabel
               control={
                 <Switch
-                  checked={settings.notifications}
+                  checked={settings.receive_notifications}
                   onChange={handleChange}
-                  name="notifications"
+                  name="receive_notifications"
                 />
               }
-              label="Habilitar notificaciones"
+              label="Habilitar todas las notificaciones"
             />
-
             <FormControlLabel
               control={
                 <Switch
-                  checked={settings.emailNotifications}
+                  checked={settings.receive_forum_notifications}
                   onChange={handleChange}
-                  name="emailNotifications"
+                  name="receive_forum_notifications"
+                  disabled={!settings.receive_notifications}
                 />
               }
-              label="Notificaciones por correo electrónico"
+              label="Notificaciones del foro"
             />
-
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={settings.receive_announcement_notifications}
+                  onChange={handleChange}
+                  name="receive_announcement_notifications"
+                  disabled={!settings.receive_notifications}
+                />
+              }
+              label="Notificaciones de anuncios"
+            />
             <FormControlLabel
               control={
                 <Switch
                   checked={settings.soundAlerts}
                   onChange={handleChange}
                   name="soundAlerts"
+                  disabled={!settings.receive_notifications}
                 />
               }
               label="Alertas sonoras"
@@ -210,161 +257,50 @@ export default function Settings() {
           </Paper>
         </Grid>
 
-        {/* Appearance Settings */}
-        <Grid item xs={12} md={6}>
+        {/* Theme Family Settings */}
+        {/* <Grid item xs={12} sm={6}>
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
             <Typography
               variant="h6"
               sx={{ display: "flex", alignItems: "center", mb: 2 }}
             >
-              <ColorLens sx={{ mr: 1 }} /> Apariencia
+              <ColorLens sx={{ mr: 1 }} /> Tema
             </Typography>
             <Divider sx={{ mb: 2 }} />
 
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Tamaño de fuente
-              </Typography>
-              <Select
-                fullWidth
-                name="fontSize"
-                value={settings.fontSize}
-                onChange={handleChange}
-              >
-                {/* <MenuItem value="small">Pequeño</MenuItem> */}
-                <MenuItem value="medium">Mediano</MenuItem>
-                {/* <MenuItem value="large">Grande</MenuItem> */}
-              </Select>
-            </Box>
-
-            <Box sx={{ mb: 2 }}>
-              <Typography variant="subtitle1" gutterBottom>
-                Tema de color
-              </Typography>
-              <Select
-                fullWidth
-                name="colorTheme"
-                value={settings.colorTheme}
-                onChange={handleChange}
-              >
-                <MenuItem value="default">Predeterminado</MenuItem>
-                {/* <MenuItem value="blue">Azul</MenuItem>
-                <MenuItem value="green">Verde</MenuItem>
-                <MenuItem value="purple">Púrpura</MenuItem> */}
-              </Select>
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Security Settings */}
-        {/* <Grid item xs={12} md={6}>
-          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Security sx={{ mr: 1 }} /> Seguridad y Privacidad
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-          
             <FormControlLabel
               control={
                 <Switch
-                  checked={settings.twoFactorAuth}
-                  onChange={handleChange}
-                  name="twoFactorAuth"
+                  checked={settings.themeFamily === "alt"}
+                  onChange={toggleThemeFamily}
                 />
               }
-              label="Autenticación de dos factores"
-            />
-          
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={settings.changePassword}
-                  onChange={handleChange}
-                  name="changePassword"
-                />
+              label={
+                settings.themeFamily === "alt"
+                  ? "Tema Alternativo"
+                  : "Tema Confe"
               }
-              label="Cambiar contraseña"
-            />
-          
-            {settings.changePassword && (
-              <Box sx={{ mt: 2 }}>
-                <TextField
-                  fullWidth
-                  margin="normal"
-                  name="currentPassword"
-                  label="Contraseña actual"
-                  type={showPassword ? "text" : "password"}
-                  value={settings.currentPassword}
-                  onChange={handleChange}
-                  InputProps={{
-                    endAdornment: (
-                      <InputAdornment position="end">
-                        <IconButton
-                          onClick={() => setShowPassword(!showPassword)}
-                          edge="end"
-                        >
-                          {showPassword ? <VisibilityOff /> : <Visibility />}
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                <TextField
-                  fullWidth
-                  margin="normal"
-                  name="newPassword"
-                  label="Nueva contraseña"
-                  type={showPassword ? "text" : "password"}
-                  value={settings.newPassword}
-                  onChange={handleChange}
-                />
-                <TextField
-                  fullWidth
-                  margin="normal"
-                  name="confirmPassword"
-                  label="Confirmar nueva contraseña"
-                  type={showPassword ? "text" : "password"}
-                  value={settings.confirmPassword}
-                  onChange={handleChange}
-                />
-              </Box>
-            )}
-          
-            <Divider sx={{ my: 2 }} />
-          
-            <Typography variant="subtitle1" gutterBottom>Privacidad</Typography>
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={settings.dataSharing}
-                  onChange={handleChange}
-                  name="dataSharing"
-                />
-              }
-              label="Compartir datos de uso"
-            />
-          
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={settings.analytics}
-                  onChange={handleChange}
-                  name="analytics"
-                />
-              }
-              label="Permitir analíticas"
             />
           </Paper>
         </Grid> */}
       </Grid>
 
       {/* Actions */}
-      <Box sx={{ mt: 4, display: "flex", justifyContent: "space-between" }}>
+      <Box
+        sx={{
+          mt: 4,
+          display: "flex",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: 2,
+        }}
+      >
         <Button
           variant="contained"
           color="primary"
           startIcon={<Save />}
           onClick={saveSettings}
+          disabled={isLoading}
         >
           Guardar configuración
         </Button>
@@ -373,6 +309,7 @@ export default function Settings() {
           color="error"
           startIcon={<Delete />}
           onClick={() => setConfirmDialog(true)}
+          disabled={isLoading}
         >
           Restablecer valores predeterminados
         </Button>

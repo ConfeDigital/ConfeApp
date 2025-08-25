@@ -1,8 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import Notification
-from .serializers import NotificationSerializer
+from .models import Notification, Settings
+from .serializers import NotificationSerializer, SettingsSerializer
 from rest_framework.exceptions import NotFound
 from django.core.exceptions import ObjectDoesNotExist
 from asgiref.sync import async_to_sync
@@ -16,6 +16,10 @@ logger = logging.getLogger(__name__)
 def send_notification_to_user(user_id, message, link=None, notification_type="info"):
     try:
         user = User.objects.get(id=user_id)
+
+        if user.notification_settings and not user.notification_settings.receive_notifications:
+            return
+
         notification = Notification.objects.create(
             user=user,
             message=message,
@@ -72,3 +76,18 @@ class NotificationListView(APIView):
 
         return Response({"success": True})
 
+class SettingsView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        settings, created = Settings.objects.get_or_create(user=request.user)
+        serializer = SettingsSerializer(settings)
+        return Response(serializer.data)
+
+    def patch(self, request):
+        settings, created = Settings.objects.get_or_create(user=request.user)
+        serializer = SettingsSerializer(settings, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)

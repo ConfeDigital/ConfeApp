@@ -70,7 +70,7 @@ class EmergencyContact(models.Model):
         #validators=[RegexValidator(r'^\+?1?\d{9,15}$', 'Enter a valid phone number.')]
     )
     email = models.EmailField(max_length=100, null=True, blank=True)
-    lives_at_same_address = models.BooleanField(default=False)
+    lives_at_same_address = models.BooleanField(default=True)
     domicile = models.ForeignKey(Domicile, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):

@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { addNotification, fetchNotifications } from "../features/notifications/notificationsSlice";
 import { setUser } from "../features/auth/authSlice";
-import { ACCESS_TOKEN, AUTH_TYPE } from "../constants";
+import { ACCESS_TOKEN, AUTH_TYPE, SOUND_ALERT } from "../constants";
 import { loginRequest } from "../auth-config";
 
 const WebSocketProvider = ({ instance, children }) => {
@@ -15,6 +15,8 @@ const WebSocketProvider = ({ instance, children }) => {
 
   useEffect(() => {
     const notificationSound = new Audio('../../assets/sounds/notification.wav');
+    notificationSound.volume = 0.3;
+    
     const isDev = import.meta.env.MODE === 'development';
 
     const urls = {
@@ -135,8 +137,9 @@ const WebSocketProvider = ({ instance, children }) => {
             link: notification.link,
             created_at: notification.created_at,
           }));
-          notificationSound.volume = 0.3;
-          notificationSound.play().catch(e => console.error("Sound error:", e));
+          if (!localStorage.getItem(SOUND_ALERT) || localStorage.getItem(SOUND_ALERT) === 'true') {
+            notificationSound.play().catch(e => console.error("Sound error:", e));
+          }
         }
       });
 
