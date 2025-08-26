@@ -28,7 +28,8 @@ from .utils import process_excel_file
 import json
 from django.shortcuts import get_object_or_404
 from rest_framework.parsers import MultiPartParser
-
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 User = get_user_model()
 
@@ -47,6 +48,11 @@ class BulkCandidateUploadView(APIView):
 
         successfully_processed = 0
         errors = []
+        total_stats = {
+            'usuarios_creados': 0,
+            'usuarios_encontrados': 0,
+            'usuarios_actualizados': 0
+        }
 
         for index, candidate_data in enumerate(candidates_data):
             print(f"DEBUG VIEW: Procesando candidato {index + 1}: {candidate_data.get('first_name', 'N/A')}")
@@ -61,6 +67,11 @@ class BulkCandidateUploadView(APIView):
                 try:
                     user = serializer.save()
                     successfully_processed += 1
+                    # Acumular estadísticas del serializer
+                    if hasattr(serializer, 'stats'):
+                        total_stats['usuarios_creados'] += serializer.stats.get('usuarios_creados', 0)
+                        total_stats['usuarios_encontrados'] += serializer.stats.get('usuarios_encontrados', 0)
+                        total_stats['usuarios_actualizados'] += serializer.stats.get('usuarios_actualizados', 0)
                 except Exception as e:
                     errors.append({
                         "index": index + 1,
@@ -94,7 +105,8 @@ class BulkCandidateUploadView(APIView):
         
         return Response({
             "successfully_processed": successfully_processed,
-            "errors": cleaned_errors
+            "errors": cleaned_errors,
+            "stats": total_stats
         })
 
 
@@ -124,6 +136,10 @@ class CycleListViewSet(viewsets.ModelViewSet):
 class CandidateListAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, PersonalPermission]
     serializer_class = CandidateListSerializer
+
+    @method_decorator(cache_page(60 * 60))
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
         print(f"DEBUG: CandidateListAPIView - User: {self.request.user.email}")
@@ -182,6 +198,10 @@ class CandidateProfileRetrieveAPIView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated, PersonalPermission]
     serializer_class = UserProfileSerializer
     lookup_field = 'user__id'  # We want to lookup by the related user’s id
+
+    @method_decorator(cache_page(60 * 60))
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     def get_object(self):
         uid = self.kwargs.get('uid')

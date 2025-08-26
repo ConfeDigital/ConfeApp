@@ -1,10 +1,23 @@
 import pandas as pd 
 import math 
+import random
+import string
 from candidatos.models import Cycle
 
 def normalize_value(val):
-    if pd.isna(val):
+    """Normaliza valores, convierte NULL/NaN a None o valores genéricos apropiados"""
+    # Manejar valores NULL/NaN
+    if pd.isna(val) or val is None:
         return None
+    
+    # Convertir a string para procesamiento
+    if isinstance(val, str):
+        val = val.strip()
+        # Manejar strings vacíos o que representan NULL
+        if val == '' or val.lower() in ['null', 'nan', 'none', 'n/a', 'no aplica', 'na', '-', '--']:
+            return None
+    
+    # Manejar floats problemáticos
     if isinstance(val, float):
         if math.isinf(val) or math.isnan(val):
             return None
@@ -14,7 +27,27 @@ def normalize_value(val):
         # Convertir floats enteros a int
         if val.is_integer():
             return int(val)
+    
     return val
+
+def generate_generic_value(field_name, field_type='string'):
+    """Genera valores genéricos para campos requeridos que están NULL"""
+    if field_type == 'phone':
+        return "Sin especificar"
+    elif field_type == 'email':
+        # Generar email único
+        random_suffix = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
+        return f"usuario.{random_suffix}@placeholder.com"
+    elif field_type == 'name':
+        return "Sin especificar"
+    elif field_type == 'date':
+        return None  # Las fechas pueden ser None
+    elif field_type == 'boolean':
+        return False
+    elif field_type == 'number':
+        return 0
+    else:
+        return "Sin especificar"
 
 def process_excel_file(file):
     try:
