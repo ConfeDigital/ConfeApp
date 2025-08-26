@@ -16,6 +16,7 @@ class CandidateAdmin(SimpleHistoryAdmin):
     ]
     list_filter = ['user__center', 'cycle'] # Corrected: use a double-underscore lookup
     search_fields = ('user_email', 'full_name',)
+    ordering = ('user__date_joined',)
 
     def user_id(self, obj):
         return obj.user.id
