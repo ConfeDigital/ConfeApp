@@ -28,7 +28,8 @@ from .utils import process_excel_file
 import json
 from django.shortcuts import get_object_or_404
 from rest_framework.parsers import MultiPartParser
-
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
 
 User = get_user_model()
 
@@ -136,6 +137,10 @@ class CandidateListAPIView(generics.ListAPIView):
     permission_classes = [IsAuthenticated, PersonalPermission]
     serializer_class = CandidateListSerializer
 
+    @method_decorator(cache_page(60 * 60))
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
+
     def get_queryset(self):
         print(f"DEBUG: CandidateListAPIView - User: {self.request.user.email}")
         print(f"DEBUG: CandidateListAPIView - User center: {self.request.user.center}")
@@ -193,6 +198,10 @@ class CandidateProfileRetrieveAPIView(generics.RetrieveAPIView):
     permission_classes = [IsAuthenticated, PersonalPermission]
     serializer_class = UserProfileSerializer
     lookup_field = 'user__id'  # We want to lookup by the related user’s id
+
+    @method_decorator(cache_page(60 * 60))
+    def get(self, request, *args, **kwargs):
+        return super().get(request, *args, **kwargs)
 
     def get_object(self):
         uid = self.kwargs.get('uid')
