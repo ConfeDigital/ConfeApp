@@ -768,6 +768,14 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
         print(f"DEBUG SERIALIZER: validated_data keys al inicio: {list(validated_data.keys())}")
         print(f"DEBUG SERIALIZER: validated_data completo: {validated_data}")
         print(f"DEBUG SERIALIZER: Antes de extraer datos del usuario")
+        
+        # Inicializar estadísticas
+        if not hasattr(self, 'stats'):
+            self.stats = {
+                'usuarios_creados': 0,
+                'usuarios_encontrados': 0,
+                'usuarios_actualizados': 0
+            }
         # Extraer datos del usuario
         user_data = {key: validated_data.pop(key, None) for key in ['first_name', 'last_name', 'second_last_name', 'email']}
         print(f"DEBUG SERIALIZER: user_data extraído: {user_data}")
@@ -798,18 +806,55 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
             password = ''.join(secrets.choice(alphabet) for i in range(12))
         
         print(f"DEBUG SERIALIZER: Antes de crear/obtener usuario")
-        # Verificar si el usuario ya existe
-        existing_user = User.objects.filter(email=user_data["email"]).first()
+        
+        # Verificar si el usuario ya existe por nombre completo (más estricto que email)
+        first_name = user_data.get("first_name", "").strip()
+        last_name = user_data.get("last_name", "").strip()
+        second_last_name = user_data.get("second_last_name", "").strip()
+        
+        # Buscar usuario existente por nombre completo
+        existing_user = None
+        if first_name and last_name:
+            # Buscar por nombre completo exacto
+            if second_last_name:
+                existing_user = User.objects.filter(
+                    first_name__iexact=first_name,
+                    last_name__iexact=last_name,
+                    second_last_name__iexact=second_last_name
+                ).first()
+            else:
+                existing_user = User.objects.filter(
+                    first_name__iexact=first_name,
+                    last_name__iexact=last_name
+                ).first()
+        
         if existing_user:
-            print(f"DEBUG SERIALIZER: Usuario ya existe: {existing_user.email}")
+            print(f"DEBUG SERIALIZER: Usuario ya existe por nombre: {existing_user.first_name} {existing_user.last_name}")
             user = existing_user
             created = False
+            self.stats['usuarios_encontrados'] += 1
+            # Actualizar email si es diferente y el existente es placeholder
+            if (user_data["email"] != existing_user.email and 
+                not existing_user.email.endswith("@placeholder.com")):
+                user.email = user_data["email"]
+                user.save()
+                self.stats['usuarios_actualizados'] += 1
+                print(f"DEBUG SERIALIZER: Email actualizado: {user.email}")
         else:
-            # Crear nuevo usuario
-            user = User.objects.create(**user_data)
-            user.set_password(password)
-            created = True
-            print(f"DEBUG SERIALIZER: Usuario creado: {user.email}")
+            # Verificar también por email como respaldo
+            existing_user_by_email = User.objects.filter(email=user_data["email"]).first()
+            if existing_user_by_email:
+                print(f"DEBUG SERIALIZER: Usuario ya existe por email: {existing_user_by_email.email}")
+                user = existing_user_by_email
+                created = False
+                self.stats['usuarios_encontrados'] += 1
+            else:
+                # Crear nuevo usuario
+                user = User.objects.create(**user_data)
+                user.set_password(password)
+                created = True
+                self.stats['usuarios_creados'] += 1
+                print(f"DEBUG SERIALIZER: Usuario creado: {user.email}")
         
         # Asignar center del usuario que está creando (solo si es nuevo)
         if created:

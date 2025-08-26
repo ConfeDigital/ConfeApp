@@ -47,6 +47,11 @@ class BulkCandidateUploadView(APIView):
 
         successfully_processed = 0
         errors = []
+        total_stats = {
+            'usuarios_creados': 0,
+            'usuarios_encontrados': 0,
+            'usuarios_actualizados': 0
+        }
 
         for index, candidate_data in enumerate(candidates_data):
             print(f"DEBUG VIEW: Procesando candidato {index + 1}: {candidate_data.get('first_name', 'N/A')}")
@@ -61,6 +66,11 @@ class BulkCandidateUploadView(APIView):
                 try:
                     user = serializer.save()
                     successfully_processed += 1
+                    # Acumular estadísticas del serializer
+                    if hasattr(serializer, 'stats'):
+                        total_stats['usuarios_creados'] += serializer.stats.get('usuarios_creados', 0)
+                        total_stats['usuarios_encontrados'] += serializer.stats.get('usuarios_encontrados', 0)
+                        total_stats['usuarios_actualizados'] += serializer.stats.get('usuarios_actualizados', 0)
                 except Exception as e:
                     errors.append({
                         "index": index + 1,
@@ -94,7 +104,8 @@ class BulkCandidateUploadView(APIView):
         
         return Response({
             "successfully_processed": successfully_processed,
-            "errors": cleaned_errors
+            "errors": cleaned_errors,
+            "stats": total_stats
         })
 
 

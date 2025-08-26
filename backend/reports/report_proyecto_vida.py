@@ -135,7 +135,7 @@ class ProyectoVidaReport:
         # Meta text
         meta_text_box = shapes.add_textbox(Inches(1.2), Inches(1.7), prs.slide_width - Inches(2.4), Inches(0.6))
         meta_tf = meta_text_box.text_frame
-        meta_tf.text = f"META: {meta_data.get("meta", 'No especificado')}"
+        meta_tf.text = f"META: {meta_data.get('meta', 'No especificado')}"
         for paragraph in meta_tf.paragraphs:
             paragraph.alignment = PP_ALIGN.CENTER
             for run in paragraph.runs:
@@ -188,7 +188,7 @@ class ProyectoVidaReport:
                 # Responsible person
                 resp_box = shapes.add_textbox(Inches(6), Inches(y_position), Inches(2.5), Inches(0.4))
                 resp_tf = resp_box.text_frame
-                resp_tf.text = f"Encargado: {paso.get("encargado", 'No especificado')}"
+                resp_tf.text = f"Encargado: {paso.get('encargado', 'No especificado')}"
                 for paragraph in resp_tf.paragraphs:
                     for run in paragraph.runs:
                         run.font.size = Pt(12)
