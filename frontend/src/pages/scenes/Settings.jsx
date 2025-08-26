@@ -23,6 +23,7 @@ import {
   Delete,
   Notifications,
   ColorLens,
+  SettingsBackupRestore,
 } from "@mui/icons-material";
 import axios from "../../api";
 import useDocumentTitle from "../../components/hooks/useDocumentTitle";
@@ -202,7 +203,7 @@ export default function Settings() {
       <Grid container spacing={3}>
         {/* Notification Settings */}
         <Grid item xs={12} sm={6}>
-          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+          <Paper elevation={2} sx={{ p: 3, mb: 3, maxWidth: "300px" }}>
             <Typography
               variant="h6"
               sx={{ display: "flex", alignItems: "center", mb: 2 }}
@@ -258,7 +259,7 @@ export default function Settings() {
         </Grid>
 
         {/* Theme Family Settings */}
-        {/* <Grid item xs={12} sm={6}>
+        {/* <Grid xs={12} sm={6}>
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
             <Typography
               variant="h6"
@@ -290,7 +291,7 @@ export default function Settings() {
         sx={{
           mt: 4,
           display: "flex",
-          justifyContent: "space-between",
+          justifyContent: "left",
           flexWrap: "wrap",
           gap: 2,
         }}
@@ -306,8 +307,8 @@ export default function Settings() {
         </Button>
         <Button
           variant="outlined"
-          color="error"
-          startIcon={<Delete />}
+          color="info"
+          startIcon={<SettingsBackupRestore />}
           onClick={() => setConfirmDialog(true)}
           disabled={isLoading}
         >
