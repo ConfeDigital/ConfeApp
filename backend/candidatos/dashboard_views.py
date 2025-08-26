@@ -1,8 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.utils.dateparse import parse_date
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 from .models import UserProfile
 from mycalendar.models import Appointment
 from centros.models import TransferRequest
@@ -18,7 +16,6 @@ User = get_user_model()
 class DashboardStatsView(APIView):
     permission_classes = [IsAuthenticated]
 
-    @method_decorator(cache_page(60 * 60))
     def get(self, request):
         start_date = request.GET.get("start_date")
         end_date = request.GET.get("end_date")
@@ -287,10 +284,6 @@ class DashboardStatsView(APIView):
 class CandidateListDashboardView(generics.ListAPIView):
     serializer_class = CandidateListSerializer
     permission_classes = [IsAuthenticated]
-
-    @method_decorator(cache_page(60 * 60))
-    def get(self, request, *args, **kwargs):
-        return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
         user_ids = self.request.query_params.getlist('ids')
