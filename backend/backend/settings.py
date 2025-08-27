@@ -81,7 +81,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "channels",
     'simple_history',
-    # 'storages',
+    'storages',
     "api",
     "mycalendar",
     "notifications",
