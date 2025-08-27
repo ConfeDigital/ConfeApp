@@ -67,7 +67,7 @@ CORS_ALLOWED_ORIGINS = [
 
 # --- Configuración de Media y Static Files ---
 
-AZURE_STORAGE_CONNECTIONSTRING = os.getenv('AZURE_CONNECTION_STRING')
+STORAGE_CONNECTION_STRING = os.getenv('AZURE_STORAGE_CONNECTIONSTRING')
 AZURE_CONTAINER = os.getenv('AZURE_CONTAINER', 'media')
 
 STORAGES = {
@@ -75,7 +75,7 @@ STORAGES = {
         "BACKEND": "storages.backends.azure_storage.AzureStorage",
         "OPTIONS": {
             "azure_container": AZURE_CONTAINER,
-            "connection_string": AZURE_CONNECTION_STRING,
+            "connection_string": STORAGE_CONNECTION_STRING,
         },
     },
     "staticfiles": {
@@ -83,7 +83,7 @@ STORAGES = {
     },
 }
 
-MEDIA_URL = f"https://{AZURE_CONNECTION_STRING.split('AccountName=')[1].split(';')[0]}.blob.core.windows.net/{AZURE_CONTAINER}/"
+MEDIA_URL = f"https://{STORAGE_CONNECTION_STRING.split('AccountName=')[1].split(';')[0]}.blob.core.windows.net/{AZURE_CONTAINER}/"
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = '/static/'
