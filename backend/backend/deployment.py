@@ -65,15 +65,41 @@ CORS_ALLOWED_ORIGINS = [
     'https://ceil.institucionconfe.org.mx'
 ]
 
-# --- Configuración de Static Files ---
+# --- Configuración de Media y Static Files ---
+
+STORAGE_CONNECTION_STRING = os.getenv('AZURE_STORAGE_CONNECTIONSTRING')
+AZURE_CONTAINER = os.getenv('AZURE_CONTAINER', 'media')
+
+# Parse Azure Storage connection string (like with SQL/Redis)
+STORAGE_PARAMS = {}
+if STORAGE_CONNECTION_STRING:
+    for part in STORAGE_CONNECTION_STRING.split(';'):
+        if '=' in part:
+            key, value = part.split('=', 1)
+            STORAGE_PARAMS[key.strip()] = value.strip()
+
+    ACCOUNT_NAME = STORAGE_PARAMS.get('AccountName')
+else:
+    ACCOUNT_NAME = None
+
 STORAGES = {
     "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
+        "BACKEND": "storages.backends.azure_storage.AzureStorage",
+        "OPTIONS": {
+            "azure_container": AZURE_CONTAINER,
+            "connection_string": STORAGE_CONNECTION_STRING,
+        },
     },
     "staticfiles": {
         "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
+
+if ACCOUNT_NAME:
+    MEDIA_URL = f"https://{ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/"
+else:
+    MEDIA_URL = "/media/"  # fallback for local dev
+
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = '/static/'
 
