@@ -83,7 +83,7 @@ STORAGES = {
     },
 }
 
-MEDIA_URL = f"/{AZURE_CONTAINER}/media/"
+MEDIA_URL = f"/{AZURE_CONTAINER}/"
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = '/static/'
