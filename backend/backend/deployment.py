@@ -83,6 +83,7 @@ STORAGES = {
     },
 }
 
+ACCOUNT_NAME = None
 if STORAGE_CONNECTION_STRING:
     from azure.storage.blob import BlobServiceClient
     try:
@@ -92,7 +93,10 @@ if STORAGE_CONNECTION_STRING:
         # Maneja el error si la cadena de conexión no es válida
         print(f"Error getting account name from connection string: {e}")
 
-MEDIA_URL = f"https://{ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/"
+if ACCOUNT_NAME:
+    MEDIA_URL = f"https://{ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/"
+else:
+    MEDIA_URL = "/media/"  # fallback for local dev
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = '/static/'
