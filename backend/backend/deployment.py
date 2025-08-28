@@ -74,8 +74,10 @@ STORAGES = {
     "default": {
         "BACKEND": "storages.backends.azure_storage.AzureStorage",
         "OPTIONS": {
+            "account_name": "saconfevm",
+            "account_key": os.getenv('AZURE_STORAGE_KEY'),  # Just the key part
             "azure_container": AZURE_CONTAINER,
-            "connection_string": STORAGE_CONNECTION_STRING,
+            "azure_ssl": True,
         },
     },
     "staticfiles": {
