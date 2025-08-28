@@ -70,18 +70,6 @@ CORS_ALLOWED_ORIGINS = [
 STORAGE_CONNECTION_STRING = os.getenv('AZURE_STORAGE_CONNECTIONSTRING')
 AZURE_CONTAINER = os.getenv('AZURE_CONTAINER', 'media')
 
-# Parse Azure Storage connection string (like with SQL/Redis)
-STORAGE_PARAMS = {}
-if STORAGE_CONNECTION_STRING:
-    for part in STORAGE_CONNECTION_STRING.split(';'):
-        if '=' in part:
-            key, value = part.split('=', 1)
-            STORAGE_PARAMS[key.strip()] = value.strip()
-
-    ACCOUNT_NAME = STORAGE_PARAMS.get('AccountName')
-else:
-    ACCOUNT_NAME = None
-
 STORAGES = {
     "default": {
         "BACKEND": "storages.backends.azure_storage.AzureStorage",
@@ -95,10 +83,16 @@ STORAGES = {
     },
 }
 
-if ACCOUNT_NAME:
-    MEDIA_URL = f"https://{ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/"
-else:
-    MEDIA_URL = "/media/"  # fallback for local dev
+if STORAGE_CONNECTION_STRING:
+    from azure.storage.blob import BlobServiceClient
+    try:
+        blob_service_client = BlobServiceClient.from_connection_string(STORAGE_CONNECTION_STRING)
+        ACCOUNT_NAME = blob_service_client.account_name
+    except Exception as e:
+        # Maneja el error si la cadena de conexión no es válida
+        print(f"Error getting account name from connection string: {e}")
+
+MEDIA_URL = f"https://{ACCOUNT_NAME}.blob.core.windows.net/{AZURE_CONTAINER}/"
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = '/static/'
