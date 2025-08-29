@@ -27,8 +27,9 @@ import dayjs from "dayjs";
 import * as Yup from "yup";
 
 import useDocumentTitle from "../../components/hooks/useDocumentTitle";
-import UserListDialog from "../../components/dashboard/UserListDialog"; 
+import UserListDialog from "../../components/dashboard/UserListDialog";
 import TransferListDialog from "../../components/dashboard/TransferListDialog"; // Import the new component
+import DashboardSkeleton from "../../components/dashboard/DashboardSkeleton";
 
 const dateFilterSchema = Yup.object({
     start_date: Yup.date()
@@ -54,18 +55,19 @@ export default function Dashboard() {
     const [selectedCycle, setSelectedCycle] = useState(null);
     const [activeFilter, setActiveFilter] = useState(null);
     const [errorMsg, setErrorMsg] = useState("");
-    
+
     // Regular user list dialog state
     const [isUserListDialogOpen, setIsUserListDialogOpen] = useState(false);
     const [userList, setUserList] = useState([]);
     const [dialogTitle, setDialogTitle] = useState("");
-    
+
     // Transfer requests dialog state
     const [isTransferDialogOpen, setIsTransferDialogOpen] = useState(false);
     const [transferUserList, setTransferUserList] = useState([]);
     const [transferTitle, setTransferTitle] = useState("");
     const [transferType, setTransferType] = useState("");
 
+    const [isLoading, setIsLoading] = useState(true);
     // Fetch cycles once
     useEffect(() => {
         api
@@ -77,6 +79,7 @@ export default function Dashboard() {
     // Fetch stats whenever filter changes
     useEffect(() => {
         const fetchStats = async () => {
+            setIsLoading(true);
             const params = {};
             if (activeFilter === "date") {
                 params.start_date = dateRange[0].format("YYYY-MM-DD");
@@ -91,6 +94,8 @@ export default function Dashboard() {
                 setStatsData(res.data);
             } catch (err) {
                 console.error(err);
+            } finally {
+                setIsLoading(false); // Set loading to false when done
             }
         };
         fetchStats();
@@ -138,7 +143,7 @@ export default function Dashboard() {
         if (userPksKey === 'haciaOrganizacion' || userPksKey === 'desdeOrganizacion') {
             setTransferTitle(title);
             setTransferType(userPksKey);
-            
+
             try {
                 // Instead of using user IDs, directly fetch transfer requests based on direction
                 const direction = userPksKey === 'haciaOrganizacion' ? 'incoming' : 'outgoing';
@@ -151,7 +156,7 @@ export default function Dashboard() {
             }
             return;
         }
-        
+
         // Regular user list handling
         setDialogTitle(title);
         const userPks = statsData.user_pks?.[userPksKey] || [];
@@ -179,13 +184,13 @@ export default function Dashboard() {
         setUserList([]);
         setDialogTitle("");
     };
-    
+
     const handleCloseTransferDialog = () => {
         setIsTransferDialogOpen(false);
         setTransferUserList([]);
         setTransferTitle("");
         setTransferType("");
-        
+
         // Refresh dashboard stats after closing transfer dialog
         // (in case transfers were approved/rejected)
         if (activeFilter === "date") {
@@ -225,29 +230,29 @@ export default function Dashboard() {
                                     key={i}
                                     onClick={() => {
                                         const userPksKey = k === 'sinPre' ? 'sinPre' :
-                                                           k === 'preIncompleta' ? 'preIncompleta' :
-                                                           k === 'preTerminada' ? 'preTerminada' :
+                                            k === 'preIncompleta' ? 'preIncompleta' :
+                                                k === 'preTerminada' ? 'preTerminada' :
 
-                                                           k === 'porContactar' ? 'porContactar' :
-                                                           k === 'conFecha' ? 'conFecha' :
-                                                           k === 'entrevistados' ? 'entrevistados' :
+                                                    k === 'porContactar' ? 'porContactar' :
+                                                        k === 'conFecha' ? 'conFecha' :
+                                                            k === 'entrevistados' ? 'entrevistados' :
 
-                                                           k === 'sis' ? 'sis' :
-                                                           k === 'diagnostica' ? 'diagnostica' :
-                                                           k === 'vida' ? 'vida' :
-                                                           k === 'habilidades' ? 'habilidades' :
+                                                                k === 'sis' ? 'sis' :
+                                                                    k === 'diagnostica' ? 'diagnostica' :
+                                                                        k === 'vida' ? 'vida' :
+                                                                            k === 'habilidades' ? 'habilidades' :
 
-                                                           k === 'desempleados' ? 'desempleados' :
-                                                           k === 'bolsa' ? 'bolsa' :
-                                                           k === 'empleados' ? 'empleados' :
+                                                                                k === 'desempleados' ? 'desempleados' :
+                                                                                    k === 'bolsa' ? 'bolsa' :
+                                                                                        k === 'empleados' ? 'empleados' :
 
-                                                           k === 'activos' ? 'activos' :
-                                                           k === 'inactivos' ? 'inactivos' :
+                                                                                            k === 'activos' ? 'activos' :
+                                                                                                k === 'inactivos' ? 'inactivos' :
 
-                                                           k === 'porCanalizar' ? 'porCanalizar' :
-                                                           k === 'desdeOrganizacion' ? 'desdeOrganizacion' :
-                                                           k === 'haciaOrganizacion' ? 'haciaOrganizacion' :
-                                                           null;
+                                                                                                    k === 'porCanalizar' ? 'porCanalizar' :
+                                                                                                        k === 'desdeOrganizacion' ? 'desdeOrganizacion' :
+                                                                                                            k === 'haciaOrganizacion' ? 'haciaOrganizacion' :
+                                                                                                                null;
                                         if (userPksKey && typeof data[k] === 'number') {
                                             handleOpenUserListDialog(label, userPksKey);
                                         } else if (typeof data[k] === 'string' && data[k].includes('no encontrado')) {
@@ -357,77 +362,84 @@ export default function Dashboard() {
 
             <Divider sx={{ mb: 2 }} />
 
-            {/* Stats panels */}
-            <Grid container spacing={2}>
-                <Grid item xs={12} sm={4}>
-                    {renderTable("Registrados", [
-                        ["Sin iniciar preentrevista", "sinPre"],
-                        ["Preentrevista incompleta", "preIncompleta"],
-                        ["Preentrevista terminada", "preTerminada"],
-                    ])}
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                    {renderTable("Canalización", [
-                        ["Por canalizar", "porCanalizar"],
-                        ["Solicitud de canalización saliente", "desdeOrganizacion"],
-                        ["Solicitud de canalización entrante", "haciaOrganizacion"],
-                    ])}
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                    {renderTable("Entrevistas", [
-                        ["Sin fecha de entrevista", "porContactar"],
-                        ["Con fecha de entrevista", "conFecha"],
-                        ["Entrevistados", "entrevistados"],
-                    ])}
-                </Grid>
-                <Grid item xs={12}>
-                    {renderTable("Capacitación", [
-                        ["Por completar - SIS", "sis"],
-                        ["Por completar - Evaluación diagnóstica", "diagnostica"],
-                        // ["Por completar - Plan personalizado de apoyo", "apoyo"],
-                        ["Por completar - Proyecto de vida", "vida"],
-                        ["Por completar - Cuadro de habilidades", "habilidades"],
-                    ])}
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                    {renderTable("Agencia", [
-                        ["Desempleados", "desempleados"],
-                        ["En bolsa de trabajo", "bolsa"],
-                        ["Empleados", "empleados"],
-                    ])}
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                    {renderTable("Documentación", [
-                        ["Por contactar", "porContactar"],
-                        ["En proceso", "enProceso"],
-                        ["Pendientes", "pendientes"],
-                        ["Terminados", "terminados"],
-                    ])}
-                </Grid>
-                <Grid item xs={12}>
-                    {renderTable("Candidatos", [
-                        ["Activos", "activos"],
-                        ["Inactivos", "inactivos"],
-                    ])}
-                </Grid>
-            </Grid>
+            {isLoading ? (
+                <DashboardSkeleton />
+            ) : (
+                <>
+                    {/* Stats panels */}
+                    <Grid container spacing={2}>
+                        <Grid item xs={12} sm={4}>
+                            {renderTable("Registrados", [
+                                ["Sin iniciar preentrevista", "sinPre"],
+                                ["Preentrevista incompleta", "preIncompleta"],
+                                ["Preentrevista terminada", "preTerminada"],
+                            ])}
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            {renderTable("Canalización", [
+                                ["Por canalizar", "porCanalizar"],
+                                ["Solicitud de canalización saliente", "desdeOrganizacion"],
+                                ["Solicitud de canalización entrante", "haciaOrganizacion"],
+                            ])}
+                        </Grid>
+                        <Grid item xs={12} sm={4}>
+                            {renderTable("Entrevistas", [
+                                ["Sin fecha de entrevista", "porContactar"],
+                                ["Con fecha de entrevista", "conFecha"],
+                                ["Entrevistados", "entrevistados"],
+                            ])}
+                        </Grid>
+                        <Grid item xs={12}>
+                            {renderTable("Capacitación", [
+                                ["Por completar - SIS", "sis"],
+                                ["Por completar - Evaluación diagnóstica", "diagnostica"],
+                                // ["Por completar - Plan personalizado de apoyo", "apoyo"],
+                                ["Por completar - Proyecto de vida", "vida"],
+                                ["Por completar - Cuadro de habilidades", "habilidades"],
+                            ])}
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            {renderTable("Agencia", [
+                                ["Desempleados", "desempleados"],
+                                ["En bolsa de trabajo", "bolsa"],
+                                ["Empleados", "empleados"],
+                            ])}
+                        </Grid>
+                        <Grid item xs={12} sm={6}>
+                            {renderTable("Documentación", [
+                                ["Por contactar", "porContactar"],
+                                ["En proceso", "enProceso"],
+                                ["Pendientes", "pendientes"],
+                                ["Terminados", "terminados"],
+                            ])}
+                        </Grid>
+                        <Grid item xs={12}>
+                            {renderTable("Candidatos", [
+                                ["Activos", "activos"],
+                                ["Inactivos", "inactivos"],
+                            ])}
+                        </Grid>
+                    </Grid>
 
-            {/* Regular User List Dialog */}
-            <UserListDialog
-                open={isUserListDialogOpen}
-                onClose={handleCloseUserListDialog}
-                title={dialogTitle}
-                userList={userList}
-            />
-            
-            {/* Transfer Requests Dialog */}
-            <TransferListDialog
-                open={isTransferDialogOpen}
-                onClose={handleCloseTransferDialog}
-                title={transferTitle}
-                transferType={transferType}
-                userList={transferUserList}
-            />
+                    {/* Regular User List Dialog */}
+                    <UserListDialog
+                        open={isUserListDialogOpen}
+                        onClose={handleCloseUserListDialog}
+                        title={dialogTitle}
+                        userList={userList}
+                    />
+
+                    {/* Transfer Requests Dialog */}
+                    <TransferListDialog
+                        open={isTransferDialogOpen}
+                        onClose={handleCloseTransferDialog}
+                        title={transferTitle}
+                        transferType={transferType}
+                        userList={transferUserList}
+                    />
+                </>
+            )}
+
         </Box>
     );
 }
