@@ -148,7 +148,7 @@ class UserProfile(models.Model):
         #unique=True,
         blank=True,
         null=True,
-        validators=[RegexValidator(r'^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z0-9]\d{1}$', 'Enter a valid CURP')]
+        # validators=[RegexValidator(r'^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z0-9]\d{1}$', 'Enter a valid CURP')]
     )
 
     # Medical and Legal Status

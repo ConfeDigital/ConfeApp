@@ -183,6 +183,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
                   name={`${prefix}.residence_type`}
                   control={control}
                   disabled={!addressLat || !addressLng || disabled}
+                  defaultValue='CASA'
                   render={({ field }) => (
                     <Select {...field} label="Tipo de Residencia">
                       <MenuItem value="">No sé</MenuItem>
