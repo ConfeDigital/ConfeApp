@@ -101,7 +101,10 @@ const Login = () => {
 
           {/* Microsoft Sign-In */}
           <Box sx={{ textAlign: "center", mb: 2 }}>
-            <Button variant="outlined" startIcon={<MicrosoftIcon />} onClick={handleLogin}>
+            <Typography variant='h5' gutterBottom>
+              ¿Tienes un correo con dominio @confe.org?
+            </Typography>
+            <Button variant="outlined" startIcon={<MicrosoftIcon />} onClick={handleLogin} sx={{ mt: 1 }}>
               Entrar con Microsoft
             </Button>
           </Box>
