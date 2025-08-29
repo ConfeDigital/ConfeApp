@@ -323,6 +323,11 @@ class RespuestasGuardadas(APIView):
                 elif pregunta.tipo in ['fecha', 'fecha_hora']:
                     # Para fechas, mantener como string ISO
                     respuesta_procesada = str(respuesta_limpia) if respuesta_limpia else ""
+                elif pregunta.tipo in ['sis', 'sis2', 'canalizacion', 'canalizacion_centro', 'ch', 'ed', 'meta', 
+                                       'datos_personales', 'datos_domicilio', 'datos_medicos', 'contactos', 
+                                       'tipo_discapacidad']:
+                    # Para preguntas complejas, mantener la estructura original sin wrapper
+                    respuesta_procesada = respuesta_limpia if respuesta_limpia else {}
                 else:
                     # Para otros tipos, usar procesamiento simplificado
                     respuesta_procesada = procesar_respuesta_simplificada(respuesta_limpia, pregunta.tipo)
@@ -1590,18 +1595,12 @@ def procesar_respuesta_simplificada(respuesta, tipo):
     elif tipo == 'fecha_hora':
         return str(respuesta) if respuesta else ""
     
-    # Para tipos complejos, mantener solo información esencial
+    # Para tipos complejos, mantener la estructura original sin wrapper
     elif tipo in ['sis', 'sis2', 'canalizacion', 'canalizacion_centro', 'ch', 'ed', 'meta', 
                   'datos_personales', 'datos_domicilio', 'datos_medicos', 'contactos', 
                   'tipo_discapacidad']:
-        if isinstance(respuesta, dict):
-            # Simplificar objetos complejos para evitar problemas de serialización
-            return {
-                'tipo': tipo,
-                'datos': str(respuesta)[:1000]  # Limitar tamaño para evitar problemas
-            }
-        else:
-            return str(respuesta) if respuesta else ""
+        # Mantener la estructura original para todos los tipos complejos
+        return respuesta if respuesta else {}
     
     # Para cualquier otro tipo, convertir a string
     else:
