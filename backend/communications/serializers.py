@@ -2,6 +2,7 @@
 from rest_framework import serializers
 from .models import CenterMessage, CommunicationPost, ForumTopic, ForumReply, ForumFile
 from django.contrib.auth import get_user_model
+from api.fields import SASFileField
 
 User = get_user_model()
 
@@ -12,32 +13,39 @@ class CreatedBySerializer(serializers.ModelSerializer):
 
 class CommunicationPostSerializer(serializers.ModelSerializer):
     created_by = CreatedBySerializer(read_only=True)
+    attachment = SASFileField(required=False, allow_null=True, read_only=True)
 
     class Meta:
         model = CommunicationPost
         fields = '__all__'
         read_only_fields = ['created_by', 'created_at']
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        request = self.context.get("request")
+        if request and request.method in ("POST", "PUT", "PATCH"):
+            # On writes: accept a plain file upload instead of read-only field
+            self.fields["attachment"] = serializers.FileField(
+                required=False, allow_null=True, write_only=True
+            )
+
 
 class ForumFileSerializer(serializers.ModelSerializer):
-    file_url = serializers.SerializerMethodField()
+    # Use SASFileField for returning file URLs
+    file_url = SASFileField(source='file', read_only=True)
     file_size = serializers.SerializerMethodField()
 
     class Meta:
         model = ForumFile
         fields = ['id', 'file_url', 'file_type', 'original_name', 'file_size', 'uploaded_at']
 
-    def get_file_url(self, obj):
-        request = self.context.get('request')
-        if obj.file and request:
-            return request.build_absolute_uri(obj.file.url)
-        return None
-
     def get_file_size(self, obj):
         try:
             return obj.file.size
-        except:
+        except Exception:
             return 0
+
 
 class ForumReplySerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
@@ -49,7 +57,7 @@ class ForumReplySerializer(serializers.ModelSerializer):
     class Meta:
         model = ForumReply
         fields = [
-            'id', 'author_id', 'author_name', 'author_center', 'content', 
+            'id', 'author_id', 'author_name', 'author_center', 'content',
             'created_at', 'updated_at', 'is_edited', 'files', 'can_edit'
         ]
 
@@ -64,6 +72,7 @@ class ForumReplySerializer(serializers.ModelSerializer):
         if request and request.user:
             return obj.author == request.user
         return False
+
 
 class ForumTopicSerializer(serializers.ModelSerializer):
     author_name = serializers.SerializerMethodField()
@@ -104,6 +113,7 @@ class ForumTopicSerializer(serializers.ModelSerializer):
         if request and request.user:
             return obj.author == request.user
         return False
+
 
 class ForumTopicDetailSerializer(ForumTopicSerializer):
     replies = ForumReplySerializer(many=True, read_only=True)

@@ -7,58 +7,48 @@ from .utils import get_media_url_with_sas
 
 
 class SASFileField(serializers.FileField):
-    """
-    Custom FileField that returns SAS URLs for Azure Storage files in production,
-    regular URLs in development
-    """
-    
     def to_representation(self, value):
         if not value:
             return None
-        
-        # Only use SAS tokens in production (when using deployment settings)
-        # Check if we're using Azure Storage (deployment environment)
+
         using_azure_storage = (
-            hasattr(settings, 'STORAGES') and 
-            settings.STORAGES.get('default', {}).get('BACKEND') == 'storages.backends.azure_storage.AzureStorage'
+            hasattr(settings, "STORAGES")
+            and settings.STORAGES.get("default", {}).get("BACKEND")
+               == "storages.backends.azure_storage.AzureStorage"
         )
-        
+
         if using_azure_storage:
-            # Generate SAS URL for the file
             sas_url = get_media_url_with_sas(value)
-            
-            # Return SAS URL if generation succeeds, otherwise fallback
             if sas_url:
                 return sas_url
-        
-        # Return the regular URL (development or fallback)
-        return value.url if hasattr(value, 'url') else str(value)
+
+        request = self.context.get("request") if hasattr(self, "context") else None
+        if hasattr(value, "url"):
+            if request:
+                return request.build_absolute_uri(value.url)
+            return value.url  # fallback if no request
+        return str(value)
 
 
 class SASImageField(serializers.ImageField):
-    """
-    Custom ImageField that returns SAS URLs for Azure Storage images in production,
-    regular URLs in development
-    """
-    
     def to_representation(self, value):
         if not value:
             return None
-        
-        # Only use SAS tokens in production (when using deployment settings)
-        # Check if we're using Azure Storage (deployment environment)
+
         using_azure_storage = (
-            hasattr(settings, 'STORAGES') and 
-            settings.STORAGES.get('default', {}).get('BACKEND') == 'storages.backends.azure_storage.AzureStorage'
+            hasattr(settings, "STORAGES")
+            and settings.STORAGES.get("default", {}).get("BACKEND")
+               == "storages.backends.azure_storage.AzureStorage"
         )
-        
+
         if using_azure_storage:
-            # Generate SAS URL for the image
             sas_url = get_media_url_with_sas(value)
-            
-            # Return SAS URL if generation succeeds, otherwise fallback
             if sas_url:
                 return sas_url
-        
-        # Return the regular URL (development or fallback)
-        return value.url if hasattr(value, 'url') else str(value)
+
+        request = self.context.get("request") if hasattr(self, "context") else None
+        if hasattr(value, "url"):
+            if request:
+                return request.build_absolute_uri(value.url)
+            return value.url  # fallback if no request
+        return str(value)

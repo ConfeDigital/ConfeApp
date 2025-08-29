@@ -141,8 +141,6 @@ class CandidateCentroSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'email', 'first_name', 'last_name', 'second_last_name', 'center', 'domicile']
     
 class CandidatePhotoSerializer(serializers.ModelSerializer):
-    photo = SASImageField(read_only=True)
-    
     class Meta:
         model = UserProfile
         fields = ['photo']
