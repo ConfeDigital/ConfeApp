@@ -40,6 +40,7 @@ const JobsCompaniesPage = () => {
   const [deleteId, setDeleteId] = useState(null);
 
   const [alert, setAlert] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
@@ -58,6 +59,7 @@ const JobsCompaniesPage = () => {
     } catch (error) {
       console.error("Error al obtener los datos", error);
     }
+    setIsLoading(false);
   };
 
   const handleTabChange = (event, newValue) => {
@@ -187,6 +189,7 @@ const JobsCompaniesPage = () => {
             onEdit={handleCompanyEdit}
             onDelete={(id) => handleDelete("company", id)}
             handleToggleActive={handleToggleActiveCompany}
+            isLoading={isLoading}
           />
         </Box>
       )}
@@ -205,6 +208,7 @@ const JobsCompaniesPage = () => {
             onEdit={handleEmployerEdit}
             onDelete={(id) => handleDelete("employer", id)}
             handleToggleActive={handleToggleActiveEmployer}
+            isLoading={isLoading}
           />
         </Box>
       )}
@@ -222,6 +226,7 @@ const JobsCompaniesPage = () => {
             rows={jobs}
             onEdit={handleJobEdit}
             onDelete={(id) => handleDelete("job", id)}
+            isLoading={isLoading}
           />
         </Box>
       )}

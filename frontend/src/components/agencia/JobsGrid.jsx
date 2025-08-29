@@ -9,7 +9,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const mapContainerStyle = { width: '100%', height: '64vh' };
 const defaultCenter = { lat: 19.43, lng: -99.13 };  // fallback center
 
-export default function JobsDataGrid({ rows, companyNameVisibility }) {
+export default function JobsDataGrid({ rows, companyNameVisibility, isLoading }) {
   const [view, setView] = useState('grid');
   const [selected, setSelected] = useState(null);
 
@@ -174,6 +174,7 @@ export default function JobsDataGrid({ rows, companyNameVisibility }) {
             },
           },
         }}
+        loading={isLoading}
       />
     </Box>
   );

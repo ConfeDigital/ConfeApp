@@ -117,7 +117,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
             render={() => (
               <Autocomplete onLoad={c => (ref.current = c)} onPlaceChanged={onPlaceChanged}>
                 <TextField
-                  label="Buscar dirección"
+                  label="Buscar y seleccionar dirección"
                   fullWidth
                   size="small"
                   margin="dense"

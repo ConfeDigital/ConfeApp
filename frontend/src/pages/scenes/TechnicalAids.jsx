@@ -19,7 +19,7 @@ const TechnicalAidsDashboard = () => {
   const [technicalAids, setTechnicalAids] = useState([]);
   const [impediments, setImpediments] = useState([]);
   const [selectedImpedimentId, setSelectedImpedimentId] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   // State for modals
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);

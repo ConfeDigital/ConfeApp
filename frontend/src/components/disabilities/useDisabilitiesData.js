@@ -3,6 +3,7 @@ import axios from "../../api";
 
 export const useDisabilitiesData = () => {
   const [data, setData] = useState({ groups: [], disabilities: [] });
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchData = async () => {
     try {
@@ -15,9 +16,11 @@ export const useDisabilitiesData = () => {
         groups: groupsRes.data,
         disabilities: disabilitiesRes.data,
       });
+      setIsLoading(false);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
+    setIsLoading(false);
   };
 
   const handleCreateOrUpdate = async (formData, tabIndex) => {
@@ -65,6 +68,7 @@ export const useDisabilitiesData = () => {
     data,
     fetchData,
     handleCreateOrUpdate,
-    handleDelete
+    handleDelete,
+    isLoading
   };
 };

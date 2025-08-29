@@ -6,7 +6,7 @@ import ToggleOnIcon from "@mui/icons-material/ToggleOn";
 import ToggleOffIcon from "@mui/icons-material/ToggleOff";
 import "../../styles/DataGridStyles.css";
 
-const CompaniesDataGrid = ({ rows, onEdit, onDelete, handleToggleActive }) => {
+const CompaniesDataGrid = ({ rows, onEdit, onDelete, handleToggleActive, isLoading }) => {
   const columns = [
     { field: 'name', headerName: 'Nombre', flex: 1, minWidth: 160 },
     {
@@ -72,6 +72,7 @@ const CompaniesDataGrid = ({ rows, onEdit, onDelete, handleToggleActive }) => {
           },
         }}
         getRowClassName={getRowClassName}
+        loading={isLoading}
       />
     </Box>
   );
