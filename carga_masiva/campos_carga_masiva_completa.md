@@ -99,7 +99,17 @@
 |-------------|-------------|---------|
 | `disability` | Lista de discapacidades | ["Discapacidad física", "Discapacidad visual"] |
 | `cycle` | ID del ciclo | 1 |
-| `medications` | Lista de medicamentos | ["Paracetamol", "Ibuprofeno"] |
+| `medications` | Lista de medicamentos en formato JSON | [{"name": "Paracetamol", "dose": "500mg cada 8 horas", "reason": "Dolor de cabeza"}] |
+
+### **8. Campos de Medicamentos**
+| Campo Excel | Descripción | Formato | Ejemplo |
+|-------------|-------------|---------|---------|
+| `medications` | Lista de medicamentos | JSON string | `[{"name": "Paracetamol", "dose": "500mg cada 8 horas", "reason": "Dolor de cabeza"}]` |
+
+**Formatos aceptados para medicamentos:**
+- **JSON completo**: `[{"name": "Medicamento", "dose": "Dosis", "reason": "Razón"}]`
+- **String simple**: `"Paracetamol"` (se convertirá a `{"name": "Paracetamol", "dose": "", "reason": ""}`)
+- **Lista vacía**: `[]` (sin medicamentos)
 
 ## 📄 **Ejemplo de Excel**
 

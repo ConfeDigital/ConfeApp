@@ -264,26 +264,32 @@ def process_excel_file(file):
                 
                 candidate["disability"] = disability_ids
                     
-                # Medicamentos - convertir nombres a objetos
+                # Medicamentos - procesar como objetos completos para ser consistentes con el serializer
                 medications = candidate.get("medications", "")
                 medication_data = []
                 
                 if medications:
                     if isinstance(medications, str):
-                        medication_names = [medications.strip()]
+                        # Si es un string, intentar parsear como JSON
+                        try:
+                            import json
+                            medication_data = json.loads(medications)
+                        except json.JSONDecodeError:
+                            # Si no es JSON válido, tratar como nombre simple
+                            medication_data = [{"name": medications.strip()}]
                     elif isinstance(medications, list):
-                        medication_names = [m.strip() for m in medications]
+                        # Si es una lista, procesar cada elemento
+                        for med in medications:
+                            if isinstance(med, dict):
+                                medication_data.append(med)
+                            elif isinstance(med, str):
+                                medication_data.append({"name": med.strip()})
                     else:
-                        medication_names = []
-                    
-                    # Crear datos de medicamentos
-                    for name in medication_names:
-                        if name:
-                            medication_data.append({"name": name})
+                        medication_data = []
                 
                 candidate["medications"] = medication_data
                 
-                                # Procesar múltiples contactos de emergencia
+                # Procesar múltiples contactos de emergencia
                 emergency_contacts = []
                 
                 # Debug: mostrar todos los campos del candidato para ver qué hay
@@ -332,13 +338,15 @@ def process_excel_file(file):
                     else:
                         print(f"DEBUG: Contacto {contact_num} NO cumple requisitos mínimos")
                 
-                # NO procesar contactos de emergencia aquí - se procesarán en el serializer
+                # Los contactos de emergencia se procesarán en el serializer
+                # No los asignamos aquí para mantener la consistencia con el serializer
                 print(f"DEBUG: Contactos de emergencia se procesarán en el serializer para {candidate.get('first_name', 'N/A')}")
                 
                 # Normalizar campos con opciones predefinidas
                 candidate['gender'] = normalize_gender(candidate.get('gender'), candidate.get('first_name'))
                 candidate['blood_type'] = normalize_blood_type(candidate.get('blood_type'))
                 candidate['residence_type'] = normalize_residence_type(candidate.get('residence_type'))
+                candidate['agency_state'] = normalize_agency_state(candidate.get('agency_state'))
                 
                 # Debug: mostrar campos de domicilio
                 domicile_fields = ['address_road', 'address_number', 'address_number_int', 'address_PC', 
@@ -371,7 +379,7 @@ def process_excel_file(file):
                     candidate['physical_restrictions'] = None  # Permitir null
                 
                 if not candidate.get('agency_state'):
-                    candidate['agency_state'] = None  # Permitir null
+                    candidate['agency_state'] = 'Bol'  # Valor por defecto: Bolsa de Trabajo
                 
                 if not candidate.get('current_job'):
                     candidate['current_job'] = None  # Permitir null
@@ -621,3 +629,36 @@ def normalize_phone(value):
         return None
     
     return value
+
+def normalize_agency_state(value):
+    """Normaliza valores de agency_state para que coincidan con las opciones válidas"""
+    if not value:
+        return 'Bol'  # Valor por defecto
+    
+    # Convertir a string y limpiar
+    value = str(value).strip().upper()
+    
+    # Mapeo de valores comunes a opciones válidas
+    agency_state_mapping = {
+        # Valores exactos
+        'BOL': 'Bol',
+        'EMP': 'Emp', 
+        'DES': 'Des',
+        
+        # Variaciones comunes
+        'BOLSA': 'Bol',
+        'BOLSA DE TRABAJO': 'Bol',
+        'BOLSA DE EMPLEO': 'Bol',
+        'EMPLEADO': 'Emp',
+        'EMPLEADA': 'Emp',
+        'TRABAJANDO': 'Emp',
+        'DESEMPLEADO': 'Des',
+        'DESEMPLEADA': 'Des',
+        'SIN TRABAJO': 'Des',
+        'SIN EMPLEO': 'Des',
+        'PARO': 'Des',
+        'DESOCUPADO': 'Des',
+        'DESOCUPADA': 'Des',
+    }
+    
+    return agency_state_mapping.get(value, 'Bol')  # Por defecto Bolsa de Trabajo
