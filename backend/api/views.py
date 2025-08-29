@@ -13,6 +13,10 @@ from rest_framework import status, generics
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
 from django.db.models import Q
+from django.conf import settings
+from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
+from datetime import datetime, timedelta
+import os
 
 User = get_user_model()
 
@@ -176,3 +180,88 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response({"error": "El ID del centro debe ser un entero."}, status=status.HTTP_400_BAD_REQUEST)
         except Center.DoesNotExist:
             return Response({"error": "Centro no encontrado."}, status=status.HTTP_404_NOT_FOUND)
+
+
+class MediaSASTokenView(APIView):
+    """
+    Generate SAS tokens for accessing private Azure Storage media files
+    Only works when using Azure Storage (deployment environment)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        """
+        Generate a SAS token for a specific blob path
+        Expected payload: {"blob_path": "path/to/file.jpg"}
+        """
+        # Check if we're using Azure Storage
+        using_azure_storage = (
+            hasattr(settings, 'STORAGES') and 
+            settings.STORAGES.get('default', {}).get('BACKEND') == 'storages.backends.azure_storage.AzureStorage'
+        )
+        
+        if not using_azure_storage:
+            return Response(
+                {"error": "SAS tokens are only available when using Azure Storage"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        blob_path = request.data.get('blob_path')
+        if not blob_path:
+            return Response(
+                {"error": "blob_path is required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            # Get Azure Storage configuration from settings
+            account_name = "saconfevm"
+            account_key = os.getenv('AZURE_STORAGE_KEY')
+            container_name = os.getenv('AZURE_CONTAINER', 'media')
+
+            if not account_key:
+                return Response(
+                    {"error": "Azure Storage configuration not found"}, 
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                )
+
+            # Generate SAS token for the specific blob
+            sas_token = generate_blob_sas(
+                account_name=account_name,
+                container_name=container_name,
+                blob_name=blob_path,
+                account_key=account_key,
+                permission=BlobSasPermissions(read=True),
+                expiry=datetime.utcnow() + timedelta(hours=1)  # Token expires in 1 hour
+            )
+
+            # Construct the full URL with SAS token
+            blob_url = f"https://{account_name}.blob.core.windows.net/{container_name}/{blob_path}?{sas_token}"
+
+            return Response({
+                "blob_url": blob_url,
+                "sas_token": sas_token,
+                "expires_at": (datetime.utcnow() + timedelta(hours=1)).isoformat()
+            })
+
+        except Exception as e:
+            return Response(
+                {"error": f"Failed to generate SAS token: {str(e)}"}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    def get(self, request):
+        """
+        Generate SAS token for blob path provided as query parameter
+        Usage: GET /api/media-sas/?blob_path=path/to/file.jpg
+        """
+        blob_path = request.query_params.get('blob_path')
+        if not blob_path:
+            return Response(
+                {"error": "blob_path query parameter is required"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Reuse the POST logic
+        request.data = {'blob_path': blob_path}
+        return self.post(request)
