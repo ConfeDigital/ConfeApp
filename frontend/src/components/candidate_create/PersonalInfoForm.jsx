@@ -181,6 +181,7 @@ const PersonalInfoForm = ({
                 {...field}
                 error={!!error}
                 helperText={error ? error.message : null}
+                slotProps={{ htmlInput: { maxLength: 18 } }}
               />
             )}
           />
