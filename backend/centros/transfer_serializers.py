@@ -3,6 +3,7 @@ from .models import TransferRequest, Center
 from api.serializers import UserSerializer
 from centros.serializers import CenterSerializer
 from django.contrib.auth import get_user_model
+from api.fields import SASImageField
 
 User = get_user_model()
 
@@ -16,7 +17,7 @@ class TransferRequestSerializer(serializers.ModelSerializer):
     requested_user_id = serializers.PrimaryKeyRelatedField(queryset=User.objects.all(), write_only=True, source='requested_user')
     destination_center_id = serializers.PrimaryKeyRelatedField(queryset=Center.objects.all(), write_only=True, source='destination_center')
 
-    photo = serializers.ImageField(read_only=True, required=False, source='requested_user.userprofile.photo')
+    photo = SASImageField(read_only=True, required=False, source='requested_user.userprofile.photo')
 
     class Meta:
         model = TransferRequest

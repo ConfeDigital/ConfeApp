@@ -117,9 +117,17 @@ const Datasheet = () => {
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [datasheetLoading, setDatasheetLoading] = useState(false);
 
+  const [openImageDialog, setOpenImageDialog] = useState(false);
+
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
   const handleChange = (event, newValue) => setSelectedTab(newValue);
+
+  const handleOpenImageDialog = () => {
+    if (candidateProfile.photo) {
+      setOpenImageDialog(true);
+    }
+  };
 
   dayjs.locale("es");
 
@@ -338,10 +346,8 @@ const Datasheet = () => {
       }
 
       console.log(
-        `🟦 Base Cuestionario: ${q.base_cuestionario_nombre || q.nombre}, id: ${
-          q.id
-        }, color: ${colorFinal}, tiene_respuestas: ${
-          q.tiene_respuestas
+        `🟦 Base Cuestionario: ${q.base_cuestionario_nombre || q.nombre}, id: ${q.id
+        }, color: ${colorFinal}, tiene_respuestas: ${q.tiene_respuestas
         }, finalizado: ${q.finalizado}, activo: ${q.activo}`
       );
 
@@ -408,11 +414,9 @@ const Datasheet = () => {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${candidateProfile.user.first_name} ${
-        candidateProfile.user.last_name
-      } ${candidateProfile.user.second_last_name} - ${
-        reportType.text
-      } - ${dayjs().format("YYYY/MM/DD")}.${ext}`;
+      a.download = `${candidateProfile.user.first_name} ${candidateProfile.user.last_name
+        } ${candidateProfile.user.second_last_name} - ${reportType.text
+        } - ${dayjs().format("YYYY/MM/DD")}.${ext}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -467,6 +471,7 @@ const Datasheet = () => {
                 height: { xs: 100, sm: 140, md: 180 },
                 border: `4px solid ${theme.palette.primary.main}`,
               }}
+              onClick={handleOpenImageDialog}
             >
               {!candidateProfile.photo &&
                 candidateProfile.user.first_name.charAt(0)}
@@ -683,10 +688,10 @@ const Datasheet = () => {
                               index < activeStep
                                 ? "success.main"
                                 : index === activeStep
-                                ? "primary.main"
-                                : isStageCompleted
-                                ? "success.main"
-                                : "transparent",
+                                  ? "primary.main"
+                                  : isStageCompleted
+                                    ? "success.main"
+                                    : "transparent",
                             color: "#fff",
                             fontSize: 14,
                             fontWeight: "bold",
@@ -708,19 +713,19 @@ const Datasheet = () => {
                           index < activeStep
                             ? "contained"
                             : index === activeStep
-                            ? "contained"
-                            : isStageCompleted
-                            ? "contained"
-                            : "outlined"
+                              ? "contained"
+                              : isStageCompleted
+                                ? "contained"
+                                : "outlined"
                         }
                         color={
                           index < activeStep
                             ? "success"
                             : index === activeStep
-                            ? "info"
-                            : isStageCompleted
-                            ? "success"
-                            : "primary"
+                              ? "info"
+                              : isStageCompleted
+                                ? "success"
+                                : "primary"
                         }
                         size="small"
                         sx={{ my: 0.5 }}
@@ -814,7 +819,7 @@ const Datasheet = () => {
                           color:
                             expandedPhase === stage.code
                               ? expandedPhase === candidateProfile.stage &&
-                                "white"
+                              "white"
                               : btnProps.color + ".contrastText",
                         }}
                         onClick={() => handleStageClick(stage.code)}
@@ -991,12 +996,15 @@ const Datasheet = () => {
       >
         <CircularProgress color="inherit" />
       </Backdrop>
-      {/* Loading popup para el datasheet */}
-      {/* <LoadingPopup
-        open={datasheetLoading}
-        message="Cargando expediente del candidato..."
-        zIndex={9998}
-      /> */}
+      <Dialog open={openImageDialog} onClose={() => setOpenImageDialog(false)} maxWidth="md">
+        <DialogContent>
+          <img
+            src={candidateProfile.photo}
+            alt="Candidato Full-Scale"
+            style={{ width: 'auto', height: 'auto' }}
+          />
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 };

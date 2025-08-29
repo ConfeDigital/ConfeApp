@@ -8,6 +8,7 @@ from api.models import CustomUser
 #     RelacionDePuntuacionesYPercentiles,
 #     CalculoDeIndiceDeNecesidadesDeApoyo
 # )
+from api.fields import SASImageField
 
 class DesbloqueoPreguntaSerializer(serializers.ModelSerializer):
     pregunta_origen = serializers.CharField(source='pregunta_origen.texto')
@@ -31,6 +32,8 @@ class OpcionSerializer(serializers.ModelSerializer):
             'desbloqueos'
         ]
 class ImagenOpcionSerializer(serializers.ModelSerializer):
+    imagen = SASImageField(read_only=True)
+
     class Meta:
         model = ImagenOpcion
         fields = ['id', 'imagen', 'descripcion']
