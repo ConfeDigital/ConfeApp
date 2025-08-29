@@ -66,6 +66,7 @@ class CurrentUserProfileSerializer(serializers.ModelSerializer):
     emergency_contacts = EmergencyContactSerializer(many=True, read_only=True)
     domicile = DomicileSerializer(read_only=True)
     medications = MedicationSerializer(many=True, read_only=True)
+    photo = SASImageField(read_only=True)
 
     class Meta:
         model = UserProfile
@@ -83,6 +84,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
     emergency_contacts = EmergencyContactSerializer(many=True, read_only=True)
     domicile = DomicileSerializer(read_only=True)
     medications = MedicationSerializer(many=True, read_only=True)
+    photo = SASImageField(read_only=True)
 
     class Meta:
         model = UserProfile
