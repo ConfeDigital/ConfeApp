@@ -20,6 +20,7 @@ from django.http import FileResponse, FileResponse, Http404
 import unicodedata
 import re
 import traceback
+import uuid
 
 import logging
 from django.views.decorators.http import require_http_methods
@@ -1214,7 +1215,7 @@ class ResumenCHView(APIView):
         ).select_related('pregunta')
 
         resumen = {
-            "usuario_id": int(usuario_id),
+            "usuario_id": usuario_id,
             "preguntas_totales": 0,
             "preguntas_respondidas": 0,
             "lo_hace": 0,

@@ -11,7 +11,8 @@ export default function EmployersDataGrid({
   onEdit,
   onDelete,
   handleToggleActive,
-  companyNameVisibility
+  companyNameVisibility,
+  isLoading
 }) {
   const columns = [
     { field: "id", headerName: "ID", width: 80 },
@@ -85,6 +86,7 @@ export default function EmployersDataGrid({
               },
             },
           }}
+        loading={isLoading}
       />
     </Box>
   );

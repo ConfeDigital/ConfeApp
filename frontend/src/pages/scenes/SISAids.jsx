@@ -52,6 +52,7 @@ const SISAids = () => {
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewIndex, setViewIndex] = useState(0);
   const [editFromView, setEditFromView] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchSISAids = async () => {
     try {
@@ -60,6 +61,7 @@ const SISAids = () => {
     } catch (error) {
       console.error("Error fetching SIS aids:", error);
     }
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -183,6 +185,7 @@ const SISAids = () => {
               setViewDialogOpen(true);
             }
           }}
+          loading={isLoading}
         />
       </Box>
 

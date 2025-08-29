@@ -111,7 +111,7 @@ const PlanApoyosSeguimiento = () => {
               cursor: "pointer",
             }}
           >
-            Cuadro de Habilidades
+            Evaluación Diagnóstica
           </Typography>
           <Typography
             variant="button"
@@ -125,7 +125,7 @@ const PlanApoyosSeguimiento = () => {
               cursor: "pointer",
             }}
           >
-            Evaluación Diagnóstica
+            Cuadro de Habilidades
           </Typography>
         </Box>
       ) : (

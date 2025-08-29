@@ -41,6 +41,7 @@ const CHAids = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedAid, setEditedAid] = useState("");
   const [editAid, setEditAid] = useState({ id: null, aid: "" });
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchCHAids = async () => {
     try {
@@ -49,6 +50,7 @@ const CHAids = () => {
     } catch (error) {
       console.error("Error fetching CH aids:", error);
     }
+    setIsLoading(false);
   };
 
   useEffect(() => {
@@ -177,6 +179,7 @@ const CHAids = () => {
             );
             if (index !== -1) handleViewClick(index);
           }}
+          loading={isLoading}
         />
       </Box>
 

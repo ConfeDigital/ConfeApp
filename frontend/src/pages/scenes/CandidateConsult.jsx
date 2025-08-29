@@ -1,4 +1,4 @@
-import { Box, Typography, useTheme, Button, Tooltip } from "@mui/material";
+import { Box, Typography, useTheme, Button, Tooltip, CircularProgress } from "@mui/material";
 import { DataGrid, GridToolbar } from "@mui/x-data-grid";
 import { tokens } from "../../theme";
 import { useNavigate } from "react-router-dom";
@@ -18,18 +18,26 @@ const CandidateConsult = ({ estadoFiltro = null, onRowClick = null }) => {
   const colors = tokens(theme.palette.mode);
   const navigate = useNavigate();
   const [candidates, setCandidates] = useState([]);
+  const [isLoading, setIsLoading] = useState(true); // 👈 Add isLoading state
 
   useEffect(() => {
     const fetchCandidates = async () => {
-      const response = await axios.get("/api/candidatos/lista/");
-      let data = response.data;
+      setIsLoading(true); // 👈 Set loading to true before the fetch
+      try {
+        const response = await axios.get("/api/candidatos/lista/");
+        let data = response.data;
 
-      // ✅ Si se pasó un estadoFiltro, filtramos
-      if (estadoFiltro) {
-        data = data.filter((c) => c.estado === estadoFiltro);
+        // ✅ Si se pasó un estadoFiltro, filtramos
+        if (estadoFiltro) {
+          data = data.filter((c) => c.estado === estadoFiltro);
+        }
+
+        setCandidates(data);
+      } catch (error) {
+        console.error("Failed to fetch candidates:", error);
+      } finally {
+        setIsLoading(false); // 👈 Set loading to false after the fetch completes (success or failure)
       }
-
-      setCandidates(data);
     };
     fetchCandidates();
   }, [estadoFiltro]);
@@ -151,13 +159,13 @@ const CandidateConsult = ({ estadoFiltro = null, onRowClick = null }) => {
   };
 
   return (
-    <Box sx={{ m:2 }} >
+    <Box sx={{ m: 2 }} >
       <Button
         variant="contained"
         endIcon={<PersonAddAltIcon />}
         color="primary"
         onClick={() => navigate("/candidatos/crear")}
-        sx={{ mb: 2, alignContent:'end' }}
+        sx={{ mb: 2, alignContent: 'end' }}
       >
         {!isSmallScreen && "Agregar Candidato"}
       </Button>
@@ -186,6 +194,7 @@ const CandidateConsult = ({ estadoFiltro = null, onRowClick = null }) => {
               },
             },
           }}
+          loading={isLoading} // 👈 Pass the loading state to the DataGrid
         />
       </Box>
     </Box>

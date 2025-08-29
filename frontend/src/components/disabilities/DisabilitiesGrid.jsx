@@ -5,9 +5,8 @@ import { useTheme } from "@mui/material";
 import { tokens } from "../../theme";
 import "../../styles/DataGridStyles.css";
 import { useSelector } from "react-redux";
-import authApi from "../../authApi";
 
-export const DisabilitiesGrid = ({ tabIndex, data, handleEdit, handleDelete }) => {
+export const DisabilitiesGrid = ({ tabIndex, data, handleEdit, handleDelete, isLoading }) => {
   const theme = useTheme();
   const colors = tokens(theme.palette.mode);
   const isStaff = useSelector((state) => state.auth.user?.is_staff);
@@ -76,6 +75,7 @@ export const DisabilitiesGrid = ({ tabIndex, data, handleEdit, handleDelete }) =
           actions: isStaff ? true : false
         }}
         disableColumnSelector
+        loading={isLoading}
       />
     </Box>
   );

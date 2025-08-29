@@ -20,7 +20,7 @@ const Disabilities = () => {
   const [open, setOpen] = useState(false);
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState(null);
-  const { data, fetchData, handleCreateOrUpdate, handleDelete } = useDisabilitiesData();
+  const { data, fetchData, handleCreateOrUpdate, handleDelete, isLoading } = useDisabilitiesData();
 
   const [formData, setFormData] = useState({
     id: null,
@@ -114,6 +114,7 @@ const Disabilities = () => {
         data={data}
         handleEdit={handleEdit}
         handleDelete={handleDeleteRequest}
+        isLoading={isLoading}
       />
 
       <AddEditModal
