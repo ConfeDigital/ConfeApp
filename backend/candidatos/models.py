@@ -28,7 +28,7 @@ class Domicile(models.Model):
         ('OTRO', 'Otro'),
     ]
 
-    address_road = models.CharField(max_length=50, null=True, blank=True)
+    address_road = models.CharField(max_length=128, null=True, blank=True)
     address_number = models.CharField(max_length=8, null=True, blank=True)
     address_number_int = models.CharField(max_length=8, null=True, blank=True)
     address_PC = models.CharField(max_length=5, null=True, blank=True)
