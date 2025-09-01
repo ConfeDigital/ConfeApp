@@ -12,6 +12,41 @@ import json
 
 User = get_user_model()
 
+def get_or_create_medication(med_data):
+    """
+    Función helper para crear o obtener un medicamento de forma segura
+    evitando el error de múltiples objetos encontrados
+    """
+    if isinstance(med_data, dict):
+        name = med_data.get('name')
+        if not name:
+            return None
+        # Buscar medicamento existente
+        med_instance = Medication.objects.filter(name=name).first()
+        if not med_instance:
+            # Crear nuevo medicamento solo si no existe
+            med_instance = Medication.objects.create(
+                name=name,
+                dose=med_data.get('dose', ''),
+                reason=med_data.get('reason', '')
+            )
+        return med_instance
+    elif isinstance(med_data, str):
+        name = med_data.strip()
+        if not name:
+            return None
+        # Buscar medicamento existente
+        med_instance = Medication.objects.filter(name=name).first()
+        if not med_instance:
+            # Crear nuevo medicamento solo si no existe
+            med_instance = Medication.objects.create(
+                name=name,
+                dose='',
+                reason=''
+            )
+        return med_instance
+    return None
+
 class CandidatePrimaryKeyRelatedField(serializers.PrimaryKeyRelatedField):
     def to_representation(self, value):
         # Return the primary key (user id) of the UserProfile instance
@@ -364,24 +399,8 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
         if medications_data:
             medication_instances = []
             for med_data in medications_data:
-                if isinstance(med_data, dict):
-                    # Asegurar que el medicamento tenga al menos un nombre
-                    if med_data.get('name'):
-                        # Crear o buscar medicamento existente
-                        med_instance, created = Medication.objects.get_or_create(
-                            name=med_data['name'],
-                            defaults={
-                                'dose': med_data.get('dose', ''),
-                                'reason': med_data.get('reason', '')
-                            }
-                        )
-                        medication_instances.append(med_instance)
-                elif isinstance(med_data, str):
-                    # Si es un string, crear medicamento con solo el nombre
-                    med_instance, created = Medication.objects.get_or_create(
-                        name=med_data.strip(),
-                        defaults={'dose': '', 'reason': ''}
-                    )
+                med_instance = get_or_create_medication(med_data)
+                if med_instance:
                     medication_instances.append(med_instance)
             
             if medication_instances:
@@ -540,24 +559,8 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
             if medications_data:
                 medication_instances = []
                 for med_data in medications_data:
-                    if isinstance(med_data, dict):
-                        # Asegurar que el medicamento tenga al menos un nombre
-                        if med_data.get('name'):
-                            # Crear o buscar medicamento existente
-                            med_instance, created = Medication.objects.get_or_create(
-                                name=med_data['name'],
-                                defaults={
-                                    'dose': med_data.get('dose', ''),
-                                    'reason': med_data.get('reason', '')
-                                }
-                            )
-                            medication_instances.append(med_instance)
-                    elif isinstance(med_data, str):
-                        # Si es un string, crear medicamento con solo el nombre
-                        med_instance, created = Medication.objects.get_or_create(
-                            name=med_data.strip(),
-                            defaults={'dose': '', 'reason': ''}
-                        )
+                    med_instance = get_or_create_medication(med_data)
+                    if med_instance:
                         medication_instances.append(med_instance)
                 
                 if medication_instances:
@@ -1023,27 +1026,10 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
         if medications_data:
             medication_instances = []
             for med_data in medications_data:
-                if isinstance(med_data, dict):
-                    # Asegurar que el medicamento tenga al menos un nombre
-                    if med_data.get('name'):
-                        # Crear o buscar medicamento existente
-                        med_instance, created = Medication.objects.get_or_create(
-                            name=med_data['name'],
-                            defaults={
-                                'dose': med_data.get('dose', ''),
-                                'reason': med_data.get('reason', '')
-                            }
-                        )
-                        medication_instances.append(med_instance)
-                        print(f"DEBUG SERIALIZER: Medicamento {'creado' if created else 'encontrado'}: {med_instance.name}")
-                elif isinstance(med_data, str):
-                    # Si es un string, crear medicamento con solo el nombre
-                    med_instance, created = Medication.objects.get_or_create(
-                        name=med_data.strip(),
-                        defaults={'dose': '', 'reason': ''}
-                    )
+                med_instance = get_or_create_medication(med_data)
+                if med_instance:
                     medication_instances.append(med_instance)
-                    print(f"DEBUG SERIALIZER: Medicamento {'creado' if created else 'encontrado'} desde string: {med_instance.name}")
+                    print(f"DEBUG SERIALIZER: Medicamento procesado: {med_instance.name}")
             
             if medication_instances:
                 user_profile.medications.set(medication_instances)
