@@ -115,6 +115,11 @@ class Pregunta(models.Model):
         ('ch', 'Cuadro de Habilidades'),
         ('imagen', 'Imagen'),
         ('meta', 'Meta'),
+        ('profile_field', 'Campo de Perfil'),
+        ('profile_field_choice', 'Campo de Perfil - Selección'),
+        ('profile_field_boolean', 'Campo de Perfil - Booleano'),
+        ('profile_field_date', 'Campo de Perfil - Fecha'),
+        ('profile_field_textarea', 'Campo de Perfil - Texto Largo'),
     ]
 
     cuestionario = models.ForeignKey(Cuestionario, on_delete=models.CASCADE, related_name="preguntas")
@@ -134,6 +139,19 @@ class Pregunta(models.Model):
     ficha_tecnica = models.BooleanField(
         default=False,
         help_text="Si está marcado, la respuesta a esta pregunta se verá en el api de ficha tecnica"
+    )
+    
+    # New fields for profile field questions
+    profile_field_path = models.CharField(
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text="Path to the UserProfile field (e.g., 'personal_info.first_name')"
+    )
+    profile_field_config = models.JSONField(
+        blank=True,
+        null=True,
+        help_text="Configuration for profile field questions"
     )
 
     class Meta:
@@ -191,6 +209,17 @@ class Respuesta(models.Model):
             elif self.pregunta.texto == "Apellido Materno":
                 self.usuario.apellido_materno = self.respuesta
             self.usuario.save()
+        
+        # Handle profile field updates for new question types
+        if self.pregunta.tipo.startswith('profile_field') and self.pregunta.profile_field_path:
+            from .profile_utils import update_user_profile_field
+            result = update_user_profile_field(
+                self.usuario.id, 
+                self.pregunta.profile_field_path, 
+                self.respuesta
+            )
+            if not result['success']:
+                print(f"Warning: Failed to update profile field {self.pregunta.profile_field_path}: {result['message']}")
     
         super().save(*args, **kwargs)
     

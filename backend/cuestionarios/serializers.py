@@ -9,6 +9,7 @@ from api.models import CustomUser
 #     CalculoDeIndiceDeNecesidadesDeApoyo
 # )
 from api.fields import SASImageField
+from .profile_fields import get_field_metadata, get_field_choices
 
 class DesbloqueoPreguntaSerializer(serializers.ModelSerializer):
     pregunta_origen = serializers.CharField(source='pregunta_origen.texto')
@@ -52,7 +53,7 @@ class PreguntaSerializer(serializers.ModelSerializer):
     opciones = OpcionSerializer(many=True, read_only=True)
     imagenes = ImagenOpcionSerializer(many=True, read_only=True)
     desbloqueos_recibidos = DesbloqueoPreguntaSerializer(many=True, read_only=True)
-
+    profile_field_metadata = serializers.SerializerMethodField()
 
     class Meta:
         model = Pregunta
@@ -71,8 +72,21 @@ class PreguntaSerializer(serializers.ModelSerializer):
             'campo_ficha_tecnica',
             'actualiza_usuario',
             'campo_datos_personales',
-
+            'profile_field_path',
+            'profile_field_config',
+            'profile_field_metadata',
         ]
+    
+    def get_profile_field_metadata(self, obj):
+        """Get metadata for profile field questions."""
+        if obj.tipo.startswith('profile_field') and obj.profile_field_path:
+            metadata = get_field_metadata(obj.profile_field_path)
+            if metadata:
+                # Add choices if it's a choice field
+                if metadata.get('type') == 'choice':
+                    metadata['choices'] = get_field_choices(obj.profile_field_path)
+                return metadata
+        return None
 
 class CuestionarioSerializer(serializers.ModelSerializer):
     """Serializador para cuestionarios con preguntas asociadas."""

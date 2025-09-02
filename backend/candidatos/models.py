@@ -67,6 +67,8 @@ class EmergencyContact(models.Model):
     relationship = models.CharField(max_length=20, choices=RELATIONSHIP_CHOICES)
     phone_number = models.CharField(
         max_length=15, 
+        blank=True,
+        null=True,
         #validators=[RegexValidator(r'^\+?1?\d{9,15}$', 'Enter a valid phone number.')]
     )
     email = models.EmailField(max_length=100, null=True, blank=True)
@@ -150,6 +152,8 @@ class UserProfile(models.Model):
         null=True,
         # validators=[RegexValidator(r'^[A-Z]{4}\d{6}[HM][A-Z]{2}[B-DF-HJ-NP-TV-Z]{3}[A-Z0-9]\d{1}$', 'Enter a valid CURP')]
     )
+    rfc = models.CharField(max_length=13, blank=True, null=True) # unique=True
+    nss = models.CharField(max_length=11, blank=True, null=True) # unique=True
 
     # Medical and Legal Status
     has_disability_certificate = models.BooleanField(default=False)

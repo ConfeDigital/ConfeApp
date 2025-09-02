@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from .views import PreguntaImagenUploadAPIView
+from . import profile_views
 
 urlpatterns = [
     # Ruta para obtener todos los cuestionarios con preguntas desbloqueadas
@@ -74,4 +75,11 @@ urlpatterns = [
     # Rutas para carga masiva de respuestas
     path('carga-masiva-respuestas/', views.CargaMasivaRespuestasView.as_view(), name='carga_masiva_respuestas'),
     path('validar-respuestas-excel/', views.ValidarRespuestasExcelView.as_view(), name='validar_respuestas_excel'),
+    
+    # Profile field management routes
+    path('profile-fields/available/', profile_views.AvailableProfileFieldsView.as_view(), name='available_profile_fields'),
+    path('profile-fields/user/<uuid:user_id>/update/', profile_views.ProfileFieldUpdateView.as_view(), name='update_profile_field'),
+    path('profile-fields/user/<uuid:user_id>/bulk-update/', profile_views.BulkProfileFieldUpdateView.as_view(), name='bulk_update_profile_fields'),
+    path('profile-fields/user/<uuid:user_id>/value/<str:field_path>/', profile_views.ProfileFieldValueView.as_view(), name='get_profile_field_value'),
+    path('profile-fields/user/<uuid:user_id>/summary/', profile_views.get_user_profile_fields_summary, name='profile_fields_summary'),
 ]
