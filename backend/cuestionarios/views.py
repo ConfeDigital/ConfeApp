@@ -124,6 +124,89 @@ class ActivarCuestionarioView(APIView):
         except Cuestionario.DoesNotExist:
             return Response({"error": "Cuestionario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
 
+class CopiarVersionCuestionario(APIView):
+    """Obtiene la estructura completa de un cuestionario para copiar en el editor"""
+    def get(self, request, cuestionario_id):
+        try:
+            # Obtener el cuestionario original
+            cuestionario_original = Cuestionario.objects.get(id=cuestionario_id)
+            
+            # Obtener todas las preguntas del cuestionario original
+            preguntas_originales = Pregunta.objects.filter(cuestionario=cuestionario_original)
+            
+            # Construir la estructura de datos para el editor
+            estructura_cuestionario = {
+                'base_cuestionario_id': cuestionario_original.base_cuestionario.id,
+                'nombre': cuestionario_original.nombre,
+                'nueva_version': cuestionario_original.version + 1,
+                'preguntas': []
+            }
+            
+            # Procesar cada pregunta
+            for pregunta in preguntas_originales:
+                pregunta_data = {
+                    'texto': pregunta.texto,
+                    'tipo': pregunta.tipo,
+                    'seccion_sis': pregunta.seccion_sis,
+                    'nombre_seccion': pregunta.nombre_seccion,
+                    'campo_ficha_tecnica': pregunta.campo_ficha_tecnica,
+                    'campo_datos_personales': pregunta.campo_datos_personales,
+                    'actualiza_usuario': pregunta.actualiza_usuario,
+                    'ficha_tecnica': pregunta.ficha_tecnica,
+                    'profile_field_path': pregunta.profile_field_path,
+                    'profile_field_config': pregunta.profile_field_config,
+                    'opciones': [],
+                    'imagenes': []
+                }
+                
+                # Obtener opciones de la pregunta
+                opciones = Opcion.objects.filter(pregunta=pregunta)
+                for opcion in opciones:
+                    pregunta_data['opciones'].append({
+                        'texto': opcion.texto,
+                        'valor': opcion.valor
+                    })
+                
+                # Obtener imágenes de la pregunta
+                imagenes = ImagenOpcion.objects.filter(pregunta=pregunta)
+                for imagen in imagenes:
+                    pregunta_data['imagenes'].append({
+                        'imagen': imagen.imagen.url if imagen.imagen else None,
+                        'descripcion': imagen.descripcion
+                    })
+                
+                estructura_cuestionario['preguntas'].append(pregunta_data)
+            
+            # Obtener lógica de desbloqueo
+            desbloqueos = DesbloqueoPregunta.objects.filter(cuestionario=cuestionario_original)
+            estructura_cuestionario['desbloqueos'] = []
+            
+            for desbloqueo in desbloqueos:
+                # Encontrar los índices de las preguntas en la lista
+                pregunta_origen_index = None
+                pregunta_desbloqueada_index = None
+                
+                for i, p in enumerate(preguntas_originales):
+                    if p.id == desbloqueo.pregunta_origen.id:
+                        pregunta_origen_index = i
+                    if p.id == desbloqueo.pregunta_desbloqueada.id:
+                        pregunta_desbloqueada_index = i
+                
+                if pregunta_origen_index is not None and pregunta_desbloqueada_index is not None:
+                    estructura_cuestionario['desbloqueos'].append({
+                        'pregunta_origen_index': pregunta_origen_index,
+                        'pregunta_desbloqueada_index': pregunta_desbloqueada_index,
+                        'opcion_valor': desbloqueo.opcion_desbloqueadora.valor,
+                        'opcion_texto': desbloqueo.opcion_desbloqueadora.texto
+                    })
+            
+            return Response(estructura_cuestionario, status=status.HTTP_200_OK)
+                
+        except Cuestionario.DoesNotExist:
+            return Response({"error": "Cuestionario no encontrado"}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({"error": f"Error al obtener estructura del cuestionario: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class CuestionarioSeleccionVisualizacion(APIView):
     """Muestra un cuestionario específico por ID"""
     permission_classes = [permissions.AllowAny]

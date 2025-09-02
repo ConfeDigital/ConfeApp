@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, Link, useNavigate, useParams } from "react-router-dom";
-import { FaChevronDown } from "react-icons/fa";
 import {
   Box,
   Typography,
@@ -30,12 +29,13 @@ import {
   Alert,
 } from "@mui/material";
 import {
-  FaPencilAlt,
-  FaDownload,
-  FaPlus,
-  FaFileExcel,
-  FaEllipsisV,
-} from "react-icons/fa";
+  Edit as EditIcon,
+  Add as AddIcon,
+  FileUpload as FileUploadIcon,
+  MoreVert as MoreVertIcon,
+  ContentCopy as ContentCopyIcon,
+  ExpandMore as ExpandMoreIcon,
+} from "@mui/icons-material";
 import api from "../../api";
 
 import useDocumentTitle from "../../components/hooks/useDocumentTitle";
@@ -60,6 +60,7 @@ const CuestionarioDetail = () => {
   const [snackbarSeverity, setSnackbarSeverity] = useState("success");
 
   const [showSearch, setShowSearch] = useState(false);
+  const [copyingVersionId, setCopyingVersionId] = useState(null);
 
   const navigate = useNavigate();
 
@@ -99,11 +100,6 @@ const CuestionarioDetail = () => {
     setError(""); // Reset error message when closing the dialog
     setFile(null); // Reset file state
     setFileInfo(""); // Reset file info state
-  };
-
-  const handleDownload = (versionId) => {
-    // Lógica para descargar el Excel
-    console.log(`Descargar Excel para la versión ${versionId}`);
   };
 
   const handleFileChange = (event) => {
@@ -212,8 +208,7 @@ const CuestionarioDetail = () => {
       .catch((err) => {
         console.error("Error activando cuestionario:", err);
         alert(
-          `Error: ${err.response?.status} - ${
-            err.response?.data?.message || err.message
+          `Error: ${err.response?.status} - ${err.response?.data?.message || err.message
           }`
         );
       });
@@ -245,10 +240,42 @@ const CuestionarioDetail = () => {
       .catch((err) => {
         console.error("Error creando nueva versión:", err);
         alert(
-          `Error: ${err.response?.status} - ${
-            err.response?.data?.message || err.message
+          `Error: ${err.response?.status} - ${err.response?.data?.message || err.message
           }`
         );
+      });
+  };
+
+  const handleCopyVersion = (cuestionario) => {
+    setCopyingVersionId(cuestionario.id);
+
+    console.log("Getting structure for copy:", cuestionario);
+
+    api
+      .get(`/api/cuestionarios/copiar-version/${cuestionario.id}/`)
+      .then((res) => {
+        console.log("Questionnaire structure received:", res.data);
+
+        // Navigate to questionnaire editor with the copied structure
+        // Create a temporary new version ID (will be created when saved)
+        navigate(`/baseCuestionarios/${baseCuestionarioId}/nuevo`, {
+          state: {
+            estructuraCopia: res.data,
+            esCopia: true,
+            versionOriginal: cuestionario.version
+          }
+        });
+
+        setCopyingVersionId(null);
+      })
+      .catch((err) => {
+        console.error("Error obteniendo estructura:", err);
+        setSnackbarMessage(
+          err.response?.data?.error || "Error al obtener la estructura del cuestionario"
+        );
+        setSnackbarSeverity("error");
+        setSnackbarOpen(true);
+        setCopyingVersionId(null);
       });
   };
 
@@ -269,8 +296,8 @@ const CuestionarioDetail = () => {
 
   const filteredPreguntas = selectedVersion
     ? selectedVersion.preguntas.filter((pregunta) =>
-        pregunta.texto.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      pregunta.texto.toLowerCase().includes(searchTerm.toLowerCase())
+    )
     : [];
 
   return (
@@ -332,11 +359,22 @@ const CuestionarioDetail = () => {
                 />
                 <Box>
                   <IconButton
+                    color="secondary"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleCopyVersion(cuestionario);
+                    }}
+                    disabled={copyingVersionId === cuestionario.id}
+                    title="Crear copia de esta versión"
+                  >
+                    <ContentCopyIcon />
+                  </IconButton>
+                  <IconButton
                     color="primary"
                     component={Link}
                     to={`/baseCuestionarios/${baseCuestionarioId}/${cuestionario.id}`}
                   >
-                    <FaPencilAlt />
+                    <EditIcon />
                   </IconButton>
                 </Box>
               </ListItem>
@@ -375,7 +413,7 @@ const CuestionarioDetail = () => {
                     variant="contained"
                     color="primary"
                     component="span"
-                    startIcon={<FaFileExcel />}
+                    startIcon={<FileUploadIcon />}
                   >
                     Cargar Cuestionario
                   </Button>
@@ -399,7 +437,7 @@ const CuestionarioDetail = () => {
                 onClick={handleMenuClick}
                 sx={{ marginLeft: 1 }}
               >
-                <FaEllipsisV />
+                <MoreVertIcon />
               </IconButton>
               <Menu
                 anchorEl={anchorEl}
@@ -422,7 +460,7 @@ const CuestionarioDetail = () => {
                           onClick={() => setShowSearch(!showSearch)}
                           sx={{ marginLeft: 1 }}
                         >
-                          <FaChevronDown />
+                          <ExpandMoreIcon />
                         </IconButton>
                         {showSearch && (
                           <Box sx={{ marginTop: 1 }}>
@@ -488,7 +526,7 @@ const CuestionarioDetail = () => {
         sx={{ position: "fixed", bottom: 16, right: 16 }}
         onClick={handleCreateNewVersion}
       >
-        <FaPlus />
+        <AddIcon />
       </Fab>
 
       <Snackbar

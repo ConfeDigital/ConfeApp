@@ -89,15 +89,15 @@ const PopupPrecargaCuestionario = ({
           },
         }
       );
-      console.log("📨 JSON recibido del backend (mostrar):", response.data);
-      console.log(
-        "📩 Respuesta recibida del backend (mostrar):",
-        response.data
-      );
-      console.log(
-        "🔍 Estructura de preguntas precargadas:",
-        JSON.stringify(response.data, null, 2)
-      );
+      // console.log("📨 JSON recibido del backend (mostrar):", response.data);
+      // console.log(
+      //   "📩 Respuesta recibida del backend (mostrar):",
+      //   response.data
+      // );
+      // console.log(
+      //   "🔍 Estructura de preguntas precargadas:",
+      //   JSON.stringify(response.data, null, 2)
+      // );
       setMessage({ type: "success", text: "Archivo analizado con éxito." });
       setPreguntasPrecargadas(response.data);
       setErroresPrecarga(response.data.errores || []);
@@ -322,17 +322,17 @@ const PopupPrecargaCuestionario = ({
                           pregunta.desbloqueo.length > 0
                             ? pregunta.desbloqueo
                                 .map((d) => {
-                                  console.log("🔍 d encontrado:", d);
-                                  console.log(
-                                    "🔍 d.pregunta_id:",
-                                    d.pregunta_id
-                                  );
-                                  console.log("🔍 d.valor:", d.valor);
-                                  console.log("🔍 d.opcion:", d.opcion);
-                                  console.log(
-                                    "🔍 d.descripcion:",
-                                    d.descripcion
-                                  );
+                                  // console.log("🔍 d encontrado:", d);
+                                  // console.log(
+                                  //   "🔍 d.pregunta_id:",
+                                  //   d.pregunta_id
+                                  // );
+                                  // console.log("🔍 d.valor:", d.valor);
+                                  // console.log("🔍 d.opcion:", d.opcion);
+                                  // console.log(
+                                  //   "🔍 d.descripcion:",
+                                  //   d.descripcion
+                                  // );
 
                                   const preguntaId =
                                     d.pregunta_id !== undefined &&
