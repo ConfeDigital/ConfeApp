@@ -17,7 +17,7 @@ def send_notification_to_user(user_id, message, link=None, notification_type="in
     try:
         user = User.objects.get(id=user_id)
 
-        if user.notification_settings and not user.notification_settings.receive_notifications:
+        if hasattr(user, 'notification_settings') and not user.notification_settings.receive_notifications:
             return
 
         notification = Notification.objects.create(

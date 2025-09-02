@@ -159,7 +159,7 @@ const ImageLightbox = ({ open, onClose, imageUrl, imageName }) => {
 };
 
 const FilePreview = ({ file, expanded = false }) => {
-    const [isExpanded, setIsExpanded] = useState(expanded);
+    const [isExpanded, setIsExpanded] = useState(true);
     const [imageError, setImageError] = useState(false);
     const [showLightbox, setShowLightbox] = useState(false);
 
@@ -223,7 +223,7 @@ const FilePreview = ({ file, expanded = false }) => {
                             </Box>
                         ) : (
                             <Alert severity="error" sx={{ mt: 1 }}>
-                                Error loading image. <Button onClick={handleDownload}>Download instead</Button>
+                                Error al cargar la imagen. <Button onClick={handleDownload}>Descargar</Button>
                             </Alert>
                         )}
                     </Box>
@@ -241,8 +241,8 @@ const FilePreview = ({ file, expanded = false }) => {
                             }}
                         >
                             <source src={file.file_url} />
-                            Your browser does not support the video tag.
-                            <Button onClick={handleDownload}>Download video</Button>
+                            Tu buscador no soporta este formato de video.
+                            <Button onClick={handleDownload}>Descargar video</Button>
                         </video>
                     </Box>
                 );
@@ -261,7 +261,7 @@ const FilePreview = ({ file, expanded = false }) => {
                             title={file.original_name}
                         />
                         <Typography variant="caption" display="block" sx={{ mt: 1, textAlign: 'center' }}>
-                            If PDF doesn't display properly, <Button size="small" onClick={handleDownload}>click here to download</Button>
+                            Si el PDF no se despliega adecuadamente, <Button size="small" onClick={handleDownload}>dale click aquí para descargar</Button>
                         </Typography>
                     </Box>
                 );
@@ -303,7 +303,7 @@ const FilePreview = ({ file, expanded = false }) => {
 
                 <Box display="flex" gap={0.5}>
                     {canPreview && (
-                        <Tooltip title={isExpanded ? "Hide preview" : "Show preview"}>
+                        <Tooltip title={isExpanded ? "Esconder" : "Mostrar"}>
                             <IconButton
                                 size="small"
                                 onClick={() => setIsExpanded(!isExpanded)}
@@ -313,7 +313,7 @@ const FilePreview = ({ file, expanded = false }) => {
                             </IconButton>
                         </Tooltip>
                     )}
-                    <Tooltip title="Download">
+                    <Tooltip title="Descargar">
                         <IconButton size="small" onClick={handleDownload}>
                             <DownloadIcon fontSize="small" />
                         </IconButton>
