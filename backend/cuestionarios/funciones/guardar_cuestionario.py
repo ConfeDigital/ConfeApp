@@ -42,30 +42,30 @@ def guardar_cuestionario_desde_json(preguntas, cuestionario_id):
         preguntas_dict[texto] = pregunta_obj
 
         # Manejar opciones según el tipo de pregunta
-        # Skip creating Opcion objects for profile field questions - they store choices in config
-        if not tipo.startswith("profile_field"):
-            opciones = pregunta.get("opciones", [])
-            for i, opcion in enumerate(opciones):
-                # Determinar el valor de la opción
-                if tipo == "multiple" and len(opciones) == 2 and "Sí" in opciones and "No" in opciones:
-                    # Es una pregunta binaria convertida a multiple
-                    valor = 0 if opcion == "Sí" else 1
-                    opcion_texto = opcion
-                elif isinstance(opcion, dict):
-                    # Si la opción es un objeto, usar su valor
-                    valor = opcion.get("valor", i)
-                    opcion_texto = opcion.get("texto", str(opcion))
-                else:
-                    # Para otros tipos, usar el índice
-                    valor = i
-                    opcion_texto = str(opcion)  # Asegurar que sea string
-                
-                opcion_obj = Opcion.objects.create(
-                    pregunta=pregunta_obj,
-                    texto=opcion_texto,
-                    valor=valor
-                )
-                opciones_dict[(texto, opcion_texto)] = opcion_obj
+        opciones = pregunta.get("opciones", [])
+        
+        # Create opciones for all question types, including profile field questions
+        for i, opcion in enumerate(opciones):
+            # Determinar el valor de la opción
+            if tipo == "multiple" and len(opciones) == 2 and "Sí" in opciones and "No" in opciones:
+                # Es una pregunta binaria convertida a multiple
+                valor = 0 if opcion == "Sí" else 1
+                opcion_texto = opcion
+            elif isinstance(opcion, dict):
+                # Si la opción es un objeto, usar su valor
+                valor = opcion.get("valor", i)
+                opcion_texto = opcion.get("texto", str(opcion))
+            else:
+                # Para otros tipos, usar el índice
+                valor = i
+                opcion_texto = str(opcion)  # Asegurar que sea string
+            
+            opcion_obj = Opcion.objects.create(
+                pregunta=pregunta_obj,
+                texto=opcion_texto,
+                valor=valor
+            )
+            opciones_dict[(texto, opcion_texto)] = opcion_obj
 
     # Segundo: crear desbloqueos
     for idx, pregunta in enumerate(preguntas):

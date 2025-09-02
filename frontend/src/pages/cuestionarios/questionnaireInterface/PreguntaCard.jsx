@@ -88,10 +88,10 @@ const PreguntaCard = ({
   secciones,
   agregarSeccionSiNoExiste,
 }) => {
-  const tiposConOpciones = ["multiple", "checkbox", "dropdown", "binaria"];
+  const tiposConOpciones = ["multiple", "checkbox", "dropdown", "binaria", "profile_field_choice", "profile_field_boolean"];
   const [preguntaSeleccionadaDesbloqueo, setPreguntaSeleccionadaDesbloqueo] =
     React.useState("");
-  
+
   // Profile field states
   const [availableFields, setAvailableFields] = React.useState({});
   const [loadingFields, setLoadingFields] = React.useState(false);
@@ -137,18 +137,31 @@ const PreguntaCard = ({
   const handleProfileFieldSelect = (fieldPath) => {
     const [groupName, fieldName] = fieldPath.split(".");
     const fieldMetadata = availableFields[groupName]?.fields[fieldName];
-    
+
     if (fieldMetadata) {
       const questionType = getQuestionTypeForField(fieldMetadata.type);
-      
+      let opciones = [];
+
+      // Create opciones for boolean and choice fields to enable unlocking logic
+      if (fieldMetadata.type === "boolean") {
+        opciones = [
+          { texto: "Sí", valor: 0 },
+          { texto: "No", valor: 1 }
+        ];
+      } else if (fieldMetadata.type === "choice" && fieldMetadata.choices) {
+        opciones = fieldMetadata.choices.map(([value, label], index) => ({
+          texto: label,
+          valor: index
+        }));
+      }
+
       updatePregunta(index, {
         ...pregunta,
         tipo: questionType,
         profile_field_path: fieldPath,
         profile_field_config: fieldMetadata,
         texto: pregunta.texto || `Actualizar ${fieldMetadata.label}`,
-        // Don't save choices in opciones - they're stored in profile_field_config
-        opciones: []
+        opciones: opciones
       });
     }
   };
@@ -192,8 +205,8 @@ const PreguntaCard = ({
               d.valor === "0" || d.valor === "Sí"
                 ? "Sí"
                 : d.valor === "1" || d.valor === "No"
-                ? "No"
-                : d.valor,
+                  ? "No"
+                  : d.valor,
           };
         }
 
@@ -212,9 +225,9 @@ const PreguntaCard = ({
 
       if (
         JSON.stringify(opcionesActualizadas) !==
-          JSON.stringify(pregunta.opciones) ||
+        JSON.stringify(pregunta.opciones) ||
         JSON.stringify(desbloqueosActualizados) !==
-          JSON.stringify(pregunta.desbloqueo)
+        JSON.stringify(pregunta.desbloqueo)
       ) {
         updatePregunta(index, {
           ...pregunta,
@@ -246,7 +259,7 @@ const PreguntaCard = ({
   }, [pregunta.desbloqueo]);
 
   const handleOptionChange = (i, value) => {
-    if (pregunta.tipo === "binaria") {
+    if (pregunta.tipo === "binaria" || pregunta.tipo.startsWith("profile_field")) {
       return; // No permitir cambios en preguntas binarias
     }
     const nuevasOpciones = [...(pregunta.opciones || [])];
@@ -268,7 +281,7 @@ const PreguntaCard = ({
   };
 
   const addOpcion = () => {
-    if (pregunta.tipo === "binaria") {
+    if (pregunta.tipo === "binaria" || pregunta.tipo.startsWith("profile_field")) {
       return; // No permitir agregar opciones en preguntas binarias
     }
     updatePregunta(index, {
@@ -278,7 +291,7 @@ const PreguntaCard = ({
   };
 
   const deleteOpcion = (i) => {
-    if (pregunta.tipo === "binaria") {
+    if (pregunta.tipo === "binaria" || pregunta.tipo.startsWith("profile_field")) {
       return; // No permitir eliminar opciones en preguntas binarias
     }
     updatePregunta(index, {
@@ -468,19 +481,19 @@ const PreguntaCard = ({
             <Typography variant="subtitle2" gutterBottom>
               Seleccionar Campo de Perfil
             </Typography>
-            
+
             {loadingFields && (
               <Box display="flex" justifyContent="center" p={2}>
                 <CircularProgress size={24} />
               </Box>
             )}
-            
+
             {fieldsError && (
               <Alert severity="error" sx={{ mb: 2 }}>
                 {fieldsError}
               </Alert>
             )}
-            
+
             {!loadingFields && !fieldsError && Object.keys(availableFields).length > 0 && (
               <FormControl fullWidth margin="normal">
                 <InputLabel>Campo de Perfil</InputLabel>
@@ -503,10 +516,10 @@ const PreguntaCard = ({
                       <MenuItem key={`${groupName}.${fieldName}`} value={`${groupName}.${fieldName}`}>
                         <Box sx={{ ml: 2 }}>
                           {fieldData.label}
-                          <Chip 
-                            label={fieldData.type} 
-                            size="small" 
-                            sx={{ ml: 1 }} 
+                          <Chip
+                            label={fieldData.type}
+                            size="small"
+                            sx={{ ml: 1 }}
                             color={fieldData.required ? "primary" : "default"}
                           />
                         </Box>
@@ -516,32 +529,32 @@ const PreguntaCard = ({
                 </Select>
               </FormControl>
             )}
-            
+
             {/* Show selected field info */}
             {pregunta.profile_field_config && (
               <Box sx={{ mt: 2, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
                 <Typography variant="subtitle2" gutterBottom>
                   Campo Seleccionado: {pregunta.profile_field_config.label}
                 </Typography>
-                
+
                 <Box sx={{ mb: 1 }}>
-                  <Chip 
-                    label={`Tipo: ${pregunta.profile_field_config.type}`} 
-                    size="small" 
-                    color="secondary" 
-                    sx={{ mr: 1 }} 
+                  <Chip
+                    label={`Tipo: ${pregunta.profile_field_config.type}`}
+                    size="small"
+                    color="secondary"
+                    sx={{ mr: 1 }}
                   />
-                  <Chip 
-                    label={`Pregunta: ${nombreTipoPregunta[pregunta.tipo]}`} 
-                    size="small" 
-                    color="primary" 
-                    sx={{ mr: 1 }} 
+                  <Chip
+                    label={`Pregunta: ${nombreTipoPregunta[pregunta.tipo]}`}
+                    size="small"
+                    color="primary"
+                    sx={{ mr: 1 }}
                   />
                   {pregunta.profile_field_config.required && (
-                    <Chip 
-                      label="Requerido" 
-                      size="small" 
-                      color="error" 
+                    <Chip
+                      label="Requerido"
+                      size="small"
+                      color="error"
                     />
                   )}
                 </Box>
@@ -561,7 +574,7 @@ const PreguntaCard = ({
         )}
 
         {/* Show options for regular question types */}
-        {tiposConOpciones.includes(pregunta.tipo) && (
+        {tiposConOpciones.includes(pregunta.tipo) && pregunta.tipo != "profile_field_choice" && pregunta.tipo != "profile_field_boolean" && (
           <>
             <Typography variant="subtitle2" sx={{ mt: 2 }} gutterBottom>
               Opciones:
@@ -604,23 +617,27 @@ const PreguntaCard = ({
         )}
 
         {/* Show profile field choices (read-only) */}
-        {pregunta.tipo === "profile_field_choice" && pregunta.profile_field_config?.choices && (
+        {(pregunta.tipo === "profile_field_choice" || pregunta.tipo === "profile_field_boolean") && pregunta.opciones && pregunta.opciones.length > 0 && (
           <Box sx={{ mt: 2 }}>
             <Typography variant="subtitle2" gutterBottom>
-              Opciones Disponibles (del campo de perfil):
+              Opciones (para desbloqueos):
             </Typography>
-            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
-              {pregunta.profile_field_config.choices.map(([value, label]) => (
-                <Chip 
-                  key={value} 
-                  label={`${label} (${value})`} 
-                  variant="outlined" 
-                  size="small" 
-                />
+            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+              {pregunta.opciones.map((opcion, i) => (
+                <Box key={i} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  <Chip
+                    label={`${opcion.valor}`}
+                    size="small"
+                    color="primary"
+                  />
+                  <Typography variant="body2">
+                    {typeof opcion === "object" ? opcion.texto : opcion}
+                  </Typography>
+                </Box>
               ))}
             </Box>
             <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
-              Estas opciones se generan automáticamente desde el campo de perfil seleccionado.
+              Estas opciones permiten usar esta pregunta para desbloquear otras preguntas.
             </Typography>
           </Box>
         )}
@@ -673,8 +690,7 @@ const PreguntaCard = ({
             return (
               <Typography key={idx} sx={{ ml: 2 }} variant="body2">
                 {d.descripcion ||
-                  `Pregunta ${origen + 1}: ${
-                    preguntas?.[origen]?.texto
+                  `Pregunta ${origen + 1}: ${preguntas?.[origen]?.texto
                   } - Opción: ${d.valor || d.opcion_desbloqueadora}`}
               </Typography>
             );
