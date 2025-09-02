@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FaPlus } from "react-icons/fa";
+import { Add as AddIcon } from "@mui/icons-material";
 import EditIcon from "@mui/icons-material/Edit";
 import {
   TextField,
@@ -70,8 +70,7 @@ const BaseCuestionarios = () => {
       .catch((err) => {
         console.error("Error buscando base de cuestionarios:", err);
         alert(
-          `Error: ${err.response?.status} - ${
-            err.response?.data?.message || err.message
+          `Error: ${err.response?.status} - ${err.response?.data?.message || err.message
           }`
         );
       });
@@ -87,8 +86,7 @@ const BaseCuestionarios = () => {
       .catch((err) => {
         console.error("Error buscando etapas:", err);
         alert(
-          `Error: ${err.response?.status} - ${
-            err.response?.data?.message || err.message
+          `Error: ${err.response?.status} - ${err.response?.data?.message || err.message
           }`
         );
       });
@@ -135,6 +133,8 @@ const BaseCuestionarios = () => {
     setOpenEdit(false);
     setError("");
   };
+
+
 
   const handleChange = (event) => {
     const { name, value, checked, type } = event.target;
@@ -204,8 +204,7 @@ const BaseCuestionarios = () => {
       .catch((err) => {
         console.error("Error creando cuestionario:", err);
         alert(
-          `Error: ${err.response?.status} - ${
-            err.response?.data?.message || err.message
+          `Error: ${err.response?.status} - ${err.response?.data?.message || err.message
           }`
         );
       });
@@ -222,7 +221,7 @@ const BaseCuestionarios = () => {
       (cuestionario) =>
         cuestionario.id !== editCuestionario.id &&
         cuestionario.nombre.toLowerCase() ===
-          editCuestionario.nombre.toLowerCase()
+        editCuestionario.nombre.toLowerCase()
     );
 
     if (cuestionarioExistente) {
@@ -250,12 +249,12 @@ const BaseCuestionarios = () => {
         const updatedCuestionarios = baseCuestionarios.map((cuestionario) =>
           cuestionario.id === editCuestionario.id
             ? {
-                ...cuestionario,
-                nombre: cuestionarioActualizado.nombre, // Usar el nombre normalizado del backend
-                estado_desbloqueo: cuestionarioActualizado.estado_desbloqueo,
-                responsable: cuestionarioActualizado.responsable,
-                inicio: cuestionarioActualizado.inicio,
-              }
+              ...cuestionario,
+              nombre: cuestionarioActualizado.nombre, // Usar el nombre normalizado del backend
+              estado_desbloqueo: cuestionarioActualizado.estado_desbloqueo,
+              responsable: cuestionarioActualizado.responsable,
+              inicio: cuestionarioActualizado.inicio,
+            }
             : cuestionario
         );
 
@@ -266,8 +265,7 @@ const BaseCuestionarios = () => {
       .catch((err) => {
         console.error("Error editando cuestionario:", err);
         alert(
-          `Error: ${err.response?.status} - ${
-            err.response?.data?.message || err.message
+          `Error: ${err.response?.status} - ${err.response?.data?.message || err.message
           }`
         );
       });
@@ -329,7 +327,7 @@ const BaseCuestionarios = () => {
         <Button
           variant="outlined"
           color="primary"
-          startIcon={<FaPlus />}
+          startIcon={<AddIcon />}
           onClick={handleClickOpen}
         >
           Crear Cuestionario
@@ -361,15 +359,15 @@ const BaseCuestionarios = () => {
                       primary={baseCuestionario.nombre}
                       secondary={`Responsable: ${getResponsableName(
                         baseCuestionario.responsable
-                      )} - Estado: ${
-                        baseCuestionario.estado_desbloqueo || "No definido"
-                      }`}
+                      )} - Estado: ${baseCuestionario.estado_desbloqueo || "No definido"
+                        }`}
                     />
                     <IconButton
                       onClick={(e) => {
                         e.stopPropagation();
                         handleClickOpenEdit(baseCuestionario);
                       }}
+                      title="Editar"
                     >
                       <EditIcon />
                     </IconButton>

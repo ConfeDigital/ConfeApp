@@ -1023,7 +1023,7 @@ const Preguntas = ({
           tipo: "error",
         });
       }
-    }, 600),
+    }, 1000),
     [usuario, cuestionario, isRespuestaValida]
   );
 

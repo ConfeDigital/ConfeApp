@@ -1,7 +1,7 @@
 // QuestionnaireInterface.jsx
 
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   Button,
   Typography,
@@ -58,7 +58,7 @@ const TIPOS_COMPLETOS = [
 const tiposPorCuestionario = {
   Normal: TIPOS_COMPLETOS.filter(
     (t) =>
-      !["sis", "sis2", "ch", "canalizacion", "canalizacion_centro", "profile_field_choice", "profile_field_boolean", "profile_field_date", "profile_field_textarea"].includes(t)
+      !["sis", "sis2", "ch", "canalizacion", "canalizacion_centro"].includes(t)
   ),
   SIS: ["sis", "sis2"],
   "Cuadro de Habilidades": ["ch"],
@@ -110,8 +110,13 @@ const detectQuestionnaireType = (questions) => {
 const EditorCuestionario = () => {
   const { idBase, idCuestionario } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [dialogoExito, setDialogoExito] = useState(false);
-  const id = parseInt(idCuestionario, 10);
+
+  // Handle both existing questionnaire IDs and "nuevo" for copies
+  const id = idCuestionario === "nuevo" ? null : parseInt(idCuestionario, 10);
+  const esCopia = location.state?.esCopia || false;
+  const estructuraCopia = location.state?.estructuraCopia || null;
 
   const [edicionDeshabilitada, setEdicionDeshabilitada] = useState(false);
   const [secciones, setSecciones] = useState([]);
@@ -135,7 +140,57 @@ const EditorCuestionario = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (id) {
+    if (esCopia && estructuraCopia) {
+      // Handle copy case - pre-fill with copied structure
+      console.log("Cargando estructura copiada:", estructuraCopia);
+
+      // Convert backend structure to frontend format
+      const preguntasConvertidas = estructuraCopia.preguntas.map((pregunta, index) => ({
+        texto: pregunta.texto,
+        tipo: pregunta.tipo,
+        opciones: pregunta.opciones.map(opcion => opcion.texto), // Convert to simple string array
+        desbloqueo: [], // Will be handled separately
+        seccion: pregunta.nombre_seccion || "",
+        seccion_sis: pregunta.seccion_sis || 0,
+        campo_ficha_tecnica: pregunta.campo_ficha_tecnica || "",
+        campo_datos_personales: pregunta.campo_datos_personales || "",
+        actualiza_usuario: pregunta.actualiza_usuario || false,
+        ficha_tecnica: pregunta.ficha_tecnica || false,
+        profile_field_path: pregunta.profile_field_path || null,
+        profile_field_config: pregunta.profile_field_config || null,
+      }));
+
+      // Convert unlocking logic
+      if (estructuraCopia.desbloqueos) {
+        estructuraCopia.desbloqueos.forEach(desbloqueo => {
+          const preguntaOrigen = preguntasConvertidas[desbloqueo.pregunta_origen_index];
+          if (preguntaOrigen) {
+            if (!preguntaOrigen.desbloqueo) {
+              preguntaOrigen.desbloqueo = [];
+            }
+            preguntaOrigen.desbloqueo.push({
+              pregunta_id: desbloqueo.pregunta_desbloqueada_index,
+              valor: desbloqueo.opcion_valor,
+              descripcion: `Pregunta ${desbloqueo.pregunta_desbloqueada_index + 1}: ${preguntasConvertidas[desbloqueo.pregunta_desbloqueada_index]?.texto || ""}`
+            });
+          }
+        });
+      }
+
+      setPreguntas(preguntasConvertidas);
+
+      // Auto-detect questionnaire type
+      const detectedType = detectQuestionnaireType(preguntasConvertidas);
+      setTipoCuestionario(detectedType);
+
+      // Extract sections
+      const seccionesUnicas = [...new Set(preguntasConvertidas.map(p => p.seccion).filter(s => s))];
+      setSecciones(seccionesUnicas);
+
+      setEdicionDeshabilitada(false); // Allow editing for copies
+
+    } else if (id) {
+      // Handle existing questionnaire case
       api
         .get(`/api/cuestionarios/${id}/preguntas/`)
         .then((response) => {
@@ -156,8 +211,11 @@ const EditorCuestionario = () => {
         .catch((error) => {
           console.error("Error al obtener las preguntas con uid:", error);
         });
+    } else {
+      // New questionnaire case
+      setEdicionDeshabilitada(false);
     }
-  }, [id]);
+  }, [id, esCopia, estructuraCopia]);
 
   const handleTipoChange = (nuevo) => {
     if (preguntas.length > 0) {
@@ -349,8 +407,44 @@ const EditorCuestionario = () => {
       };
     });
 
+    let cuestionarioId;
+
+    if (esCopia && !id) {
+      // For copies, we need to create a new questionnaire first
+      // First get the base questionnaire to find existing questionnaires
+      try {
+        const baseResponse = await api.get(`/api/cuestionarios/base/${idBase}/`);
+        const baseCuestionario = baseResponse.data;
+
+        if (baseCuestionario.cuestionarios && baseCuestionario.cuestionarios.length > 0) {
+          // If there are existing questionnaires, create a new version from the latest one
+          const latestCuestionario = baseCuestionario.cuestionarios[0]; // Assuming they're ordered by version
+          const newVersionResponse = await api.post(
+            `/api/cuestionarios/crear-cuestionario/${latestCuestionario.id}/nueva-version/`
+          );
+          cuestionarioId = newVersionResponse.data.id;
+        } else {
+          // If no questionnaires exist, create the first one
+          const newCuestionarioResponse = await api.post('/api/cuestionarios/crear-cuestionario/', {
+            nombre: baseCuestionario.nombre,
+            base_cuestionario: parseInt(idBase, 10)
+          });
+          cuestionarioId = newCuestionarioResponse.data.id;
+        }
+
+        console.log("Nueva versión creada para copia:", cuestionarioId);
+      } catch (error) {
+        console.error("Error creando nueva versión:", error);
+        alert("Error al crear la nueva versión del cuestionario");
+        setIsLoading(false);
+        return;
+      }
+    } else {
+      cuestionarioId = parseInt(idCuestionario, 10);
+    }
+
     const data = {
-      cuestionario_id: parseInt(idCuestionario, 10),
+      cuestionario_id: cuestionarioId,
       preguntas: preguntasFormateadas,
     };
 
@@ -387,7 +481,7 @@ const EditorCuestionario = () => {
 
         // Obtener las preguntas actualizadas con sus IDs
         const preguntasActualizadas = await api.get(
-          `/api/cuestionarios/${id}/preguntas/`
+          `/api/cuestionarios/${cuestionarioId}/preguntas/`
         );
         const preguntasConIds = preguntasActualizadas.data;
 
@@ -464,7 +558,10 @@ const EditorCuestionario = () => {
         </Button>
       </div>
       <Typography variant="h4" align="center" style={{ flex: 1 }}>
-        Editor de Cuestionario
+        {esCopia
+          ? `Editor de Cuestionario - Copia de Versión ${location.state?.versionOriginal || ''}`
+          : "Editor de Cuestionario"
+        }
       </Typography>
 
       <FormControl fullWidth sx={{ mb: 3 }}>
@@ -607,7 +704,12 @@ const EditorCuestionario = () => {
       >
         <DialogTitle>Éxito</DialogTitle>
         <DialogContent>
-          <DialogContentText>{mensajeConfirmacionGuardar}</DialogContentText>
+          <DialogContentText>
+            {esCopia
+              ? `Copia del cuestionario guardada exitosamente como nueva versión.`
+              : mensajeConfirmacionGuardar
+            }
+          </DialogContentText>
         </DialogContent>
         <DialogActions>
           <Button

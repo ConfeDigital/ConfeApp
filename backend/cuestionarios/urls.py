@@ -34,6 +34,7 @@ urlpatterns = [
     path('crear-cuestionario/', views.CrearCuestionario.as_view(), name='crear_cuestionario'),
     path('crear-cuestionario/<int:cuestionario_id>/nueva-version/', views.CrearNuevaVersionCuestionario.as_view(), name='crear-nueva-version-cuestionario'),
     path('crear-cuestionario/<int:cuestionario_id>/activar/', views.ActivarCuestionarioView.as_view(), name='activar_cuestionario'),
+    path('copiar-version/<int:cuestionario_id>/', views.CopiarVersionCuestionario.as_view(), name='copiar-version-cuestionario'),
 
     path('base/<int:id>/', views.CuestionarioSeleccion.as_view(), name='CuestionarioSeleccionVisualizacion'),
     path('<int:cuestionario_id>/preguntas/', views.PreguntasCuestionarioView.as_view(), name='preguntas_cuestionario'),
