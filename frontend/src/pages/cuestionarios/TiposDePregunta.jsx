@@ -28,6 +28,8 @@ import ProfileFieldChoice from "../../components/tipos_de_pregunta/ProfileFieldC
 import ProfileFieldBoolean from "../../components/tipos_de_pregunta/ProfileFieldBoolean";
 import ProfileFieldDate from "../../components/tipos_de_pregunta/ProfileFieldDate";
 import ProfileFieldTextarea from "../../components/tipos_de_pregunta/ProfileFieldTextarea";
+import Discapacidad from "../../components/tipos_de_pregunta/Discapacidad";
+import Medicamentos from "../../components/tipos_de_pregunta/Medicamentos";
 
 const TiposDePregunta = ({
   pregunta,
@@ -149,6 +151,26 @@ const TiposDePregunta = ({
       case "datos_medicos":
         return (
           <Datos_medicos
+            usuarioId={usuario}
+            seleccionOpcion={respuestaParseada}
+            setSeleccionOpcion={onRespuestaChange}
+            disabled={!habilitada}
+          />
+        );
+
+      case "tipo_discapacidad":
+        return (
+          <Discapacidad
+            usuarioId={usuario}
+            seleccionOpcion={respuestaParseada}
+            setSeleccionOpcion={onRespuestaChange}
+            disabled={!habilitada}
+          />
+        );
+
+      case "medicamentos":
+        return (
+          <Medicamentos
             usuarioId={usuario}
             seleccionOpcion={respuestaParseada}
             setSeleccionOpcion={onRespuestaChange}

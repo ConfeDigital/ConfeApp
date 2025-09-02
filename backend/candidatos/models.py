@@ -79,7 +79,7 @@ class EmergencyContact(models.Model):
         return f"{self.first_name} {self.last_name} {self.second_last_name} ({self.relationship})"
 
 class Medication(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=200)
     dose = models.CharField(max_length=100, blank=True, null=True)
     reason = models.TextField(blank=True, null=True)
 

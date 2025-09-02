@@ -109,6 +109,7 @@ class Pregunta(models.Model):
         ('datos_medicos', 'Datos Médicos'),
         ('contactos', 'Contactos'),
         ('tipo_discapacidad', 'Discapacidad'),
+        ('medicamentos', 'Medicamentos'),
         ('canalizacion', 'Canalización'),
         ('canalizacion_centro', 'Canalización Centro'),
         ('ed', 'Evaluación Diagnóstica'),
@@ -120,6 +121,7 @@ class Pregunta(models.Model):
         ('profile_field_boolean', 'Campo de Perfil - Booleano'),
         ('profile_field_date', 'Campo de Perfil - Fecha'),
         ('profile_field_textarea', 'Campo de Perfil - Texto Largo'),
+        ('profile_field_phonenumber', 'Campo de Perfil - Número de Teléfono'),
     ]
 
     cuestionario = models.ForeignKey(Cuestionario, on_delete=models.CASCADE, related_name="preguntas")
