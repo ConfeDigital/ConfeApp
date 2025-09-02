@@ -79,6 +79,7 @@ import QuestionnaireInterface from "./pages/cuestionarios/questionnaireInterface
 import Announcements from "./pages/scenes/Announcements";
 import CenterChat from "./pages/scenes/CenterChat";
 import CenterForum from "./pages/scenes/CenterForum";
+import ProfileFieldDemo from "./pages/ProfileFieldDemo"
 
 import { onSessionExpired } from "./components/session_expired/sessionExpiredEvent";
 import SessionExpiredDialog from "./components/session_expired/SessionExpiredDialog";
@@ -285,6 +286,7 @@ function App({ instance }) {
                   <Route path="/anuncios" element={<Announcements />} />
                   <Route path="/comunicacion-centros" element={<CenterChat />} />
                   <Route path="/foro" element={<CenterForum />} />
+                  <Route path="/demo" element={<ProfileFieldDemo />} />
                 </Route>
                 <Route
                   element={
