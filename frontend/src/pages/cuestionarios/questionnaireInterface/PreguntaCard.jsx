@@ -12,7 +12,11 @@ import {
   MenuItem,
   Button,
   Autocomplete,
+  Chip,
+  Alert,
+  CircularProgress,
 } from "@mui/material";
+import axios from "../../../api";
 import {
   ArrowUpward as ArrowUpwardIcon,
   ArrowDownward as ArrowDownwardIcon,
@@ -59,6 +63,11 @@ const nombreTipoPregunta = {
   ch: "Cuadro de Habilidades",
   imagen: "Imagen",
   meta: "Meta",
+  profile_field: "Campo de Perfil",
+  profile_field_choice: "Campo de Perfil - Selección",
+  profile_field_boolean: "Campo de Perfil - Booleano",
+  profile_field_date: "Campo de Perfil - Fecha",
+  profile_field_textarea: "Campo de Perfil - Texto Largo",
 };
 
 const PreguntaCard = ({
@@ -81,6 +90,67 @@ const PreguntaCard = ({
   const tiposConOpciones = ["multiple", "checkbox", "dropdown", "binaria"];
   const [preguntaSeleccionadaDesbloqueo, setPreguntaSeleccionadaDesbloqueo] =
     React.useState("");
+  
+  // Profile field states
+  const [availableFields, setAvailableFields] = React.useState({});
+  const [loadingFields, setLoadingFields] = React.useState(false);
+  const [fieldsError, setFieldsError] = React.useState("");
+
+  // Load available profile fields when component mounts
+  React.useEffect(() => {
+    if (pregunta.tipo.startsWith("profile_field")) {
+      loadAvailableFields();
+    }
+  }, [pregunta.tipo]);
+
+  const loadAvailableFields = async () => {
+    setLoadingFields(true);
+    setFieldsError("");
+    try {
+      const response = await axios.get("/api/cuestionarios/profile-fields/available/");
+      setAvailableFields(response.data.field_groups);
+    } catch (err) {
+      setFieldsError("Error loading available fields: " + (err.response?.data?.message || err.message));
+    } finally {
+      setLoadingFields(false);
+    }
+  };
+
+  // Map field types to question types
+  const getQuestionTypeForField = (fieldType) => {
+    switch (fieldType) {
+      case "choice":
+        return "profile_field_choice";
+      case "boolean":
+        return "profile_field_boolean";
+      case "date":
+        return "profile_field_date";
+      case "textarea":
+        return "profile_field_textarea";
+      default:
+        return "profile_field";
+    }
+  };
+
+  // Handle profile field selection
+  const handleProfileFieldSelect = (fieldPath) => {
+    const [groupName, fieldName] = fieldPath.split(".");
+    const fieldMetadata = availableFields[groupName]?.fields[fieldName];
+    
+    if (fieldMetadata) {
+      const questionType = getQuestionTypeForField(fieldMetadata.type);
+      
+      updatePregunta(index, {
+        ...pregunta,
+        tipo: questionType,
+        profile_field_path: fieldPath,
+        profile_field_config: fieldMetadata,
+        texto: pregunta.texto || `Actualizar ${fieldMetadata.label}`,
+        // Don't save choices in opciones - they're stored in profile_field_config
+        opciones: []
+      });
+    }
+  };
 
   // Efecto para manejar opciones según el tipo de pregunta
   React.useEffect(() => {
@@ -366,15 +436,21 @@ const PreguntaCard = ({
         <FormControl fullWidth margin="normal">
           <InputLabel>Tipo de pregunta</InputLabel>
           <Select
-            value={pregunta.tipo}
+            value={pregunta.tipo.startsWith("profile_field") ? "profile_field" : pregunta.tipo}
             label="Tipo de pregunta"
-            onChange={(e) =>
+            onChange={(e) => {
+              const newType = e.target.value;
               updatePregunta(index, {
                 ...pregunta,
-                tipo: e.target.value,
+                tipo: newType,
                 opciones: [],
-              })
-            }
+                // Clear profile field data if switching away from profile field types
+                ...(newType !== "profile_field" && !newType.startsWith("profile_field_") ? {
+                  profile_field_path: undefined,
+                  profile_field_config: undefined
+                } : {})
+              });
+            }}
             disabled={deshabilitado}
           >
             {tiposPermitidos.map((tipo) => (
@@ -385,6 +461,105 @@ const PreguntaCard = ({
           </Select>
         </FormControl>
 
+        {/* Profile Field Selection */}
+        {pregunta.tipo.startsWith("profile_field") && (
+          <Box sx={{ mt: 2, p: 2, border: "1px solid #e0e0e0", borderRadius: 1 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Seleccionar Campo de Perfil
+            </Typography>
+            
+            {loadingFields && (
+              <Box display="flex" justifyContent="center" p={2}>
+                <CircularProgress size={24} />
+              </Box>
+            )}
+            
+            {fieldsError && (
+              <Alert severity="error" sx={{ mb: 2 }}>
+                {fieldsError}
+              </Alert>
+            )}
+            
+            {!loadingFields && !fieldsError && Object.keys(availableFields).length > 0 && (
+              <FormControl fullWidth margin="normal">
+                <InputLabel>Campo de Perfil</InputLabel>
+                <Select
+                  value={pregunta.profile_field_path || ""}
+                  onChange={(e) => handleProfileFieldSelect(e.target.value)}
+                  disabled={deshabilitado}
+                  label="Campo de Perfil"
+                >
+                  <MenuItem value="">
+                    <em>Seleccionar campo...</em>
+                  </MenuItem>
+                  {Object.entries(availableFields).map(([groupName, groupData]) => [
+                    <MenuItem key={`header-${groupName}`} disabled>
+                      <Typography variant="subtitle2" color="primary">
+                        {groupData.name}
+                      </Typography>
+                    </MenuItem>,
+                    ...Object.entries(groupData.fields).map(([fieldName, fieldData]) => (
+                      <MenuItem key={`${groupName}.${fieldName}`} value={`${groupName}.${fieldName}`}>
+                        <Box sx={{ ml: 2 }}>
+                          {fieldData.label}
+                          <Chip 
+                            label={fieldData.type} 
+                            size="small" 
+                            sx={{ ml: 1 }} 
+                            color={fieldData.required ? "primary" : "default"}
+                          />
+                        </Box>
+                      </MenuItem>
+                    ))
+                  ]).flat()}
+                </Select>
+              </FormControl>
+            )}
+            
+            {/* Show selected field info */}
+            {pregunta.profile_field_config && (
+              <Box sx={{ mt: 2, p: 2, bgcolor: "grey.50", borderRadius: 1 }}>
+                <Typography variant="subtitle2" gutterBottom>
+                  Campo Seleccionado: {pregunta.profile_field_config.label}
+                </Typography>
+                
+                <Box sx={{ mb: 1 }}>
+                  <Chip 
+                    label={`Tipo: ${pregunta.profile_field_config.type}`} 
+                    size="small" 
+                    color="secondary" 
+                    sx={{ mr: 1 }} 
+                  />
+                  <Chip 
+                    label={`Pregunta: ${nombreTipoPregunta[pregunta.tipo]}`} 
+                    size="small" 
+                    color="primary" 
+                    sx={{ mr: 1 }} 
+                  />
+                  {pregunta.profile_field_config.required && (
+                    <Chip 
+                      label="Requerido" 
+                      size="small" 
+                      color="error" 
+                    />
+                  )}
+                </Box>
+
+                <Typography variant="body2" color="text.secondary">
+                  {pregunta.profile_field_config.help_text}
+                </Typography>
+
+                {pregunta.profile_field_config.max_length && (
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    Longitud máxima: {pregunta.profile_field_config.max_length} caracteres
+                  </Typography>
+                )}
+              </Box>
+            )}
+          </Box>
+        )}
+
+        {/* Show options for regular question types */}
         {tiposConOpciones.includes(pregunta.tipo) && (
           <>
             <Typography variant="subtitle2" sx={{ mt: 2 }} gutterBottom>
@@ -425,6 +600,28 @@ const PreguntaCard = ({
               Agregar opción
             </Button>
           </>
+        )}
+
+        {/* Show profile field choices (read-only) */}
+        {pregunta.tipo === "profile_field_choice" && pregunta.profile_field_config?.choices && (
+          <Box sx={{ mt: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>
+              Opciones Disponibles (del campo de perfil):
+            </Typography>
+            <Box sx={{ display: "flex", flexWrap: "wrap", gap: 1 }}>
+              {pregunta.profile_field_config.choices.map(([value, label]) => (
+                <Chip 
+                  key={value} 
+                  label={`${label} (${value})`} 
+                  variant="outlined" 
+                  size="small" 
+                />
+              ))}
+            </Box>
+            <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: "block" }}>
+              Estas opciones se generan automáticamente desde el campo de perfil seleccionado.
+            </Typography>
+          </Box>
         )}
 
         {pregunta.tipo === "imagen" && (

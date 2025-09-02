@@ -47,12 +47,17 @@ const TIPOS_COMPLETOS = [
   "ch",
   "imagen",
   "meta",
+  "profile_field",
+  "profile_field_choice",
+  "profile_field_boolean",
+  "profile_field_date",
+  "profile_field_textarea",
 ];
 
 const tiposPorCuestionario = {
   Normal: TIPOS_COMPLETOS.filter(
     (t) =>
-      !["sis", "sis2", "ch", "canalizacion", "canalizacion_centro"].includes(t)
+      !["sis", "sis2", "ch", "canalizacion", "canalizacion_centro", "profile_field_choice", "profile_field_boolean", "profile_field_date", "profile_field_textarea"].includes(t)
   ),
   SIS: ["sis", "sis2"],
   "Cuadro de Habilidades": ["ch"],
@@ -227,9 +232,8 @@ const EditorCuestionario = () => {
             const nuevaPregunta = nuevas[d.pregunta_id];
             return {
               ...d,
-              descripcion: `Pregunta ${d.pregunta_id + 1}: ${
-                nuevaPregunta?.texto || ""
-              }`,
+              descripcion: `Pregunta ${d.pregunta_id + 1}: ${nuevaPregunta?.texto || ""
+                }`,
             };
           });
         }
@@ -251,9 +255,8 @@ const EditorCuestionario = () => {
             const nuevaPregunta = nuevas[d.pregunta_id];
             return {
               ...d,
-              descripcion: `Pregunta ${d.pregunta_id + 1}: ${
-                nuevaPregunta?.texto || ""
-              }`,
+              descripcion: `Pregunta ${d.pregunta_id + 1}: ${nuevaPregunta?.texto || ""
+                }`,
             };
           });
         }
@@ -311,6 +314,21 @@ const EditorCuestionario = () => {
           desbloqueo: p.desbloqueo?.map((d) => ({
             ...d,
             valor: d.valor === "0" ? "Sí" : d.valor === "1" ? "No" : d.valor,
+            // Limpiar información de pre-selección
+            preguntaSeleccionadaDesbloqueo: undefined,
+            opcionSeleccionadaDesbloqueo: undefined,
+          })),
+        };
+      }
+
+      // Si es una pregunta de campo de perfil, incluir la información del campo
+      if (p.tipo.startsWith("profile_field")) {
+        return {
+          ...p,
+          profile_field_path: p.profile_field_path,
+          profile_field_config: p.profile_field_config,
+          desbloqueo: p.desbloqueo?.map((d) => ({
+            ...d,
             // Limpiar información de pre-selección
             preguntaSeleccionadaDesbloqueo: undefined,
             opcionSeleccionadaDesbloqueo: undefined,

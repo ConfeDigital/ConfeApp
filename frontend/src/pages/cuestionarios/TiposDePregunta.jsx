@@ -23,6 +23,11 @@ import Canalizacion from "../../components/tipos_de_pregunta/Canalizacion";
 import CanalizacionCentro from "../../components/tipos_de_pregunta/CanalizacionCentro";
 import Imagen from "../../components/tipos_de_pregunta/Imagen";
 import BinaryPregunta from "../../components/tipos_de_pregunta/BinaryPregunta";
+import ProfileField from "../../components/tipos_de_pregunta/ProfileField";
+import ProfileFieldChoice from "../../components/tipos_de_pregunta/ProfileFieldChoice";
+import ProfileFieldBoolean from "../../components/tipos_de_pregunta/ProfileFieldBoolean";
+import ProfileFieldDate from "../../components/tipos_de_pregunta/ProfileFieldDate";
+import ProfileFieldTextarea from "../../components/tipos_de_pregunta/ProfileFieldTextarea";
 
 const TiposDePregunta = ({
   pregunta,
@@ -291,6 +296,72 @@ const TiposDePregunta = ({
             respuesta={respuestaParseada}
             setRespuesta={onRespuestaChange}
             disabled={!habilitada}
+          />
+        );
+
+      case "profile_field":
+        return (
+          <ProfileField
+            pregunta={pregunta}
+            usuarioId={usuario}
+            setSeleccionOpcion={onRespuestaChange}
+            disabled={!habilitada}
+            initialValue={respuestaParseada}
+          />
+        );
+
+      case "profile_field_choice":
+        return (
+          <ProfileFieldChoice
+            pregunta={pregunta}
+            usuarioId={usuario}
+            setSeleccionOpcion={onRespuestaChange}
+            disabled={!habilitada}
+            initialValue={respuestaParseada}
+          />
+        );
+
+      case "profile_field_boolean":
+        return (
+          <ProfileFieldBoolean
+            pregunta={pregunta}
+            usuarioId={usuario}
+            setSeleccionOpcion={onRespuestaChange}
+            disabled={!habilitada}
+            initialValue={respuestaParseada}
+          />
+        );
+
+      case "profile_field_date":
+        return (
+          <ProfileFieldDate
+            pregunta={pregunta}
+            usuarioId={usuario}
+            setSeleccionOpcion={onRespuestaChange}
+            disabled={!habilitada}
+            initialValue={respuestaParseada}
+          />
+        );
+
+      case "profile_field_textarea":
+        return (
+          <ProfileFieldTextarea
+            pregunta={pregunta}
+            usuarioId={usuario}
+            setSeleccionOpcion={onRespuestaChange}
+            disabled={!habilitada}
+            initialValue={respuestaParseada}
+          />
+        );
+
+      case "profile_field_phonenumber":
+        return (
+          <ProfileFieldPhonenumber
+            pregunta={pregunta}
+            usuarioId={usuario}
+            setSeleccionOpcion={onRespuestaChange}
+            disabled={!habilitada}
+            initialValue={respuestaParseada}
           />
         );
 
