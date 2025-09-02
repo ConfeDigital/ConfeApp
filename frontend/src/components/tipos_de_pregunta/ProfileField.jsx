@@ -25,8 +25,8 @@ const ProfileField = ({
   disabled = false,
   initialValue = null,
 }) => {
-  const [value, setValue] = useState(initialValue || "");
-  const [initialLoaded, setInitialLoaded] = useState(false); // avoid autosave after GET
+  const [value, setValue] = useState(initialValue);
+  const [initialLoaded, setInitialLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -41,24 +41,62 @@ const ProfileField = ({
     if (metadata) {
       setFieldMetadata(metadata);
     }
+  }, [pregunta]); // Dependency on 'pregunta' to ensure metadata is set
 
-    if (pregunta.profile_field_path && usuarioId) {
+  useEffect(() => {
+    if (pregunta.profile_field_path && usuarioId && fieldMetadata) {
       loadCurrentValue();
     }
-  }, [pregunta, usuarioId]);
+  }, [pregunta, usuarioId, fieldMetadata]); // Added fieldMetadata to the dependency array
 
   const loadCurrentValue = async () => {
+    setLoading(true);
     try {
       const response = await axios.get(
         `/api/cuestionarios/profile-fields/user/${usuarioId}/value/${pregunta.profile_field_path}/`
       );
       if (response.data.success && response.data.value !== null) {
-        setValue(response.data.value);
+        let displayValue = response.data.value;
+
+        // Convert actual profile values to option indices for display
+        if (fieldMetadata?.type === "choice" && pregunta.opciones) {
+          const choiceIndex = fieldMetadata.choices?.findIndex(
+            ([val, label]) => val === response.data.value
+          );
+          if (choiceIndex >= 0 && pregunta.opciones[choiceIndex]) {
+            displayValue = pregunta.opciones[choiceIndex].valor;
+          }
+        } else if (fieldMetadata?.type === "boolean") {
+          const boolValue = response.data.value;
+          if (
+            boolValue === true ||
+            boolValue === "true" ||
+            boolValue === 1 ||
+            boolValue === "1"
+          ) {
+            displayValue = 0; // Sí
+          } else if (
+            boolValue === false ||
+            boolValue === "false" ||
+            boolValue === 0 ||
+            boolValue === "0"
+          ) {
+            displayValue = 1; // No
+          } else {
+            console.warn("Unexpected boolean value:", boolValue);
+            displayValue = null;
+          }
+        }
+        setValue(displayValue);
+      } else {
+        setValue(null);
       }
     } catch (err) {
       console.error("Error loading current value:", err);
+      setError("Error loading initial field value.");
     } finally {
       setInitialLoaded(true);
+      setLoading(false);
     }
   };
 
@@ -67,20 +105,47 @@ const ProfileField = ({
     setError("");
     setSuccess("");
     try {
-      const payloadValue =
-        typeof valToSave === "boolean" ? valToSave.toString() : valToSave;
+      // For choice and boolean fields, convert the selected option index back to the actual value
+      let actualValue = valToSave;
+      let opcionValue = valToSave;
+
+      if (fieldMetadata?.type === "choice" && pregunta.opciones) {
+        const selectedOption = pregunta.opciones.find(
+          (opt) => opt.valor === parseInt(valToSave)
+        );
+        if (selectedOption && fieldMetadata.choices) {
+          const choiceIndex = pregunta.opciones.findIndex(
+            (opt) => opt.valor === parseInt(valToSave)
+          );
+          if (choiceIndex >= 0 && fieldMetadata.choices[choiceIndex]) {
+            actualValue = fieldMetadata.choices[choiceIndex][0];
+          }
+          opcionValue = selectedOption.valor;
+        }
+      } else if (fieldMetadata?.type === "boolean") {
+        actualValue = (parseInt(valToSave) === 0).toString();
+        const selectedOption = pregunta.opciones?.find(
+          (opt) => opt.valor === parseInt(valToSave)
+        );
+        opcionValue =
+          selectedOption?.texto || (parseInt(valToSave) === 0 ? "Sí" : "No");
+      } else {
+        actualValue =
+          typeof valToSave === "boolean" ? valToSave.toString() : valToSave;
+        opcionValue = actualValue;
+      }
 
       const response = await axios.post(
         `/api/cuestionarios/profile-fields/user/${usuarioId}/update/`,
         {
           field_path: pregunta.profile_field_path,
-          value: payloadValue,
+          value: actualValue,
         }
       );
 
       if (response.data.success) {
         setSuccess(response.data.message);
-        setSeleccionOpcion(payloadValue);
+        setSeleccionOpcion(opcionValue.toString());
       } else {
         setError(response.data.message);
       }
@@ -99,12 +164,12 @@ const ProfileField = ({
     setError("");
     setSuccess("");
 
-    if (!initialLoaded) return; // don’t autosave while loading initial value
+    if (!initialLoaded) return;
 
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       saveValue(newValue);
-    }, 1500); // debounce save
+    }, 1500);
   };
 
   const renderField = () => {
@@ -116,7 +181,16 @@ const ProfileField = ({
       );
     }
 
-    const { type, label, choices, required, max_length } = fieldMetadata;
+    const { type, label, required, max_length } = fieldMetadata;
+
+    if (loading) {
+      return (
+        <Box display="flex" alignItems="center" gap={1}>
+          <CircularProgress size={20} />
+          <Typography variant="body2">Cargando datos…</Typography>
+        </Box>
+      );
+    }
 
     switch (type) {
       case "text":
@@ -132,7 +206,6 @@ const ProfileField = ({
             helperText={fieldMetadata.help_text}
           />
         );
-
       case "textarea":
         return (
           <TextField
@@ -148,7 +221,6 @@ const ProfileField = ({
             helperText={fieldMetadata.help_text}
           />
         );
-
       case "choice":
         return (
           <FormControl fullWidth required={required}>
@@ -162,15 +234,14 @@ const ProfileField = ({
               <MenuItem value="">
                 <em>Seleccionar...</em>
               </MenuItem>
-              {choices?.map(([choiceValue, choiceLabel]) => (
-                <MenuItem key={choiceValue} value={choiceValue}>
-                  {choiceLabel}
+              {pregunta.opciones?.map((opcion) => (
+                <MenuItem key={opcion.valor} value={opcion.valor}>
+                  {opcion.texto}
                 </MenuItem>
               ))}
             </Select>
           </FormControl>
         );
-
       case "boolean":
         return (
           <Box
@@ -185,44 +256,42 @@ const ProfileField = ({
               variant="contained"
               fullWidth
               sx={{
-                py: 2,
-                fontSize: "1.2rem",
+                fontSize: "1rem",
                 fontWeight: "bold",
-                backgroundColor:
-                  value === true ? "success.light" : "grey.700",
-                color: value === true ? "success.contrastText" : "grey.100",
+                py: 1,
+                backgroundColor: value === 0 ? "success.light" : "grey.700",
+                color: value === 0 ? "success.contrastText" : "grey.100",
+                transition: "all 0.3s ease",
                 "&:hover": {
                   transform: "scale(1.02)",
                 },
               }}
-              onClick={() => handleValueChange(true)}
+              onClick={() => handleValueChange(0)}
               disabled={disabled || autoSaving}
             >
               Sí
             </Button>
-
             <Button
               variant="contained"
               fullWidth
               sx={{
-                py: 2,
-                fontSize: "1.2rem",
+                fontSize: "1rem",
                 fontWeight: "bold",
-                backgroundColor:
-                  value === false ? "success.light" : "grey.700",
-                color: value === false ? "error.contrastText" : "grey.100",
+                py: 1,
+                backgroundColor: value === 1 ? "success.light" : "grey.700",
+                color: value === 1 ? "error.contrastText" : "grey.100",
+                transition: "all 0.3s ease",
                 "&:hover": {
                   transform: "scale(1.02)",
                 },
               }}
-              onClick={() => handleValueChange(false)}
+              onClick={() => handleValueChange(1)}
               disabled={disabled || autoSaving}
             >
               No
             </Button>
           </Box>
         );
-
       case "date":
         return (
           <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -245,7 +314,6 @@ const ProfileField = ({
             />
           </LocalizationProvider>
         );
-
       case "phonenumber":
         return (
           <StandalonePhoneInputField
@@ -257,7 +325,6 @@ const ProfileField = ({
             required={required}
           />
         );
-
       default:
         return (
           <Alert severity="error">Unsupported field type: {type}</Alert>
@@ -266,22 +333,26 @@ const ProfileField = ({
   };
 
   return (
-    <Box sx={{ p: 2 }}>
+    <Box
+      sx={{
+        gap: 2,
+        width: "100%",
+        mt: 2,
+        px: { xs: 1, sm: 2 },
+      }}
+    >
       <Box sx={{ mb: 2 }}>{renderField()}</Box>
-
       {error && (
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
       )}
-
       {success && (
         <Alert severity="success" sx={{ mb: 2 }}>
           {success}
         </Alert>
       )}
-
-      {autoSaving && (
+      {autoSaving && !loading && (
         <Box display="flex" alignItems="center" gap={1}>
           <CircularProgress size={20} />
           <Typography variant="body2">Guardando cambios…</Typography>

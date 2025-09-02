@@ -203,6 +203,7 @@ const Preguntas = ({
             }
           } else if (
             pregunta.tipo === "binaria" ||
+            pregunta.tipo === "profile_field_boolean" ||
             (pregunta.opciones.length === 2 &&
               pregunta.opciones.some((op) => op.texto === "Sí") &&
               pregunta.opciones.some((op) => op.texto === "No"))
@@ -218,6 +219,32 @@ const Preguntas = ({
 
             // console.log(
             //   `🔘 Opción seleccionada (texto ${respuesta}):`,
+            //   opcionSeleccionada?.texto
+            // );
+            // console.log(
+            //   `🔘 Desbloqueos de esta opción:`,
+            //   opcionSeleccionada?.desbloqueos
+            // );
+
+            if (opcionSeleccionada?.desbloqueos) {
+              opcionSeleccionada.desbloqueos.forEach((desbloqueo) => {
+                // console.log(
+                //   `🔓 Desbloqueando pregunta: ${desbloqueo.pregunta_desbloqueada}`
+                // );
+                unlocked.add(desbloqueo.pregunta_desbloqueada);
+              });
+            } else {
+              // console.log("❌ No se encontró la opción o no tiene desbloqueos");
+            }
+          } else if (pregunta.tipo === "profile_field_choice") {
+            // console.log("🔘 Procesando PROFILE_FIELD_CHOICE");
+            // Para preguntas de campo de perfil tipo choice, usar valor numérico
+            const opcionSeleccionada = pregunta.opciones.find(
+              (op) => op.valor === parseInt(respuesta, 10)
+            );
+
+            // console.log(
+            //   `🔘 Opción seleccionada (valor ${respuesta}):`,
             //   opcionSeleccionada?.texto
             // );
             // console.log(
