@@ -83,6 +83,8 @@ import ProfileFieldDemo from "./pages/ProfileFieldDemo"
 
 import { onSessionExpired } from "./components/session_expired/sessionExpiredEvent";
 import SessionExpiredDialog from "./components/session_expired/SessionExpiredDialog";
+import NetworkStatus from "./components/network_status/NetworkStatusDialog";
+import BackendStatus from "./components/network_status/BackendStatusDialog";
 
 reactDebugHooks(React);
 
@@ -308,6 +310,8 @@ function App({ instance }) {
                 open={showSessionExpired}
                 onClose={() => setShowSessionExpired(false)}
               />
+              <NetworkStatus />
+              <BackendStatus />
             </LocalizationProvider>
           </ThemeProvider>
         </ColorModeContext.Provider>
