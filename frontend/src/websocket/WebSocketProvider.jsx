@@ -1,9 +1,10 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useDispatch } from "react-redux";
 import { addNotification, fetchNotifications } from "../features/notifications/notificationsSlice";
 import { setUser } from "../features/auth/authSlice";
 import { ACCESS_TOKEN, AUTH_TYPE, SOUND_ALERT } from "../constants";
 import { loginRequest } from "../auth-config";
+import { WebSocketContext } from "./WebSocketContext";
 
 const WebSocketProvider = ({ instance, children }) => {
   const dispatch = useDispatch();
@@ -12,6 +13,7 @@ const WebSocketProvider = ({ instance, children }) => {
   const isUnmounted = useRef(false);
   const retries = useRef({ notifications: 0, userUpdates: 0 });
   const MAX_RETRIES = 5;
+  const [isWsConnected, setIsWsConnected] = useState(false);
 
   useEffect(() => {
     const notificationSound = new Audio('../../assets/sounds/notification.wav');
@@ -26,6 +28,12 @@ const WebSocketProvider = ({ instance, children }) => {
       userUpdates: isDev
         ? import.meta.env.VITE_USER_UPDATES_WEBSOCKET_LOCAL
         : import.meta.env.VITE_USER_UPDATES_WEBSOCKET_PROD,
+    };
+
+    const updateConnectionStatus = () => {
+      const isNotificationsConnected = notificationSocketRef.current?.readyState === WebSocket.OPEN;
+      const isUserUpdatesConnected = userUpdateSocketRef.current?.readyState === WebSocket.OPEN;
+      setIsWsConnected(isNotificationsConnected && isUserUpdatesConnected);
     };
 
     const connectWebSocket = (type, url, initialToken, onMessage) => {
@@ -70,6 +78,7 @@ const WebSocketProvider = ({ instance, children }) => {
             console.log(`[${type}] WebSocket connected`);
             retries.current[type] = 0;
             if (type === "notifications") dispatch(fetchNotifications());
+            updateConnectionStatus(); // Update status on successful connection
           };
     
           socket.onmessage = (event) => {
@@ -79,6 +88,7 @@ const WebSocketProvider = ({ instance, children }) => {
     
           socket.onclose = (e) => {
             console.log(`[${type}] WebSocket closed:`, e.code, e.reason);
+            updateConnectionStatus(); // Update status on disconnect
             if (!isUnmounted.current && retries.current[type] < MAX_RETRIES) {
               const timeout = Math.min(1000 * 2 ** retries.current[type], 30000);
               console.log(`[${type}] Reconnecting in ${timeout}ms...`);
@@ -90,13 +100,14 @@ const WebSocketProvider = ({ instance, children }) => {
           };
     
           socket.onerror = (error) => {
+            console.error(`[${type}] WebSocket error:`, error);
             socket.close(); // Triggers retry
           };
         });
       };
     
       connect();
-    };    
+    };    
 
     const startConnections = async () => {
       const authType = sessionStorage.getItem(AUTH_TYPE);
@@ -159,7 +170,11 @@ const WebSocketProvider = ({ instance, children }) => {
     };
   }, [instance, dispatch]);
 
-  return <>{children}</>;
+  return (
+    <WebSocketContext.Provider value={{ isWsConnected }}>
+      {children}
+    </WebSocketContext.Provider>
+  );
 };
 
 export default WebSocketProvider;

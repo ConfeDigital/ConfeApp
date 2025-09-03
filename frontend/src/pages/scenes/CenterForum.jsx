@@ -303,7 +303,7 @@ const FilePreview = ({ file, expanded = false }) => {
 
                 <Box display="flex" gap={0.5}>
                     {canPreview && (
-                        <Tooltip title={isExpanded ? "Esconder" : "Mostrar"}>
+                        <Tooltip title={isExpanded ? "Ocultar" : "Mostrar"}>
                             <IconButton
                                 size="small"
                                 onClick={() => setIsExpanded(!isExpanded)}
