@@ -37,15 +37,15 @@ const PopupPrecargaCuestionario = ({
   const [downloadingTemplate, setDownloadingTemplate] = useState(false);
 
   // Log preguntasPrecargadas JSON crudo al frontend cuando cambia
-  useEffect(() => {
-    if (preguntasPrecargadas?.length) {
-      console.log(
-        "🔢 Length de preguntasPrecargadas:",
-        preguntasPrecargadas?.length
-      );
-      console.log("📊 Preguntas precargadas (frontend):", preguntasPrecargadas);
-    }
-  }, [preguntasPrecargadas]);
+  // useEffect(() => {
+  //   if (preguntasPrecargadas?.length) {
+  //     console.log(
+  //       "🔢 Length de preguntasPrecargadas:",
+  //       preguntasPrecargadas?.length
+  //     );
+  //     console.log("📊 Preguntas precargadas (frontend):", preguntasPrecargadas);
+  //   }
+  // }, [preguntasPrecargadas]);
 
   useEffect(() => {
     const getCsrfToken = () => {

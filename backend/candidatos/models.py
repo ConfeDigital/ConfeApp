@@ -127,13 +127,13 @@ class UserProfile(models.Model):
     ]
 
     SOCIAL_SECURITY_CHOICES = [
+        ('NINGUNO', 'Ninguno'),
         ('IMSS', 'IMSS'),
         ('ISSSTE', 'ISSSTE'),
         ('PEMEX', 'PEMEX'),
         ('IMSS-BIENESTAR', 'IMSS-Bienestar'),
         ('PARTICULAR', 'Particular'),
         ('OTRO', 'Otro'),
-        ('NINGUNO', 'Ninguno'),
     ]
 
     # Personal Information

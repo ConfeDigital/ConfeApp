@@ -166,10 +166,10 @@ const Datasheet = () => {
         const questionnairesResponse = await axios.get(
           `/api/cuestionarios/usuario/${profileResponse.data.user.id}/cuestionarios-con-respuestas/`
         );
-        console.log(
-          "📋 Todos los base_cuestionarios recibidos:",
-          questionnairesResponse.data
-        );
+        // console.log(
+        //   "📋 Todos los base_cuestionarios recibidos:",
+        //   questionnairesResponse.data
+        // );
         setQuestionnaires(questionnairesResponse.data);
 
         // Usar los mismos datos para el estado de cuestionarios
@@ -182,10 +182,10 @@ const Datasheet = () => {
         const currentStageQuestionnaires = questionnairesResponse.data.filter(
           (q) => q.estado_desbloqueo === currentStage
         );
-        console.log(
-          `🔍 Base_cuestionarios para la etapa ${currentStage}:`,
-          currentStageQuestionnaires
-        );
+        // console.log(
+        //   `🔍 Base_cuestionarios para la etapa ${currentStage}:`,
+        //   currentStageQuestionnaires
+        // );
 
         const stageIdx = stageOrder.findIndex(
           (stage) => stage.code === currentStage
@@ -313,20 +313,20 @@ const Datasheet = () => {
       (q) => q.estado_desbloqueo === stageCode
     );
 
-    console.log(
-      "🔍 Cuestionarios encontrados para la etapa:",
-      filteredQuestionnaires
-    );
+    // console.log(
+    //   "🔍 Cuestionarios encontrados para la etapa:",
+    //   filteredQuestionnaires
+    // );
 
     if (filteredQuestionnaires.length === 0) {
-      console.log("❌ No hay cuestionarios para esta etapa.");
+      // console.log("❌ No hay cuestionarios para esta etapa.");
       return;
     }
 
     // 📌 SIEMPRE mostrar la lista de base_cuestionarios disponibles
-    console.log(
-      `📋 ${filteredQuestionnaires.length} base_cuestionarios disponibles, mostrando lista de selección`
-    );
+    // console.log(
+    //   `📋 ${filteredQuestionnaires.length} base_cuestionarios disponibles, mostrando lista de selección`
+    // );
     setExpandedPhase(expandedPhase === stageCode ? null : stageCode);
 
     // Construir subfases visuales con información detallada
@@ -345,11 +345,11 @@ const Datasheet = () => {
         targetId = q.id;
       }
 
-      console.log(
-        `🟦 Base Cuestionario: ${q.base_cuestionario_nombre || q.nombre}, id: ${q.id
-        }, color: ${colorFinal}, tiene_respuestas: ${q.tiene_respuestas
-        }, finalizado: ${q.finalizado}, activo: ${q.activo}`
-      );
+      // console.log(
+      //   `🟦 Base Cuestionario: ${q.base_cuestionario_nombre || q.nombre}, id: ${q.id
+      //   }, color: ${colorFinal}, tiene_respuestas: ${q.tiene_respuestas
+      //   }, finalizado: ${q.finalizado}, activo: ${q.activo}`
+      // );
 
       return {
         ...q,

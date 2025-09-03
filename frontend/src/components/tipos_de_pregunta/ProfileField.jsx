@@ -145,14 +145,17 @@ const ProfileField = ({
 
       if (response.data.success) {
         setSuccess(response.data.message);
-        setSeleccionOpcion(opcionValue.toString());
+        // Only update parent state after successful save to avoid triggering another save
+        if (setSeleccionOpcion) {
+          setSeleccionOpcion(opcionValue.toString());
+        }
       } else {
         setError(response.data.message);
       }
     } catch (err) {
       setError(
         "Error updating profile field: " +
-          (err.response?.data?.message || err.message)
+        (err.response?.data?.message || err.message)
       );
     } finally {
       setAutoSaving(false);

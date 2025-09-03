@@ -204,6 +204,8 @@ const Preguntas = ({
           } else if (
             pregunta.tipo === "binaria" ||
             pregunta.tipo === "profile_field_boolean" ||
+            (pregunta.profile_field_path && 
+             pregunta.profile_field_metadata?.type === "boolean") ||
             (pregunta.opciones.length === 2 &&
               pregunta.opciones.some((op) => op.texto === "Sí") &&
               pregunta.opciones.some((op) => op.texto === "No"))
@@ -236,7 +238,11 @@ const Preguntas = ({
             } else {
               // console.log("❌ No se encontró la opción o no tiene desbloqueos");
             }
-          } else if (pregunta.tipo === "profile_field_choice") {
+          } else if (
+            pregunta.tipo === "profile_field_choice" ||
+            (pregunta.profile_field_path && 
+             pregunta.profile_field_metadata?.type === "choice")
+          ) {
             // console.log("🔘 Procesando PROFILE_FIELD_CHOICE");
             // Para preguntas de campo de perfil tipo choice, usar valor numérico
             const opcionSeleccionada = pregunta.opciones.find(
@@ -295,6 +301,68 @@ const Preguntas = ({
     },
     [cuestionario]
   );
+
+  // Función para cargar valores de profile fields para cálculo de desbloqueos
+  const loadProfileFieldValues = async () => {
+    const profileFieldQuestions = cuestionario.preguntas.filter(
+      (p) => p.profile_field_path
+    );
+    
+    const profileFieldValues = {};
+    
+    for (const pregunta of profileFieldQuestions) {
+      try {
+        const response = await api.get(
+          `/api/cuestionarios/profile-fields/user/${usuario}/value/${pregunta.profile_field_path}/`
+        );
+        
+        if (response.data.success && response.data.value !== null) {
+          let displayValue = response.data.value;
+          const fieldMetadata = pregunta.profile_field_metadata || pregunta.profile_field_config;
+          
+          // Convert actual profile values to option indices for display (same logic as ProfileField)
+          if (fieldMetadata?.type === "choice" && pregunta.opciones) {
+            const choiceIndex = fieldMetadata.choices?.findIndex(
+              ([val, label]) => val === response.data.value
+            );
+            if (choiceIndex >= 0 && pregunta.opciones[choiceIndex]) {
+              displayValue = pregunta.opciones[choiceIndex].valor;
+            }
+          } else if (fieldMetadata?.type === "boolean") {
+            const boolValue = response.data.value;
+            // For unlocking logic, we need the text value that matches the option text
+            if (
+              boolValue === true ||
+              boolValue === "true" ||
+              boolValue === 1 ||
+              boolValue === "1"
+            ) {
+              displayValue = "Sí"; // Text value for unlocking logic
+            } else if (
+              boolValue === false ||
+              boolValue === "false" ||
+              boolValue === 0 ||
+              boolValue === "0"
+            ) {
+              displayValue = "No"; // Text value for unlocking logic
+            } else {
+              console.warn("Unexpected boolean value:", boolValue);
+              displayValue = null;
+            }
+          }
+          
+          if (displayValue !== null) {
+            profileFieldValues[pregunta.id] = displayValue;
+            // console.log(`Loaded profile field value for question ${pregunta.id}:`, displayValue);
+          }
+        }
+      } catch (error) {
+        console.error(`Error loading profile field value for question ${pregunta.id}:`, error);
+      }
+    }
+    
+    return profileFieldValues;
+  };
 
   // Efecto para recargar respuestas cuando cambien
   useEffect(() => {
@@ -392,7 +460,15 @@ const Preguntas = ({
         }
       });
 
-      setRespuestas(respuestasMap);
+      // Load profile field values and merge them with regular responses
+      const profileFieldValues = await loadProfileFieldValues();
+      const mergedRespuestas = { ...respuestasMap, ...profileFieldValues };
+      
+      // console.log("Regular responses:", respuestasMap);
+      // console.log("Profile field values:", profileFieldValues);
+      // console.log("Merged responses:", mergedRespuestas);
+
+      setRespuestas(mergedRespuestas);
     } catch (error) {
       // console.error("Error fetching respuestas:", error);
       setError("Error al cargar las respuestas");
@@ -770,6 +846,12 @@ const Preguntas = ({
         const preguntaActual = cuestionario.preguntas.find(
           (p) => p.id === preguntaId
         );
+
+        // Skip processing for profile field questions as they handle their own saving
+        if (preguntaActual.profile_field_path) {
+          // console.log("Skipping handleRespuestaChange for profile field question:", preguntaActual.texto);
+          return;
+        }
 
         // Validación específica para preguntas abiertas
         if (

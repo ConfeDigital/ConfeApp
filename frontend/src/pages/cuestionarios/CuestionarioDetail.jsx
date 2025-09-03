@@ -37,6 +37,7 @@ import {
   ExpandMore as ExpandMoreIcon,
 } from "@mui/icons-material";
 import api from "../../api";
+import dayjs from "dayjs";
 
 import useDocumentTitle from "../../components/hooks/useDocumentTitle";
 
@@ -69,7 +70,7 @@ const CuestionarioDetail = () => {
     api
       .get(`/api/cuestionarios/base/${baseCuestionarioId}/`)
       .then((res) => {
-        console.log("Fetched questionnaire data:", res.data);
+        // console.log("Fetched questionnaire data:", res.data);
         setBaseCuestionario(res.data);
         setCuestionarios(res.data.cuestionarios || []);
       })
@@ -216,24 +217,24 @@ const CuestionarioDetail = () => {
 
   const handleCreateNewVersion = () => {
     const currentCuestionario = cuestionarios[0]; // Assuming the first cuestionario is the current one
-    console.log("Creating new version from:", currentCuestionario);
+    // console.log("Creating new version from:", currentCuestionario);
 
     api
       .post(
         `/api/cuestionarios/crear-cuestionario/${currentCuestionario.id}/nueva-version/`
       )
       .then((res) => {
-        console.log("New version created:", res.data);
+        // console.log("New version created:", res.data);
         // The new version is in res.data, we can navigate directly to it
         const newVersionId = res.data.id;
-        console.log("Navigating to new version:", newVersionId);
+        // console.log("Navigating to new version:", newVersionId);
         navigate(`/baseCuestionarios/${baseCuestionarioId}/${newVersionId}`);
 
         // Then refresh the list
         return api.get(`/api/cuestionarios/base/${baseCuestionarioId}/`);
       })
       .then((res) => {
-        console.log("Updated questionnaire data:", res.data);
+        // console.log("Updated questionnaire data:", res.data);
         setBaseCuestionario(res.data);
         setCuestionarios(res.data.cuestionarios || []);
       })
@@ -249,12 +250,12 @@ const CuestionarioDetail = () => {
   const handleCopyVersion = (cuestionario) => {
     setCopyingVersionId(cuestionario.id);
 
-    console.log("Getting structure for copy:", cuestionario);
+    // console.log("Getting structure for copy:", cuestionario);
 
     api
       .get(`/api/cuestionarios/copiar-version/${cuestionario.id}/`)
       .then((res) => {
-        console.log("Questionnaire structure received:", res.data);
+        // console.log("Questionnaire structure received:", res.data);
 
         // Navigate to questionnaire editor with the copied structure
         // Create a temporary new version ID (will be created when saved)
@@ -353,9 +354,7 @@ const CuestionarioDetail = () => {
                 />
                 <ListItemText
                   primary={`Versión ${cuestionario.version}`}
-                  secondary={`Fecha de creación: ${new Date(
-                    cuestionario.fecha_creacion
-                  ).toLocaleDateString()}`}
+                  secondary={`Fecha de creación: ${dayjs(cuestionario.fecha_creacion).format("DD/MM/YYYY")}`}
                 />
                 <Box>
                   <IconButton

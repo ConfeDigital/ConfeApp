@@ -58,15 +58,15 @@ PROFILE_FIELD_GROUPS = {
                 'required': True,
                 'max_length': 15,
                 'help_text': 'Número de teléfono del usuario'
-            },
-            'stage': {
-                'field_name': 'stage',
-                'label': 'Etapa',
-                'type': 'choice',
-                'required': False,
-                'choices': UserProfile.STAGE_CHOICES,
-                'help_text': 'Etapa actual del usuario en el proceso'
             }
+            # 'stage': {
+            #     'field_name': 'stage',
+            #     'label': 'Etapa',
+            #     'type': 'choice',
+            #     'required': False,
+            #     'choices': UserProfile.STAGE_CHOICES,
+            #     'help_text': 'Etapa actual del usuario en el proceso'
+            # }
         }
     },
     'identification': {
@@ -184,21 +184,21 @@ PROFILE_FIELD_GROUPS = {
                 'help_text': 'Restricciones físicas del usuario'
             }
         }
-    },
-    'employment': {
-        'name': 'Empleo',
-        'description': 'Información relacionada con el empleo',
-        'fields': {
-            'agency_state': {
-                'field_name': 'agency_state',
-                'label': 'Estado de Agencia',
-                'type': 'choice',
-                'required': False,
-                'choices': UserProfile.AGENCY_STATE_CHOICES,
-                'help_text': 'Estado actual en la agencia'
-            }
-        }
     }
+    # 'employment': {
+    #     'name': 'Empleo',
+    #     'description': 'Información relacionada con el empleo',
+    #     'fields': {
+    #         'agency_state': {
+    #             'field_name': 'agency_state',
+    #             'label': 'Estado de Agencia',
+    #             'type': 'choice',
+    #             'required': False,
+    #             'choices': UserProfile.AGENCY_STATE_CHOICES,
+    #             'help_text': 'Estado actual en la agencia'
+    #         }
+    #     }
+    # }
 }
 
 def get_field_metadata(field_path):
