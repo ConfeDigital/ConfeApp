@@ -18,7 +18,7 @@ import {
   useTheme,
 } from "@mui/material";
 import AddCircleIcon from "@mui/icons-material/AddCircle";
-import { FaFileExcel } from "react-icons/fa";
+import UploadFileIcon from '@mui/icons-material/UploadFile';
 import PreguntaCard from "./PreguntaCard"; // Asegúrate de que esta ruta sea correcta
 import PopupPrecargaCuestionario from "./PopupPrecargaCuestionario";
 import api from "../../../api"; // Asegúrate de que esta ruta sea correcta
@@ -142,7 +142,7 @@ const EditorCuestionario = () => {
   useEffect(() => {
     if (esCopia && estructuraCopia) {
       // Handle copy case - pre-fill with copied structure
-      console.log("Cargando estructura copiada:", estructuraCopia);
+      // console.log("Cargando estructura copiada:", estructuraCopia);
 
       // Convert backend structure to frontend format
       const preguntasConvertidas = estructuraCopia.preguntas.map((pregunta, index) => ({
@@ -195,16 +195,16 @@ const EditorCuestionario = () => {
         .get(`/api/cuestionarios/${id}/preguntas/`)
         .then((response) => {
           setPreguntas(response.data);
-          console.log("Preguntas obtenidas:", response.data);
+          // console.log("Preguntas obtenidas:", response.data);
           if (response.data.length > 0) {
-            console.log(response.data);
-            console.log("Ya existen preguntas en este cuestionario");
+            // console.log(response.data);
+            // console.log("Ya existen preguntas en este cuestionario");
             setEdicionDeshabilitada(true);
             // Auto-detect and set questionnaire type based on existing questions
             const detectedType = detectQuestionnaireType(response.data);
             setTipoCuestionario(detectedType);
           } else {
-            console.log("no hay");
+            // console.log("no hay");
             setEdicionDeshabilitada(false);
           }
         })
@@ -340,10 +340,10 @@ const EditorCuestionario = () => {
   }, [preguntas]);
 
   const handleGuardar = async () => {
-    console.log("⏳ Iniciando proceso de guardado...");
-    console.log("Tipo de cuestionario actual:", tipoCuestionario);
-    console.log("Preguntas actuales:", preguntas);
-    console.log("📝 Mis preguntitas:", preguntas);
+    // console.log("⏳ Iniciando proceso de guardado...");
+    // console.log("Tipo de cuestionario actual:", tipoCuestionario);
+    // console.log("Preguntas actuales:", preguntas);
+    // console.log("📝 Mis preguntitas:", preguntas);
 
     // Guardar las referencias a las imágenes para subirlas después
     const imagenesPendientes = preguntas
@@ -432,7 +432,7 @@ const EditorCuestionario = () => {
           cuestionarioId = newCuestionarioResponse.data.id;
         }
 
-        console.log("Nueva versión creada para copia:", cuestionarioId);
+        // console.log("Nueva versión creada para copia:", cuestionarioId);
       } catch (error) {
         console.error("Error creando nueva versión:", error);
         alert("Error al crear la nueva versión del cuestionario");
@@ -448,11 +448,7 @@ const EditorCuestionario = () => {
       preguntas: preguntasFormateadas,
     };
 
-    console.log(
-      "➡️ Enviando a:",
-      "http://localhost:8000/api/cuestionarios/guardar-cuestionario/"
-    );
-    console.log("📤 Datos enviados:", JSON.stringify(data));
+    // console.log("📤 Datos enviados:", JSON.stringify(data));
 
     try {
       const response = await api.post(
@@ -460,11 +456,11 @@ const EditorCuestionario = () => {
         data
       );
 
-      console.log(
-        "📡 Respuesta del servidor recibida. Status:",
-        response.status
-      );
-      console.log("📥 Respuesta bruta recibida:", response);
+      // console.log(
+      //   "📡 Respuesta del servidor recibida. Status:",
+      //   response.status
+      // );
+      // console.log("📥 Respuesta bruta recibida:", response);
 
       if (response.status !== 200 && response.status !== 201) {
         console.error("Error del servidor:", response.data);
@@ -477,7 +473,7 @@ const EditorCuestionario = () => {
 
       // Ahora subir las imágenes después de que las preguntas tengan ID
       if (imagenesPendientes.length > 0) {
-        console.log("📤 Subiendo imágenes pendientes...");
+        // console.log("📤 Subiendo imágenes pendientes...");
 
         // Obtener las preguntas actualizadas con sus IDs
         const preguntasActualizadas = await api.get(
@@ -504,7 +500,7 @@ const EditorCuestionario = () => {
                 }
               );
 
-              console.log(`✅ Imagen subida para pregunta ${preguntaConId.id}`);
+              // console.log(`✅ Imagen subida para pregunta ${preguntaConId.id}`);
             } else {
               console.warn(
                 `⚠️ No se encontró la pregunta: ${item.pregunta.texto}`
@@ -525,7 +521,7 @@ const EditorCuestionario = () => {
 
       setDialogoExito(true);
     } catch (err) {
-      console.log("❌ Error atrapado en catch:", err);
+      // console.log("❌ Error atrapado en catch:", err);
       console.error(err);
       alert(err.message || "Ocurrió un error al guardar.");
     }
@@ -550,7 +546,7 @@ const EditorCuestionario = () => {
       >
         <Button
           variant="outlined"
-          startIcon={<FaFileExcel />}
+          startIcon={<UploadFileIcon />}
           onClick={() => setPopupPrecargaAbierto(true)}
           disabled={edicionDeshabilitada}
         >

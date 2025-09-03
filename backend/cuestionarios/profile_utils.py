@@ -62,7 +62,9 @@ def update_user_profile_field(user_id, field_path, value):
             
             return {
                 'success': True,
-                'message': f'{metadata["label"]} se actualizo exitosamente'
+                'message': f'{metadata["label"]} se actualizó exitosamente',
+                'attribute':  attr_name,
+                'value': converted_value,
             }
             
     except CustomUser.DoesNotExist:

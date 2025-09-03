@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { FaPlus } from "react-icons/fa";
+import AddIcon from "@mui/icons-material/Add";
 import { useNavigate } from "react-router-dom";
 import {
   TextField,
@@ -113,7 +113,7 @@ const TablasEquivalencia = () => {
         <Button
           variant="outlined"
           color="primary"
-          startIcon={<FaPlus />}
+          startIcon={<AddIcon />}
           onClick={handleOpen}
         >
           Crear Tabla
