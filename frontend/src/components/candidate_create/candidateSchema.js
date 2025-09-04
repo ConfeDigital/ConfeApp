@@ -54,9 +54,9 @@ const candidateSchema = yup.object().shape({
       domicile: yup.object().when('lives_at_same_address', {
         is: false,
         then: (schema) => schema.shape({
-          address_PC: yup.string().max(5, "El código postal es demasiado largo").required('El código postal del domicilio es obligatorio'),
-          address_road: yup.string().max(50, 'La calle del domicilio es demasiado larga').required('La calle del domicilio es obligatorio'),
-          address_number: yup.string().max(8, 'El número del domicilio es demasiado largo').required('El número del domicilio es obligatorio'),
+          address_PC: yup.string().max(5, "El código postal es demasiado largo").nullable(),
+          address_road: yup.string().max(50, 'La calle del domicilio es demasiado larga').nullable(),
+          address_number: yup.string().max(8, 'El número del domicilio es demasiado largo').nullable(),
           address_number_int: yup.string().max(8, 'El número interior del domicilio es demasiado largo').nullable(),
           address_municip: yup.string().nullable(),
           address_state: yup.string().nullable(),

@@ -36,9 +36,9 @@ const WebSocketProvider = ({ instance, children }) => {
     };
 
     const updateConnectionStatus = () => {
-      // const isNotificationsConnected = notificationSocketRef.current?.readyState === WebSocket.OPEN;
+      const isNotificationsConnected = notificationSocketRef.current?.readyState === WebSocket.OPEN;
       const isUserUpdatesConnected = userUpdateSocketRef.current?.readyState === WebSocket.OPEN;
-      return isUserUpdatesConnected;
+      return isNotificationsConnected || isUserUpdatesConnected;
     };
 
     const debouncedSetIsWsConnected = () => {
