@@ -19,6 +19,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import candidateSchema from "../../components/candidate_create/candidateSchema";
 
 import PersonalInfoForm from "../../components/candidate_create/PersonalInfoForm";
+import IdentificationForm from "../../components/candidate_create/IdentificationForm";
 import AddressAutoCompleteForm from '../../components/AddressAutoCompleteForm';
 import MedicalInfoForm from "../../components/candidate_create/MedicalInfoForm";
 import EmergencyContactsForm from "../../components/candidate_create/EmergencyContactForm";
@@ -35,6 +36,7 @@ const CandidateCreate = () => {
   const [loading, setLoading] = useState(false);
   const [expandedAccordions, setExpandedAccordions] = useState({
     personal: true,
+    identification: false,
     address: false,
     contacts: false,
     medical: false,
@@ -52,9 +54,11 @@ const CandidateCreate = () => {
       birth_date: null,
       gender: "",
       blood_type: undefined,
-      curp: undefined,
       phone_number: "",
       stage: "Pre",
+      curp: "",
+      rfc: "",
+      nss: "",
       address_PC: "",
       address_road: "",
       address_number: "",
@@ -176,6 +180,22 @@ const CandidateCreate = () => {
               </AccordionSummary>
               <AccordionDetails>
                 <PersonalInfoForm />
+              </AccordionDetails>
+            </Accordion>
+            <Divider sx={{ my: 2 }} />
+            <Accordion
+              expanded={expandedAccordions.identification}
+              onChange={handleAccordionChange('identification')}
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <AccordionHeader
+                  title="Identificación"
+                  hasErrors={!!accordionErrors.identification}
+                  errorCount={accordionErrors.identification || 0}
+                />
+              </AccordionSummary>
+              <AccordionDetails>
+                <IdentificationForm />
               </AccordionDetails>
             </Accordion>
             <Divider sx={{ my: 2 }} />

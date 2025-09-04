@@ -15,11 +15,15 @@ export const fieldToAccordionMap = {
   birth_date: 'personal',
   gender: 'personal',
   blood_type: 'personal',
-  curp: 'personal',
   phone_number: 'personal',
   stage: 'personal',
   cycle: 'personal',
   photo: 'personal',
+
+  // Identification fields
+  curp: 'identification',
+  rfc: 'identification',
+  nss: 'identification',
 
   // Address fields
   address_PC: 'address',
@@ -57,6 +61,7 @@ export const fieldToAccordionMap = {
  */
 export const accordionSectionNames = {
   personal: 'Información Personal',
+  identification: 'Identificación',
   address: 'Domicilio',
   contacts: 'Contactos',
   medical: 'Detalles Médicos y Emergencia',

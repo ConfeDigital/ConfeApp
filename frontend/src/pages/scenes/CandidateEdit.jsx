@@ -10,6 +10,7 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import candidateSchema from '../../components/candidate_create/candidateSchemaEdit';
 
 import PersonalInfoForm from '../../components/candidate_create/PersonalInfoForm';
+import IdentificationForm from "../../components/candidate_create/IdentificationForm";
 import AddressAutoCompleteForm from '../../components/AddressAutoCompleteForm';
 import MedicalInfoForm from '../../components/candidate_create/MedicalInfoForm';
 import EmergencyContactsForm from '../../components/candidate_create/EmergencyContactForm';
@@ -27,6 +28,7 @@ const CandidateEdit = () => {
   const [loading, setLoading] = useState(false);
   const [expandedAccordions, setExpandedAccordions] = useState({
     personal: true,
+    identification: false,
     address: false,
     contacts: false,
     medical: false,
@@ -43,10 +45,12 @@ const CandidateEdit = () => {
       birth_date: null,
       gender: '',
       blood_type: '',
-      curp: '',
       phone_number: '',
       stage: '',
       cycle: '',
+      curp: '',
+      rfc: '',
+      nss: '',
       address_road: '',
       address_number: '',
       address_number_int: '',
@@ -146,10 +150,12 @@ const CandidateEdit = () => {
           birth_date: data.birth_date ? dayjs(data.birth_date) : null,
           gender: data.gender,
           blood_type: data.blood_type || '',
-          curp: data.curp || '',
           phone_number: data.phone_number,
           stage: data.stage,
           cycle: data.cycle ? data.cycle.id : null,
+          curp: data.curp || '',
+          rfc: data.rfc || '',
+          nss: data.nss || '',
           address_road: data.domicile ? data.domicile.address_road : '',
           address_number: data.domicile ? data.domicile.address_number : '',
           address_number_int: data.domicile ? data.domicile.address_number_int : '',
@@ -270,6 +276,22 @@ const CandidateEdit = () => {
               </AccordionSummary>
               <AccordionDetails>
                 <PersonalInfoForm editMode={true} />
+              </AccordionDetails>
+            </Accordion>
+            <Divider sx={{ my: 2 }} />
+            <Accordion
+              expanded={expandedAccordions.identification}
+              onChange={handleAccordionChange('identification')}
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <AccordionHeader
+                  title="Identificación"
+                  hasErrors={!!accordionErrors.identification}
+                  errorCount={accordionErrors.identification || 0}
+                />
+              </AccordionSummary>
+              <AccordionDetails>
+                <IdentificationForm />
               </AccordionDetails>
             </Accordion>
             <Divider sx={{ my: 2 }} />
