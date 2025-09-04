@@ -12,6 +12,8 @@ import {
   Checkbox,
   FormControlLabel,
   Typography,
+  Autocomplete,
+  FormHelperText,
 } from "@mui/material";
 import { useFormContext, Controller } from "react-hook-form";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -21,25 +23,69 @@ import dayjs from "dayjs";
 
 const PersonalInfoForm = ({
   editMode = false,
-  preentrevista = false,
-  ciclo = true,
 }) => {
   const { control, watch } = useFormContext();
   const [disabilities, setDisabilities] = useState([]);
+  const [disabilityGroups, setDisabilityGroups] = useState([]);
+  const [selectedDisabilityGroups, setSelectedDisabilityGroups] = useState([]);
+  const [filteredDisabilities, setFilteredDisabilities] = useState([]);
   const [cycles, setCycles] = useState([]);
   // Watch the current photo value
   const photoValue = watch("photo");
+  const selectedDisabilities = watch("disability") || [];
 
   useEffect(() => {
     axios
       .get("/api/discapacidad/disabilities/")
-      .then((res) => setDisabilities(res.data))
+      .then((res) => {
+        setDisabilities(res.data);
+        // Extract unique groups from disabilities
+        const groups = res.data.reduce((acc, disability) => {
+          if (disability.group && !acc.find(g => g.id === disability.group.id)) {
+            acc.push(disability.group);
+          }
+          return acc;
+        }, []);
+        setDisabilityGroups(groups);
+      })
       .catch((err) => console.error(err));
     axios
       .get("/api/candidatos/ciclos/")
       .then((res) => setCycles(res.data))
       .catch((err) => console.error(err));
   }, []);
+
+  // Auto-select disability groups based on selected disabilities
+  useEffect(() => {
+    if (selectedDisabilities.length > 0 && disabilities.length > 0) {
+      const selectedGroups = selectedDisabilities
+        .map(disabilityId => {
+          const disability = disabilities.find(d => d.id === disabilityId);
+          return disability?.group?.id;
+        })
+        .filter((groupId, index, self) => groupId && self.indexOf(groupId) === index);
+
+      setSelectedDisabilityGroups(selectedGroups);
+    } else if (selectedDisabilities.length === 0) {
+      setSelectedDisabilityGroups([]);
+    }
+  }, [selectedDisabilities, disabilities]);
+
+  // Filter disabilities based on selected groups
+  useEffect(() => {
+    if (selectedDisabilityGroups.length > 0) {
+      const filtered = disabilities.filter(d =>
+        d.group && selectedDisabilityGroups.includes(d.group.id)
+      );
+      setFilteredDisabilities(filtered);
+    } else {
+      setFilteredDisabilities([]);
+    }
+  }, [selectedDisabilityGroups, disabilities]);
+
+  const handleDisabilityGroupsChange = (groupIds) => {
+    setSelectedDisabilityGroups(groupIds);
+  };
 
   return (
     <Box>
@@ -170,105 +216,22 @@ const PersonalInfoForm = ({
             )}
           />
         </Grid>
-        <Grid xs={12}>
-          <Controller
-            name="curp"
-            control={control}
-            render={({ field, fieldState: { error } }) => (
-              <TextField
-                fullWidth
-                label="CURP"
-                {...field}
-                error={!!error}
-                helperText={error ? error.message : null}
-                slotProps={{ htmlInput: { maxLength: 18 } }}
-              />
-            )}
-          />
-        </Grid>
         <Grid xs={12} sm={6}>
-          <MyPhoneField label="Teléfono" name="phone_number" control={control} fullWidth sx={{ width: 223 }}/>
+          <MyPhoneField label="Teléfono" name="phone_number" control={control} fullWidth sx={{ width: 223 }} />
         </Grid>
-        <Grid xs={12} sm={6}>
-          {!preentrevista && (
-            <Controller
-              name="cycle"
-              control={control}
-              defaultValue=""
-              render={({ field, fieldState: { error } }) => (
-                <FormControl fullWidth error={!!error} sx={{ minWidth: 223 }}>
-                  <InputLabel id="cycle-label">Ciclo</InputLabel>
-                  <Select labelId="cycle-label" {...field} label="Ciclo">
-                    <MenuItem value={undefined}>Ninguno</MenuItem>
-                    {cycles.map((cyc) => (
-                      <MenuItem key={cyc.id} value={cyc.id}>
-                        {cyc.name}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              )}
-            />
-          )}
-        </Grid>
-        {!preentrevista && (
-          <Grid xs={12} sm={6}>
-            <Controller
-              name="stage"
-              control={control}
-              defaultValue="Reg"
-              render={({ field, fieldState: { error } }) => (
-                <FormControl fullWidth error={!!error} sx={{ minWidth: 223 }}>
-                  <InputLabel id="stage-label">Etapa (Opcional)</InputLabel>
-                  <Select
-                    labelId="stage-label"
-                    label="Etapa (Opcional)"
-                    {...field}
-                  >
-                    <MenuItem value={undefined}>Seleccionar</MenuItem>
-                    <MenuItem value="Reg">Registro</MenuItem>
-                    <MenuItem value="Pre">Preentrevista</MenuItem>
-                    <MenuItem value="Can">Canalización</MenuItem>
-                    <MenuItem value="Ent">Entrevista</MenuItem>
-                    <MenuItem value="Cap">Capacitación</MenuItem>
-                    <MenuItem value="Agn">Agencia</MenuItem>
-                  </Select>
-                </FormControl>
-              )}
-            />
-          </Grid>
-        )}
         <Grid xs={12} sm={6}>
           <Controller
-            name="disability"
+            name="cycle"
             control={control}
+            defaultValue=""
             render={({ field, fieldState: { error } }) => (
               <FormControl fullWidth error={!!error} sx={{ minWidth: 223 }}>
-                <InputLabel id="disability-label">
-                  Discapacidad (Opcional)
-                </InputLabel>
-                <Select
-                  labelId="disability-label"
-                  multiple
-                  {...field}
-                  input={<OutlinedInput label="Discapacidad (Opcional)" />}
-                  renderValue={(selected) => (
-                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5 }}>
-                      {selected.map((value) => {
-                        const disObj = disabilities.find((d) => d.id === value);
-                        return (
-                          <Chip
-                            key={value}
-                            label={disObj ? disObj.name : value}
-                          />
-                        );
-                      })}
-                    </Box>
-                  )}
-                >
-                  {disabilities.map((dis) => (
-                    <MenuItem key={dis.id} value={dis.id}>
-                      {dis.name}
+                <InputLabel id="cycle-label">Ciclo</InputLabel>
+                <Select labelId="cycle-label" {...field} label="Ciclo">
+                  <MenuItem value={undefined}>Ninguno</MenuItem>
+                  {cycles.map((cyc) => (
+                    <MenuItem key={cyc.id} value={cyc.id}>
+                      {cyc.name}
                     </MenuItem>
                   ))}
                 </Select>
@@ -276,53 +239,170 @@ const PersonalInfoForm = ({
             )}
           />
         </Grid>
+        <Grid xs={12} sm={6}>
+          <Controller
+            name="stage"
+            control={control}
+            defaultValue="Reg"
+            render={({ field, fieldState: { error } }) => (
+              <FormControl fullWidth error={!!error} sx={{ minWidth: 223 }}>
+                <InputLabel id="stage-label">Etapa</InputLabel>
+                <Select
+                  labelId="stage-label"
+                  label="Etapa"
+                  {...field}
+                >
+                  <MenuItem value={undefined}>Seleccionar</MenuItem>
+                  <MenuItem value="Reg">Registro</MenuItem>
+                  <MenuItem value="Pre">Preentrevista</MenuItem>
+                  <MenuItem value="Can">Canalización</MenuItem>
+                  <MenuItem value="Ent">Entrevista</MenuItem>
+                  <MenuItem value="Cap">Capacitación</MenuItem>
+                  <MenuItem value="Agn">Agencia</MenuItem>
+                </Select>
+              </FormControl>
+            )}
+          />
+        </Grid>
+        <Grid xs={12}></Grid>
+        {/* Disability Groups Selection */}
+      </Grid>
+      <Grid container spacing={2} sx={{ mt: 2, mb: 2 }}>
+        <Grid xs={12}>
+          <FormControl fullWidth sx={{ minWidth: 223 }}>
+            <Autocomplete
+              multiple
+              id="disability-groups-autocomplete"
+              options={disabilityGroups}
+              getOptionLabel={(option) => option.name}
+              value={disabilityGroups.filter(group => selectedDisabilityGroups.includes(group.id))}
+              onChange={(event, newValue) => {
+                const groupIds = newValue.map(group => group.id);
+                handleDisabilityGroupsChange(groupIds);
+              }}
+              renderTags={(tagValue, getTagProps) =>
+                tagValue.map((option, index) => (
+                  <Chip
+                    label={option.name}
+                    size="small"
+                    {...getTagProps({ index })}
+                    key={option.id}
+                  />
+                ))
+              }
+              renderInput={(params) => (
+                <TextField
+                  {...params}
+                  label="Grupo de discapacidad"
+                  placeholder="Buscar grupos..."
+                  sx={{ fontSize: "1rem" }}
+                />
+              )}
+              noOptionsText="No se encontraron grupos"
+              loadingText="Cargando grupos..."
+            />
+            {/* <FormHelperText>
+              Selecciona uno o más grupos para filtrar las discapacidades disponibles
+            </FormHelperText> */}
+          </FormControl>
+        </Grid>
+
+        {/* Disability Selection */}
+        {selectedDisabilityGroups.length > 0 && (
+          <Grid xs={12}>
+            <Controller
+              name="disability"
+              control={control}
+              defaultValue={[]}
+              render={({ field, fieldState: { error } }) => (
+                <FormControl fullWidth error={!!error} sx={{ minWidth: 223 }}>
+                  <Autocomplete
+                    multiple
+                    id="disability-autocomplete"
+                    options={filteredDisabilities}
+                    getOptionLabel={(option) => option.name}
+                    value={filteredDisabilities.filter(disability =>
+                      field.value && field.value.includes(disability.id)
+                    )}
+                    onChange={(event, newValue) => {
+                      const disabilityIds = newValue.map(disability => disability.id);
+                      field.onChange(disabilityIds);
+                    }}
+                    renderTags={(tagValue, getTagProps) =>
+                      tagValue.map((option, index) => (
+                        <Chip
+                          label={option.name}
+                          size="small"
+                          {...getTagProps({ index })}
+                          key={option.id}
+                        />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Discapacidad"
+                        placeholder="Buscar discapacidades..."
+                        error={!!error}
+                        sx={{ fontSize: "1rem" }}
+                      />
+                    )}
+                    noOptionsText="No se encontraron discapacidades"
+                    loadingText="Cargando discapacidades..."
+                  />
+                  {/* <FormHelperText>
+                    {error?.message || "Puedes seleccionar múltiples discapacidades de diferentes grupos"}
+                  </FormHelperText> */}
+                </FormControl>
+              )}
+            />
+          </Grid>
+        )}
         {/* Photo Upload Section */}
         <Grid xs={12}></Grid>
       </Grid>
-      {!preentrevista && (
-        <Box
-          sx={{
-            border: "1px solid",
-            borderColor: 'neutral.dark',
-            borderRadius: 2,
-            p: 2,
-            mt: 2,
-            width: "fitContent",
-          }}
-        >
-          <Typography variant="subtitle1" gutterBottom>
-            Imagen de Perfil
-          </Typography>
-          <Controller
-            name="photo"
-            control={control}
-            defaultValue={null}
-            render={({ field, fieldState: { error } }) => (
-              <Box>
-                {field.value && typeof field.value === "string" && (
-                  <Box mb={1}>
-                    <img
-                      src={field.value}
-                      alt="Profile"
-                      style={{ maxWidth: "200px", display: "block" }}
-                    />
-                  </Box>
-                )}
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => {
-                    field.onChange(e.target.files[0]);
-                  }}
-                />
-                {error && (
-                  <Typography color="error">{error.message}</Typography>
-                )}
-              </Box>
-            )}
-          />
-        </Box>
-      )}
+      <Box
+        sx={{
+          border: "1px solid",
+          borderColor: 'neutral.dark',
+          borderRadius: 2,
+          p: 2,
+          mt: 2,
+          width: "fitContent",
+        }}
+      >
+        <Typography variant="subtitle1" gutterBottom>
+          Imagen de Perfil
+        </Typography>
+        <Controller
+          name="photo"
+          control={control}
+          defaultValue={null}
+          render={({ field, fieldState: { error } }) => (
+            <Box>
+              {field.value && typeof field.value === "string" && (
+                <Box mb={1}>
+                  <img
+                    src={field.value}
+                    alt="Profile"
+                    style={{ maxWidth: "200px", display: "block" }}
+                  />
+                </Box>
+              )}
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  field.onChange(e.target.files[0]);
+                }}
+              />
+              {error && (
+                <Typography color="error">{error.message}</Typography>
+              )}
+            </Box>
+          )}
+        />
+      </Box>
     </Box>
   );
 };

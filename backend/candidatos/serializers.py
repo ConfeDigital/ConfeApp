@@ -246,6 +246,8 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
     birth_date = serializers.DateField(write_only=True)
     gender = serializers.ChoiceField(choices=UserProfile.GENDER_CHOICES, write_only=True)
     curp = serializers.CharField(write_only=True, required=False)
+    rfc = serializers.CharField(write_only=True, required=False)
+    nss = serializers.CharField(write_only=True, required=False)
     phone_number = serializers.CharField(write_only=True)
     stage = serializers.CharField(write_only=True, required=False, default='Reg')
     photo = serializers.ImageField(write_only=True, required=False)
@@ -295,7 +297,7 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
         # Remove 'id' from writable fields (or mark it as read-only)
         fields = [
             'email', 'first_name', 'last_name', 'second_last_name', 'password',
-            'birth_date', 'gender', 'blood_type', 'curp', 'phone_number',
+            'birth_date', 'gender', 'blood_type', 'curp', 'rfc', 'nss', 'phone_number',
             'stage', 'has_disability_certificate', 'has_interdiction_judgment',
             'receives_pension', 'receives_psychological_care', 'receives_psychiatric_care', 'social_security',
             'has_seizures', 'medications', 'allergies', 'dietary_restrictions', 'physical_restrictions',
@@ -329,7 +331,7 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
     
         # Extract profile data for UserProfile
         profile_fields = [
-            'birth_date', 'gender', 'blood_type', 'curp', 'phone_number', 'stage',
+            'birth_date', 'gender', 'blood_type', 'curp', 'rfc', 'nss', 'phone_number', 'stage',
             'has_disability_certificate', 'has_interdiction_judgment', 'receives_pension', 'social_security',
             'receives_psychological_care', 'receives_psychiatric_care', 'has_seizures',
             'allergies', 'dietary_restrictions', 'physical_restrictions'
@@ -415,6 +417,8 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
     birth_date = serializers.DateField(write_only=True, required=False)
     gender = serializers.ChoiceField(choices=UserProfile.GENDER_CHOICES, write_only=True, required=False)
     curp = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    rfc = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    nss = serializers.CharField(write_only=True, required=False, allow_blank=True)
     phone_number = serializers.CharField(write_only=True, required=False)
     stage = serializers.CharField(write_only=True, required=False)
     
@@ -456,7 +460,7 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'email', 'first_name', 'last_name', 'second_last_name',
-            'birth_date', 'gender', 'blood_type', 'curp', 'phone_number',
+            'birth_date', 'gender', 'blood_type', 'curp', 'rfc', 'nss', 'phone_number',
             'stage', 'has_disability_certificate', 'has_interdiction_judgment',
             'receives_pension', 'receives_psychological_care', 'receives_psychiatric_care', 'social_security',
             'has_seizures', 'medications', 'allergies', 'dietary_restrictions', 'physical_restrictions',
@@ -480,6 +484,8 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
         profile.gender = validated_data.get('gender', profile.gender)
         profile.blood_type = validated_data.get('blood_type', profile.blood_type)
         profile.curp = validated_data.get('curp', profile.curp)
+        profile.rfc = validated_data.get('rfc', profile.rfc)
+        profile.nss = validated_data.get('nss', profile.nss)
         profile.phone_number = validated_data.get('phone_number', profile.phone_number)
         profile.stage = validated_data.get('stage', profile.stage)
         profile.has_disability_certificate = validated_data.get('has_disability_certificate', profile.has_disability_certificate)
@@ -653,6 +659,8 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
     birth_date = serializers.DateField(write_only=True, required=False)
     gender = serializers.CharField(write_only=True, required=False)
     curp = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    rfc = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    nss = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     phone_number = serializers.CharField(write_only=True, required=False)
     stage = serializers.CharField(write_only=True, required=False)
     disability = serializers.ListField(write_only=True, required=False)
@@ -746,7 +754,7 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'first_name', 'last_name', 'second_last_name', 'email', 'password',
-            'birth_date', 'gender', 'blood_type', 'curp', 'phone_number', 'stage',
+            'birth_date', 'gender', 'blood_type', 'curp', 'rfc', 'nss', 'phone_number', 'stage',
             'has_disability_certificate', 'has_interdiction_judgment',
             'receives_psychological_care', 'receives_psychiatric_care',
             'has_seizures', 'receives_pension', 'social_security', 'allergies',

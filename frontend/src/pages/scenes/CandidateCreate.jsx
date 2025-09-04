@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from "react";
 import {
   Box,
-  Typography,
   Paper,
   Button,
   Divider,
   Accordion,
   AccordionSummary,
   AccordionDetails,
-  Alert, 
+  Alert,
   Snackbar,
 } from "@mui/material";
 import dayjs from "dayjs";
@@ -20,11 +19,14 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import candidateSchema from "../../components/candidate_create/candidateSchema";
 
 import PersonalInfoForm from "../../components/candidate_create/PersonalInfoForm";
+import IdentificationForm from "../../components/candidate_create/IdentificationForm";
 import AddressAutoCompleteForm from '../../components/AddressAutoCompleteForm';
 import MedicalInfoForm from "../../components/candidate_create/MedicalInfoForm";
 import EmergencyContactsForm from "../../components/candidate_create/EmergencyContactForm";
+import AccordionHeader from "../../components/candidate_create/AccordionHeader";
 
 import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import { processValidationErrors, formatErrorMessage } from "../../components/candidate_create/validationUtils";
 
 const CandidateCreate = () => {
   useDocumentTitle('Crear Candidato');
@@ -32,6 +34,14 @@ const CandidateCreate = () => {
   const navigate = useNavigate();
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [expandedAccordions, setExpandedAccordions] = useState({
+    personal: true,
+    identification: false,
+    address: false,
+    contacts: false,
+    medical: false,
+  });
+  const [accordionErrors, setAccordionErrors] = useState({});
 
   const methods = useForm({
     resolver: yupResolver(candidateSchema),
@@ -44,9 +54,11 @@ const CandidateCreate = () => {
       birth_date: null,
       gender: "",
       blood_type: undefined,
-      curp: undefined,
       phone_number: "",
       stage: "Pre",
+      curp: "",
+      rfc: "",
+      nss: "",
       address_PC: "",
       address_road: "",
       address_number: "",
@@ -76,11 +88,40 @@ const CandidateCreate = () => {
     },
   });
 
-  useEffect(() => {
-    document.title = "Crear Candidato";
-  }, []);
+  const { handleSubmit, formState: { errors } } = methods;
 
-  const { handleSubmit } = methods;
+  // Handle accordion expansion
+  const handleAccordionChange = (accordion) => (_, isExpanded) => {
+    setExpandedAccordions(prev => ({
+      ...prev,
+      [accordion]: isExpanded,
+    }));
+  };
+
+  // Process react-hook-form errors and manage accordions
+  useEffect(() => {
+    if (Object.keys(errors).length > 0) {
+      const { accordionsToOpen, errorMessages, accordionErrors } = processValidationErrors(errors);
+
+      // Open accordions with errors
+      setExpandedAccordions(prev => {
+        const newState = { ...prev };
+        accordionsToOpen.forEach(accordion => {
+          newState[accordion] = true;
+        });
+        return newState;
+      });
+
+      // Set accordion error counts
+      setAccordionErrors(accordionErrors);
+
+      // Only set the error message if it's not already an API error.
+      // This prevents API errors from being overwritten.
+      if (!error || error.response) {
+        setError(formatErrorMessage(errorMessages));
+      }
+    }
+  }, [errors]); // <-- Dependencia ajustada para evitar el bucle
 
   const onSubmit = async (formData) => {
     setError("");
@@ -126,38 +167,80 @@ const CandidateCreate = () => {
       <Paper elevation={3} sx={{ padding: 2 }}>
         <FormProvider {...methods}>
           <form onSubmit={handleSubmit(onSubmit)}>
-            <Accordion defaultExpanded>
+            <Accordion
+              expanded={expandedAccordions.personal}
+              onChange={handleAccordionChange('personal')}
+            >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">Información Personal</Typography>
+                <AccordionHeader
+                  title="Información Personal"
+                  hasErrors={!!accordionErrors.personal}
+                  errorCount={accordionErrors.personal || 0}
+                />
               </AccordionSummary>
               <AccordionDetails>
                 <PersonalInfoForm />
               </AccordionDetails>
             </Accordion>
             <Divider sx={{ my: 2 }} />
-            <Accordion>
+            <Accordion
+              expanded={expandedAccordions.identification}
+              onChange={handleAccordionChange('identification')}
+            >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">Domicilio</Typography>
+                <AccordionHeader
+                  title="Identificación"
+                  hasErrors={!!accordionErrors.identification}
+                  errorCount={accordionErrors.identification || 0}
+                />
+              </AccordionSummary>
+              <AccordionDetails>
+                <IdentificationForm />
+              </AccordionDetails>
+            </Accordion>
+            <Divider sx={{ my: 2 }} />
+            <Accordion
+              expanded={expandedAccordions.address}
+              onChange={handleAccordionChange('address')}
+            >
+              <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                <AccordionHeader
+                  title="Domicilio"
+                  hasErrors={!!accordionErrors.address}
+                  errorCount={accordionErrors.address || 0}
+                />
               </AccordionSummary>
               <AccordionDetails>
                 <AddressAutoCompleteForm prefix="" domicile={true} />
               </AccordionDetails>
             </Accordion>
             <Divider sx={{ my: 2 }} />
-            <Accordion>
+            <Accordion
+              expanded={expandedAccordions.contacts}
+              onChange={handleAccordionChange('contacts')}
+            >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">Contactos</Typography>
+                <AccordionHeader
+                  title="Contactos"
+                  hasErrors={!!accordionErrors.contacts}
+                  errorCount={accordionErrors.contacts || 0}
+                />
               </AccordionSummary>
               <AccordionDetails>
                 <EmergencyContactsForm />
               </AccordionDetails>
             </Accordion>
             <Divider sx={{ my: 2 }} />
-            <Accordion>
+            <Accordion
+              expanded={expandedAccordions.medical}
+              onChange={handleAccordionChange('medical')}
+            >
               <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                <Typography variant="h6">
-                  Detalles Médicos y Emergencia
-                </Typography>
+                <AccordionHeader
+                  title="Detalles Médicos y Emergencia"
+                  hasErrors={!!accordionErrors.medical}
+                  errorCount={accordionErrors.medical || 0}
+                />
               </AccordionSummary>
               <AccordionDetails>
                 <MedicalInfoForm />
@@ -178,20 +261,24 @@ const CandidateCreate = () => {
       </Paper>
       <Snackbar
         open={!!error}
-        autoHideDuration={6000}
+        autoHideDuration={8000}
         onClose={() => setError('')}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert
           onClose={() => setError('')}
           severity="error"
-          sx={{ width: '100%' }}
+          sx={{
+            width: '100%',
+            maxWidth: '600px',
+            whiteSpace: 'pre-line'
+          }}
         >
           {typeof error === 'string'
             ? error
-            : (error.response?.data?.detail 
-               || JSON.stringify(error.response?.data) 
-               || 'Unknown error')}
+            : (error.response?.data?.detail
+              || JSON.stringify(error.response?.data)
+              || 'Unknown error')}
         </Alert>
       </Snackbar>
     </Box>

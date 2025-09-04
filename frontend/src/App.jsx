@@ -83,8 +83,7 @@ import ProfileFieldDemo from "./pages/ProfileFieldDemo"
 
 import { onSessionExpired } from "./components/session_expired/sessionExpiredEvent";
 import SessionExpiredDialog from "./components/session_expired/SessionExpiredDialog";
-import NetworkStatus from "./components/network_status/NetworkStatusDialog";
-import BackendStatus from "./components/network_status/BackendStatusDialog";
+import ConnectionStatusDialog from "./components/network_status/ConnectionStatusDialog";
 
 reactDebugHooks(React);
 
@@ -166,155 +165,146 @@ function App({ instance }) {
   return (
     <BrowserRouter>
       <MsalProvider instance={instance}>
-        <ColorModeContext.Provider
-          value={{ cycleColorMode, mode, resolvedMode }}
-        >
-          <ThemeProvider theme={theme}>
-            <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
-              <CssBaseline />
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/logout" element={<Logout instance={instance} />} />
-                <Route path="/register" element={<RegisterAndLogout instance={instance} />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/password/reset/confirm/:uid/:token" element={<ResetPasswordConfirm />} />
-                <Route path="/activate/:uid/:token" element={<Activate />} />
-                <Route path="/info" element={<Info />} />
-                <Route path="/no-autorizado" element={<InActive />} />
-                <Route path="*" element={<NotFound />} />
+        <WebSocketProvider instance={instance}>
+          <ColorModeContext.Provider
+            value={{ cycleColorMode, mode, resolvedMode }}
+          >
+            <ThemeProvider theme={theme}>
+              <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="es">
+                <CssBaseline />
+                <Routes>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/logout" element={<Logout instance={instance} />} />
+                  <Route path="/register" element={<RegisterAndLogout instance={instance} />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/password/reset/confirm/:uid/:token" element={<ResetPasswordConfirm />} />
+                  <Route path="/activate/:uid/:token" element={<Activate />} />
+                  <Route path="/info" element={<Info />} />
+                  <Route path="/no-autorizado" element={<InActive />} />
+                  <Route path="*" element={<NotFound />} />
 
-                <Route
-                  element={
-                    <ProtectedRoute allowedRoles={["candidatos"]}>
-                      <Outlet />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route path="/candidato/perfil" element={<CandidateDatasheet />} />
-                  <Route path="/candidato/dashboard" element={<CandidateDashboard />} />
-                  <Route path="/candidato/preentrevista" element={<Preentrevista />} />
-                </Route>
-
-                <Route
-                  element={
-                    <ProtectedRoute allowedRoles={["empleador"]}>
-                      <SidebarProvider>
-                        <WebSocketProvider instance={instance}>
-                          <DashboardLayout employer={true} />
-                        </WebSocketProvider>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route path="/empleador" element={<EmployerPanel />} />
-                  <Route path="/empleador/perfil" element={<EmployerProfile />} />
-                  <Route path="/empleador/empleo/:jobId" element={<JobCandidatesPage />} />
-                  <Route path="/empleador/configuracion" element={<Settings />} />
-                </Route>
-
-                <Route
-                  element={
-                    <ProtectedRoute allowedRoles={["admin"]}>
-                      <SidebarProvider>
-                        <WebSocketProvider instance={instance}>
-                          <DashboardLayout />
-                        </WebSocketProvider>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route path="/cuestionarios" element={<Cuestionarios />} />
-                  <Route path="/cargaMT" element={<CargaMasivaCuestionario />} />
-                  <Route path="/baseCuestionarios" element={<BaseCuestionarios />} />
-                  <Route path="/baseCuestionarios/:id" element={<CuestionarioDetail />} />
-                  <Route path="/baseCuestionarios/:idBase/:idCuestionario" element={<QuestionnaireInterface />} />
-                  <Route path="/tablas-de-equivalencia" element={<TablasEquivalencia />} />
-                  <Route path="/tablas-de-equivalencia/:id" element={<TablaDetalle />} />
-                  <Route path="/panel-de-administracion" element={<AdminPanel />} />
-                  <Route path="/cargaMasiva" element={<CargaMasivaCandidatos />} />
-                  <Route path="/carga-masiva-respuestas" element={<CargaMasivaRespuestas />} />
-                </Route>
-
-                <Route
-                  element={
-                    <ProtectedRoute allowedRoles={["admin", "gerente"]}>
-                      <SidebarProvider>
-                        <WebSocketProvider instance={instance}>
-                          <DashboardLayout />
-                        </WebSocketProvider>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  }
-                >
                   <Route
-                    path="/configuracion-del-centro"
-                    element={<ManagerSettings />}
-                  />
-                </Route>
+                    element={
+                      <ProtectedRoute allowedRoles={["candidatos"]}>
+                        <Outlet />
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route path="/candidato/perfil" element={<CandidateDatasheet />} />
+                    <Route path="/candidato/dashboard" element={<CandidateDashboard />} />
+                    <Route path="/candidato/preentrevista" element={<Preentrevista />} />
+                  </Route>
 
-                <Route
-                  element={
-                    <ProtectedRoute allowedRoles={["personal"]}>
-                      <SidebarProvider>
-                        <WebSocketProvider instance={instance}>
+                  <Route
+                    element={
+                      <ProtectedRoute allowedRoles={["empleador"]}>
+                        <SidebarProvider>
+                          <DashboardLayout employer={true} />
+                        </SidebarProvider>
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route path="/empleador" element={<EmployerPanel />} />
+                    <Route path="/empleador/perfil" element={<EmployerProfile />} />
+                    <Route path="/empleador/empleo/:jobId" element={<JobCandidatesPage />} />
+                    <Route path="/empleador/configuracion" element={<Settings />} />
+                  </Route>
+
+                  <Route
+                    element={
+                      <ProtectedRoute allowedRoles={["admin"]}>
+                        <SidebarProvider>
                           <DashboardLayout />
-                        </WebSocketProvider>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/candidatos" element={<CandidateConsult />} />
-                  <Route path="/calendar" element={<Calendar />} />
-                  <Route path="/calendar-microsoft" element={<CalendarMicrosoft />} />
-                  <Route path="/candidatos/:uid" element={<Datasheet />} />
-                  <Route path="/candidatos/visualizar/:uid" element={<DatasheetReadOnly />} />
-                  <Route path="/candidatos/:uid/:cuestionarioId" element={<PaginaCuestionario />} />
-                  <Route path="/seguimiento-candidatos/:uid" element={<Seguimiento />} />
-                  <Route path="/seguimiento-candidatos" element={<NavegacionSeguimiento />} />
-                  <Route path="/dashboard/*" element={<NotFound />} />
-                  <Route path="/profile" element={<Profile />} />
-                  <Route path="/candidatos/crear" element={<CandidateCreate />} />
-                  <Route path="/candidatos/editar/:uid" element={<CandidateEdit />} />
-                  <Route path="/candidatos/historial-apoyos/:uid" element={<CandidateAidHistory />} />
-                  <Route path="/candidatos/historial-empleos/:uid" element={<CandidateJobHistory />} />
-                  <Route path="/candidatos/proyecto-vida/:uid" element={<ProyectoDeVidaSeguimiento />} />
-                  <Route path="/discapacidades" element={<Disabilities />} />
-                  <Route path="/apoyos/evaluacion-diagnostica" element={<TechnicalAids />} />
-                  <Route path="/apoyos/SIS" element={<SISAids />} />
-                  <Route path="/apoyos/cuadro-habilidades" element={<CHAids />} />
-                  <Route path="/configuracion" element={<Settings />} />
-                  <Route path="/anuncios" element={<Announcements />} />
-                  <Route path="/comunicacion-centros" element={<CenterChat />} />
-                  <Route path="/foro" element={<CenterForum />} />
-                  <Route path="/demo" element={<ProfileFieldDemo />} />
-                </Route>
-                <Route
-                  element={
-                    <ProtectedRoute allowedRoles={["agencia_laboral"]}>
-                      <SidebarProvider>
-                        <WebSocketProvider instance={instance}>
+                        </SidebarProvider>
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route path="/cuestionarios" element={<Cuestionarios />} />
+                    <Route path="/cargaMT" element={<CargaMasivaCuestionario />} />
+                    <Route path="/baseCuestionarios" element={<BaseCuestionarios />} />
+                    <Route path="/baseCuestionarios/:id" element={<CuestionarioDetail />} />
+                    <Route path="/baseCuestionarios/:idBase/:idCuestionario" element={<QuestionnaireInterface />} />
+                    <Route path="/tablas-de-equivalencia" element={<TablasEquivalencia />} />
+                    <Route path="/tablas-de-equivalencia/:id" element={<TablaDetalle />} />
+                    <Route path="/panel-de-administracion" element={<AdminPanel />} />
+                    <Route path="/cargaMasiva" element={<CargaMasivaCandidatos />} />
+                    <Route path="/carga-masiva-respuestas" element={<CargaMasivaRespuestas />} />
+                  </Route>
+
+                  <Route
+                    element={
+                      <ProtectedRoute allowedRoles={["admin", "gerente"]}>
+                        <SidebarProvider>
                           <DashboardLayout />
-                        </WebSocketProvider>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route path="/agencia-laboral/dashboard" element={<AgenciaLaboralDashboard />} />
-                  <Route path="/agencia-laboral/empleo/:jobId" element={<JobCandidatesPage />} />
-                  <Route path="/agencia-laboral/administracion" element={<AdminAgencia />} />
-                </Route>
-              </Routes>
-              <SessionExpiredDialog
-                open={showSessionExpired}
-                onClose={() => setShowSessionExpired(false)}
-              />
-              <NetworkStatus />
-              <BackendStatus />
-            </LocalizationProvider>
-          </ThemeProvider>
-        </ColorModeContext.Provider>
+                        </SidebarProvider>
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route
+                      path="/configuracion-del-centro"
+                      element={<ManagerSettings />}
+                    />
+                  </Route>
+
+                  <Route
+                    element={
+                      <ProtectedRoute allowedRoles={["personal"]}>
+                        <SidebarProvider>
+                          <DashboardLayout />
+                        </SidebarProvider>
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/candidatos" element={<CandidateConsult />} />
+                    <Route path="/calendar" element={<Calendar />} />
+                    <Route path="/calendar-microsoft" element={<CalendarMicrosoft />} />
+                    <Route path="/candidatos/:uid" element={<Datasheet />} />
+                    <Route path="/candidatos/visualizar/:uid" element={<DatasheetReadOnly />} />
+                    <Route path="/candidatos/:uid/:cuestionarioId" element={<PaginaCuestionario />} />
+                    <Route path="/seguimiento-candidatos/:uid" element={<Seguimiento />} />
+                    <Route path="/seguimiento-candidatos" element={<NavegacionSeguimiento />} />
+                    <Route path="/dashboard/*" element={<NotFound />} />
+                    <Route path="/profile" element={<Profile />} />
+                    <Route path="/candidatos/crear" element={<CandidateCreate />} />
+                    <Route path="/candidatos/editar/:uid" element={<CandidateEdit />} />
+                    <Route path="/candidatos/historial-apoyos/:uid" element={<CandidateAidHistory />} />
+                    <Route path="/candidatos/historial-empleos/:uid" element={<CandidateJobHistory />} />
+                    <Route path="/candidatos/proyecto-vida/:uid" element={<ProyectoDeVidaSeguimiento />} />
+                    <Route path="/discapacidades" element={<Disabilities />} />
+                    <Route path="/apoyos/evaluacion-diagnostica" element={<TechnicalAids />} />
+                    <Route path="/apoyos/SIS" element={<SISAids />} />
+                    <Route path="/apoyos/cuadro-habilidades" element={<CHAids />} />
+                    <Route path="/configuracion" element={<Settings />} />
+                    <Route path="/anuncios" element={<Announcements />} />
+                    <Route path="/comunicacion-centros" element={<CenterChat />} />
+                    <Route path="/foro" element={<CenterForum />} />
+                    <Route path="/demo" element={<ProfileFieldDemo />} />
+                  </Route>
+                  <Route
+                    element={
+                      <ProtectedRoute allowedRoles={["agencia_laboral"]}>
+                        <SidebarProvider>
+                          <DashboardLayout />
+                        </SidebarProvider>
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route path="/agencia-laboral/dashboard" element={<AgenciaLaboralDashboard />} />
+                    <Route path="/agencia-laboral/empleo/:jobId" element={<JobCandidatesPage />} />
+                    <Route path="/agencia-laboral/administracion" element={<AdminAgencia />} />
+                  </Route>
+                </Routes>
+                <SessionExpiredDialog
+                  open={showSessionExpired}
+                  onClose={() => setShowSessionExpired(false)}
+                />
+                <ConnectionStatusDialog />
+              </LocalizationProvider>
+            </ThemeProvider>
+          </ColorModeContext.Provider>
+        </WebSocketProvider>
       </MsalProvider>
     </BrowserRouter>
   );
