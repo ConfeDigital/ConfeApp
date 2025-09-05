@@ -11,12 +11,18 @@ from rest_framework.decorators import action
 from rest_framework.views import APIView
 from rest_framework import status, generics
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.db.models import Q
 from django.conf import settings
 from azure.storage.blob import BlobServiceClient, generate_blob_sas, BlobSasPermissions
 from datetime import datetime, timedelta
+
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -265,3 +271,24 @@ class MediaSASTokenView(APIView):
         # Reuse the POST logic
         request.data = {'blob_path': blob_path}
         return self.post(request)
+
+
+@csrf_exempt
+@require_http_methods(["HEAD", "GET"])
+def health_check(request):
+    """
+    Simple health check endpoint for frontend connectivity verification.
+    Returns 200 OK if the server is running.
+    """
+    try:
+        # You can add additional health checks here if needed
+        # For example, database connectivity, external services, etc.
+        
+        if request.method == "HEAD":
+            return HttpResponse(status=200)
+        else:
+            return HttpResponse("OK", status=200)
+            
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
+        return HttpResponse("Service Unavailable", status=503)
