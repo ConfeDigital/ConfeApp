@@ -100,7 +100,9 @@ const EmploymentDashboard = () => {
     const fetchCandidateData = async () => {
       try {
         setLoading(true);
+        console.log("🔍 Fetching candidate data for UID:", uid);
         const response = await axios.get(`/api/candidatos/profiles/${uid}/`);
+        console.log("✅ Candidate data received:", response.data);
         setCandidateProfile(response.data);
         
         // Cargar historial de empleo
@@ -115,7 +117,9 @@ const EmploymentDashboard = () => {
         // Cargar comentarios de seguimiento
         await fetchTrackingComments();
       } catch (error) {
-        console.error("Error loading candidate data:", error);
+        console.error("❌ Error loading candidate data:", error);
+        console.error("Error details:", error.response?.data);
+        console.error("Error status:", error.response?.status);
       } finally {
         setLoading(false);
       }
@@ -123,15 +127,20 @@ const EmploymentDashboard = () => {
 
     if (uid) {
       fetchCandidateData();
+    } else {
+      console.error("❌ No UID provided");
     }
   }, [uid]);
 
   const fetchEmploymentHistory = async () => {
     try {
+      console.log("🔍 Fetching employment history for UID:", uid);
       const response = await axios.get(`/api/candidatos/historial-empleos/?candidate=${uid}`);
+      console.log("✅ Employment history received:", response.data);
       setEmploymentHistory(response.data.results || response.data);
     } catch (error) {
-      console.error("Error loading employment history:", error);
+      console.error("❌ Error loading employment history:", error);
+      console.error("Error details:", error.response?.data);
       // Si no hay historial, establecer array vacío
       setEmploymentHistory([]);
     }
@@ -139,7 +148,9 @@ const EmploymentDashboard = () => {
 
   const fetchAptitudeQuestionnaires = async () => {
     try {
+      console.log("🔍 Fetching aptitude questionnaires");
       const response = await axios.get(`/api/cuestionarios/`);
+      console.log("✅ All questionnaires received:", response.data);
       // Filtrar cuestionarios de aptitudes (puedes ajustar este filtro según tu lógica)
       const aptitudeQuestionnaires = response.data.filter(q => 
         q.title && (
@@ -148,29 +159,36 @@ const EmploymentDashboard = () => {
           q.title.toLowerCase().includes('habilidad')
         )
       );
+      console.log("✅ Filtered aptitude questionnaires:", aptitudeQuestionnaires);
       setAptitudeQuestionnaires(aptitudeQuestionnaires);
     } catch (error) {
-      console.error("Error loading aptitude questionnaires:", error);
+      console.error("❌ Error loading aptitude questionnaires:", error);
+      console.error("Error details:", error.response?.data);
       setAptitudeQuestionnaires([]);
     }
   };
 
   const fetchStageQuestionnaires = async () => {
     try {
+      console.log("🔍 Fetching stage questionnaires for UID:", uid);
       const response = await axios.get(`/api/cuestionarios/usuario/${uid}/cuestionarios-con-respuestas/`);
+      console.log("✅ Stage questionnaires received:", response.data);
       // Filtrar cuestionarios de la etapa Agencia
       const agencyQuestionnaires = response.data.filter(q => 
         q.estado_desbloqueo === 'Agn' && q.activo
       );
+      console.log("✅ Filtered agency questionnaires:", agencyQuestionnaires);
       setStageQuestionnaires(agencyQuestionnaires);
     } catch (error) {
-      console.error("Error loading stage questionnaires:", error);
+      console.error("❌ Error loading stage questionnaires:", error);
+      console.error("Error details:", error.response?.data);
       setStageQuestionnaires([]);
     }
   };
 
   const fetchTrackingComments = async () => {
     try {
+      console.log("🔍 Fetching tracking comments for employment history:", employmentHistory);
       // Obtener todos los comentarios de los trabajos del candidato
       const allComments = [];
       for (const job of employmentHistory) {
@@ -184,9 +202,10 @@ const EmploymentDashboard = () => {
       }
       // Ordenar por fecha de creación (más recientes primero)
       allComments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      console.log("✅ Tracking comments processed:", allComments);
       setTrackingComments(allComments);
     } catch (error) {
-      console.error("Error loading tracking comments:", error);
+      console.error("❌ Error loading tracking comments:", error);
       setTrackingComments([]);
     }
   };

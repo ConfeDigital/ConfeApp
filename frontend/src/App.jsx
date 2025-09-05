@@ -253,11 +253,10 @@ function App({ instance }) {
                       <ProtectedRoute allowedRoles={["personal"]}>
                         <SidebarProvider>
                           <DashboardLayout />
-                        </WebSocketProvider>
-                      </SidebarProvider>
-                    </ProtectedRoute>
-                  }
-                >
+                        </SidebarProvider>
+                      </ProtectedRoute>
+                    }
+                  >
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/candidatos" element={<CandidateConsult />} />
                   <Route path="/calendar" element={<Calendar />} />
@@ -273,6 +272,7 @@ function App({ instance }) {
                   <Route path="/candidatos/editar/:uid" element={<CandidateEdit />} />
                   <Route path="/candidatos/historial-apoyos/:uid" element={<CandidateAidHistory />} />
                   <Route path="/candidatos/historial-empleos/:uid" element={<CandidateJobHistory />} />
+                  <Route path="/candidatos/empleo/:uid" element={<EmploymentDashboard />} />
                   <Route path="/candidatos/proyecto-vida/:uid" element={<ProyectoDeVidaSeguimiento />} />
                   <Route path="/discapacidades" element={<Disabilities />} />
                   <Route path="/apoyos/evaluacion-diagnostica" element={<TechnicalAids />} />
@@ -288,12 +288,11 @@ function App({ instance }) {
                   element={
                     <ProtectedRoute allowedRoles={["agencia_laboral"]}>
                       <SidebarProvider>
-                        <WebSocketProvider instance={instance}>
-                          <DashboardLayout />
-                        </SidebarProvider>
-                      </ProtectedRoute>
-                    }
-                  >
+                        <DashboardLayout />
+                      </SidebarProvider>
+                    </ProtectedRoute>
+                  }
+                >
                     <Route path="/agencia-laboral/dashboard" element={<AgenciaLaboralDashboard />} />
                     <Route path="/agencia-laboral/empleo/:jobId" element={<JobCandidatesPage />} />
                     <Route path="/agencia-laboral/administracion" element={<AdminAgencia />} />
