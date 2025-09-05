@@ -35,7 +35,7 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/es';
 import { useParams } from "react-router-dom";
 import axios from "../../../api";
-import useDocumentTitle from "../../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../../hooks/useDocumentTitle";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";

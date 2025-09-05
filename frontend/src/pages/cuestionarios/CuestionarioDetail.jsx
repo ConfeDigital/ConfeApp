@@ -39,7 +39,7 @@ import {
 import api from "../../api";
 import dayjs from "dayjs";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const CuestionarioDetail = () => {
   const { id: baseCuestionarioId } = useParams();

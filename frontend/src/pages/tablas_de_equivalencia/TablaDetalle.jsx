@@ -28,7 +28,7 @@ import CargaMasivaCuestionario from "../cuestionarios/CargaMasivaCuestionario";
 import CargaMasivaPuntuaciones from "./CargaMasivaPuntuaciones";
 import CargaMasivaIndiceApoyo from "./CargaMasivaIndiceApoyo";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const TablaDetalle = () => {
   useDocumentTitle('Detalles de la Tabla');

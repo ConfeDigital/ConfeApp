@@ -11,7 +11,7 @@ import api from "../../api";
 import AddBusinessOutlinedIcon from "@mui/icons-material/AddBusinessOutlined";
 import PostAddOutlinedIcon from "@mui/icons-material/PostAddOutlined";
 import PersonAddAlt from "@mui/icons-material/PersonAddAlt";
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const JobsCompaniesPage = () => {
   useDocumentTitle("Administración Agencia");

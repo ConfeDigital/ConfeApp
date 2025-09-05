@@ -21,7 +21,7 @@ import {
     Tooltip
 } from '@mui/material';
 import Header from '../../components/Header';
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 import PersonIcon from '@mui/icons-material/Person'; // Icon for candidate
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'; // For 'info' type
 import CheckCircleOutlinedIcon from '@mui/icons-material/CheckCircleOutlined'; // For 'success' type

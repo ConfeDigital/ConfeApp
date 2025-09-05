@@ -26,7 +26,7 @@ import {
 } from "@mui/material";
 import api from "../../api";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const BaseCuestionarios = () => {
   useDocumentTitle("Base Cuestionarios");

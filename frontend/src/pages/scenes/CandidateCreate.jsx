@@ -25,7 +25,7 @@ import MedicalInfoForm from "../../components/candidate_create/MedicalInfoForm";
 import EmergencyContactsForm from "../../components/candidate_create/EmergencyContactForm";
 import AccordionHeader from "../../components/candidate_create/AccordionHeader";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 import { processValidationErrors, formatErrorMessage } from "../../components/candidate_create/validationUtils";
 
 const CandidateCreate = () => {
@@ -261,7 +261,7 @@ const CandidateCreate = () => {
       </Paper>
       <Snackbar
         open={!!error}
-        autoHideDuration={8000}
+        autoHideDuration={10000}
         onClose={() => setError('')}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >

@@ -45,7 +45,7 @@ const InterviewDialog = lazy(() =>
   import("../../components/candidate_create/InterviewModal")
 );
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 import CandidateDetails from "../../components/candidate_create/DetailSection";
 import LoadingPopup from "../../components/LoadingPopup";
 import CuestionarioReportView from "../cuestionarios/CuestionarioReportView";

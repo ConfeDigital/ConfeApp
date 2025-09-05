@@ -6,7 +6,7 @@ import { useState, useEffect } from "react";
 import axios from "../../api";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import { useMediaQuery } from "@mui/material";
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 import { formatCanonicalPhoneNumber } from "../../components/phone_number/phoneUtils";
 
 // ✅ Recibe props: estadoFiltro y onRowClick

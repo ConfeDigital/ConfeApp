@@ -34,7 +34,7 @@ import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import CancelIcon from "@mui/icons-material/Cancel";
 import * as Yup from "yup";
 
-import useDocumentTitle from "../../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../../hooks/useDocumentTitle";
 
 const CandidateAidHistoryPage = () => {
   useDocumentTitle("Historial de Apoyos");

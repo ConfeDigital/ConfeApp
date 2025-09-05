@@ -10,7 +10,7 @@ import { useDisabilitiesData } from "../../components/disabilities/useDisabiliti
 import { FileFormatTable } from "../../components/disabilities/FileFormatTable"
 import { useSelector } from "react-redux";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const Disabilities = () => {
   useDocumentTitle('Discapacidades');

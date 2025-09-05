@@ -19,7 +19,7 @@ import { useSelector } from 'react-redux';
 import axios from '../../api';
 import dayjs from 'dayjs';
 import 'dayjs/locale/es';
-import useDocumentTitle from '../../components/hooks/useDocumentTitle';
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 import { useLocation } from 'react-router-dom';
 
 import { useForm } from 'react-hook-form';

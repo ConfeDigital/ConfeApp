@@ -29,7 +29,7 @@ import { FileFormatTable } from "../../components/disabilities/FileFormatTableSI
 import "../../styles/DataGridStyles.css";
 import { useSelector } from "react-redux";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const groups = [
   "Vida en el hogar",
