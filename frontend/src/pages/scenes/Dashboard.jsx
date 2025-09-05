@@ -26,7 +26,7 @@ import api from "../../api";
 import dayjs from "dayjs";
 import * as Yup from "yup";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 import UserListDialog from "../../components/dashboard/UserListDialog";
 import TransferListDialog from "../../components/dashboard/TransferListDialog"; // Import the new component
 import DashboardSkeleton from "../../components/dashboard/DashboardSkeleton";

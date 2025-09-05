@@ -10,7 +10,7 @@ import { FileFormatTable } from '../../components/disabilities/FileFormatTableTe
 import axios from '../../api';
 import { useSelector } from 'react-redux';
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const TechnicalAidsDashboard = () => {
   useDocumentTitle('Apoyos: Evaluación Diagnóstica');

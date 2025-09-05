@@ -2,7 +2,7 @@ import React from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DespliegueCuestionario from "./DespliegueCuestionario"; // usa el componente existente
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const PaginaCuestionario = () => {
   useDocumentTitle("Cuestionario");

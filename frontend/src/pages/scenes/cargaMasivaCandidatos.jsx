@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Box, Button, Typography, Paper } from "@mui/material";
 import axios from "../../api";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const UploadExcelComponent = () => {
     useDocumentTitle('Carga de Candidatos');

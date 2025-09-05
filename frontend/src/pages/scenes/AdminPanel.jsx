@@ -1,7 +1,7 @@
 // src/pages/Settings.jsx
 import React, { useState } from 'react';
 import { Box, Paper, Tabs, Tab } from '@mui/material';
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 import UsersSettings  from '../../components/settings/UserSettingsAdminPanel';
 import CentersSettings from '../../components/settings/CentersSettings';

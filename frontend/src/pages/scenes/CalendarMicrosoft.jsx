@@ -7,7 +7,7 @@ import MyModal from "../../components/calendar/ModalMicrosoft";
 import ContentSkeleton from "../../components/ContentSkeleton";
 import { useMsal } from "@azure/msal-react";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const CalendarMicrosoft = () => {
   useDocumentTitle('Calendario Microsoft');

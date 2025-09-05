@@ -22,7 +22,7 @@ import {
 } from "@mui/material";
 import api from "../../api";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const TablasEquivalencia = () => {
   useDocumentTitle('Tablas de Equivalencia');

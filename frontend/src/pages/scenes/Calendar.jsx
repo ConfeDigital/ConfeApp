@@ -9,7 +9,7 @@ import MyModal from "../../components/calendar/Modal"; // Renamed to avoid confu
 import ContentSkeleton from "../../components/ContentSkeleton";
 import { useLocation } from "react-router-dom";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const Calendar = () => {
   useDocumentTitle('Calendario');

@@ -26,7 +26,7 @@ import {
   SettingsBackupRestore,
 } from "@mui/icons-material";
 import axios from "../../api";
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 import { SOUND_ALERT, THEME_FAMILY } from "../../constants";
 
 // Define a default state object that matches the backend model's fields

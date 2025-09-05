@@ -5,7 +5,7 @@ import {
 import { useSelector } from 'react-redux';
 import axios from '../../api';
 
-import useDocumentTitle from '../../components/hooks/useDocumentTitle';
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 
 // const colorPalette = ['#dce775', '#4fc3f7', '#ffb74d', '#ba68c8', '#aed581'];
 

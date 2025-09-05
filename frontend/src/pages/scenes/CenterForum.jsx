@@ -33,7 +33,7 @@ import {
 } from '@mui/icons-material';
 import { useSelector } from 'react-redux';
 import axios from '../../api';
-import useDocumentTitle from '../../components/hooks/useDocumentTitle';
+import useDocumentTitle from '../../hooks/useDocumentTitle';
 
 function stringToColor(string) {
     let hash = 0;
