@@ -31,7 +31,7 @@ import EditIcon from "@mui/icons-material/Edit";
 import AddIcon from "@mui/icons-material/Add";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import useDocumentTitle from "../../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../../hooks/useDocumentTitle";
 import ManageAidsDialog from "./ManageAidsDialog";
 
 const GeneralAidHistory = ({

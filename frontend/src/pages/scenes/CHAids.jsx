@@ -25,7 +25,7 @@ import axios from "../../api";
 import { FileUploadSection } from "../../components/disabilities/FileUploadSection";
 import { FileFormatTable } from "../../components/disabilities/FileFormatTableCHAids";
 import "../../styles/DataGridStyles.css";
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 import { useSelector } from "react-redux";
 
 const groups = ["Habilidades Laborales", "Conducta Adaptativa"];

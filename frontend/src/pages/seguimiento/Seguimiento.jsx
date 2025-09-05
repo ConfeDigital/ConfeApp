@@ -20,7 +20,7 @@ import { formatCanonicalPhoneNumber } from "../../components/phone_number/phoneU
 
 import ApoyosSeguimientoGeneral from "./ApoyosSeguimientoGeneral";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const Seguimiento = () => {
   useDocumentTitle("Seguimiento del Candidato");

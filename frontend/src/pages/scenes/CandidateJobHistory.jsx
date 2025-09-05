@@ -44,7 +44,7 @@ import ErrorOutlineOutlinedIcon from '@mui/icons-material/ErrorOutlineOutlined';
 import { DeleteConfirmDialog } from '../../components/DeleteConfirmDialog';
 import Header from '../../components/Header';
 import *as Yup from 'yup';
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 import AssignJobModal from '../../components/agencia/AssignJobModalGoogleMaps';
 import RemoveJobModal from '../../components/agencia/RemoveJobModal';

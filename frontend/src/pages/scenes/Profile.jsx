@@ -20,7 +20,7 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import { useSelector, useDispatch } from "react-redux";
 import axios from "../../api";
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 import { tokens } from "../../theme";
 // import your auth actions, e.g.:
 import { setUser } from "../../features/auth/authSlice";

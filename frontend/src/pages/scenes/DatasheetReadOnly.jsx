@@ -23,7 +23,7 @@ import DatasheetSkeleton from "../../components/datasheet/DatasheetSkeleton";
 import { formatCanonicalPhoneNumber } from "../../components/phone_number/phoneUtils";
 import ContactList from "../../components/candidate_create/ContactList";
 import CandidateDetails from "../../components/candidate_create/DetailSection";
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 import TransferListDialog from '../../components/dashboard/TransferListDialog'; // Adjust path if needed
 
 // Define stages

@@ -7,7 +7,7 @@ import AssignCandidateModal from '../../components/agencia/AssignCandidateModal'
 import AssignJobModal from '../../components/agencia/AssignJobModalGoogleMaps';
 import RemoveJobModal from '../../components/agencia/RemoveJobModal'; // Nuevo modal
 import api from '../../api';
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const CandidateEmploymentManagement = () => {
   useDocumentTitle('Agencia Laboral');

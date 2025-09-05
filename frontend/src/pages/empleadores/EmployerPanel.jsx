@@ -20,7 +20,7 @@ import JobFormDialog from "../../components/agencia/JobFormDialogGoogle";
 import EmployerFormDialog from "../../components/agencia/EmployerFormDialog";
 import { DeleteConfirmDialog } from "../../components/DeleteConfirmDialog";
 
-import useDocumentTitle from "../../components/hooks/useDocumentTitle";
+import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 export default function EmployerPanel() {
   useDocumentTitle('Panel de Empleos');
