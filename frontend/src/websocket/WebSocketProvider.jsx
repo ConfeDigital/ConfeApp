@@ -12,15 +12,12 @@ const WebSocketProvider = ({ instance, children }) => {
   const userUpdateSocketRef = useRef(null);
   const isUnmounted = useRef(false);
   const retries = useRef({ notifications: 0, userUpdates: 0 });
-  const reconnectTimeouts = useRef({ notifications: null, userUpdates: null });
-  
-  const MAX_RETRIES_EXPONENTIAL = 5;
-  const LONG_RETRY_INTERVAL = 30000;
+  const MAX_RETRIES_EXPONENTIAL = 5; // Use exponential backoff for the first 5 retries
+  const LONG_RETRY_INTERVAL = 30000; // 30 seconds for long-interval polling
   const [isWsConnected, setIsWsConnected] = useState(false);
   const [isWsConnecting, setIsWsConnecting] = useState(false);
   const [isProviderInitializing, setIsProviderInitializing] = useState(true);
   const debounceTimeoutRef = useRef(null);
-  
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
   useEffect(() => {
@@ -50,44 +47,10 @@ const WebSocketProvider = ({ instance, children }) => {
       }
       debounceTimeoutRef.current = setTimeout(() => {
         setIsWsConnected(updateConnectionStatus());
-      }, 500);
-    };
-
-    // Gentle reconnection check when app becomes visible again
-    // This doesn't force disconnect, just checks if we need to reconnect
-    const handleVisibilityChange = () => {
-      if (!document.hidden && isAuthenticated) {
-        // Only attempt reconnection if the WebSocket is actually closed/failed
-        setTimeout(() => {
-          if (notificationSocketRef.current?.readyState === WebSocket.CLOSED || 
-              notificationSocketRef.current?.readyState === WebSocket.CLOSING) {
-            console.log('App returned to foreground, notifications WebSocket needs reconnection');
-            connectWebSocket("notifications", urls.notifications);
-          }
-          
-          if (userUpdateSocketRef.current?.readyState === WebSocket.CLOSED || 
-              userUpdateSocketRef.current?.readyState === WebSocket.CLOSING) {
-            console.log('App returned to foreground, user updates WebSocket needs reconnection');
-            connectWebSocket("userUpdates", urls.userUpdates);
-          }
-        }, 1000);
-      }
+      }, 500); // 500ms debounce
     };
 
     const connectWebSocket = (type, url) => {
-      // Clear any existing reconnect timeout
-      if (reconnectTimeouts.current[type]) {
-        clearTimeout(reconnectTimeouts.current[type]);
-        reconnectTimeouts.current[type] = null;
-      }
-
-      // Only close if we're explicitly reconnecting a failed connection
-      const currentSocket = type === 'notifications' ? notificationSocketRef.current : userUpdateSocketRef.current;
-      if (currentSocket && (currentSocket.readyState === WebSocket.CONNECTING || currentSocket.readyState === WebSocket.OPEN)) {
-        // Don't interrupt a good connection
-        return;
-      }
-
       setIsWsConnecting(true);
 
       const createSocket = () => {
@@ -122,10 +85,8 @@ const WebSocketProvider = ({ instance, children }) => {
       };
     
       const connect = () => {
-        if (isUnmounted.current) return;
-        
         createSocket().then(socket => {
-          if (!socket || isUnmounted.current) return;
+          if (!socket) return;
     
           if (type === 'notifications') notificationSocketRef.current = socket;
           if (type === 'userUpdates') userUpdateSocketRef.current = socket;
@@ -135,6 +96,7 @@ const WebSocketProvider = ({ instance, children }) => {
             retries.current[type] = 0;
             setIsWsConnecting(false);
             
+            // Clear any pending debounces and set connected status immediately
             if (debounceTimeoutRef.current) {
                 clearTimeout(debounceTimeoutRef.current);
             }
@@ -160,9 +122,10 @@ const WebSocketProvider = ({ instance, children }) => {
     
           socket.onclose = (e) => {
             console.log(`[${type}] WebSocket closed:`, e.code, e.reason);
+            // Use debounced function to update connection status on close
             debouncedSetIsWsConnected();
             
-            if (!isUnmounted.current && isAuthenticated) {
+            if (!isUnmounted.current) {
               let timeout = 0;
               if (retries.current[type] < MAX_RETRIES_EXPONENTIAL) {
                 timeout = Math.min(1000 * 2 ** retries.current[type], 30000);
@@ -173,7 +136,7 @@ const WebSocketProvider = ({ instance, children }) => {
                 setIsWsConnecting(false);
               }
     
-              reconnectTimeouts.current[type] = setTimeout(() => {
+              setTimeout(() => {
                 retries.current[type] += 1;
                 connect();
               }, timeout);
@@ -182,19 +145,16 @@ const WebSocketProvider = ({ instance, children }) => {
     
           socket.onerror = (error) => {
             console.error(`[${type}] WebSocket error:`, error);
-            // Don't immediately close on error, let the browser handle it
-            // socket.close();
+            socket.close();
           };
         });
       };
     
       connect();
-    };
-
-    // Add gentle visibility change listener (doesn't force disconnection)
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    };    
 
     if (isAuthenticated) {
+      // If we are authenticated, start the connection process
       setIsProviderInitializing(true);
       const authType = sessionStorage.getItem(AUTH_TYPE);
       if (authType === "msal" || authType === "djoser") {
@@ -205,7 +165,7 @@ const WebSocketProvider = ({ instance, children }) => {
       }
       setIsProviderInitializing(false);
     } else {
-      // Clean up connections when not authenticated
+      // If we are not authenticated, close any existing connections
       if (notificationSocketRef.current) {
         notificationSocketRef.current.close();
         notificationSocketRef.current = null;
@@ -214,33 +174,13 @@ const WebSocketProvider = ({ instance, children }) => {
         userUpdateSocketRef.current.close();
         userUpdateSocketRef.current = null;
       }
-      
-      // Clear any pending reconnection attempts
-      Object.keys(reconnectTimeouts.current).forEach(key => {
-        if (reconnectTimeouts.current[key]) {
-          clearTimeout(reconnectTimeouts.current[key]);
-          reconnectTimeouts.current[key] = null;
-        }
-      });
     }
 
     return () => {
       isUnmounted.current = true;
-      
-      // Clean up all timeouts
       if (debounceTimeoutRef.current) {
         clearTimeout(debounceTimeoutRef.current);
       }
-      Object.keys(reconnectTimeouts.current).forEach(key => {
-        if (reconnectTimeouts.current[key]) {
-          clearTimeout(reconnectTimeouts.current[key]);
-        }
-      });
-      
-      // Clean up event listener
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      
-      // Close connections
       if (notificationSocketRef.current) notificationSocketRef.current.close();
       if (userUpdateSocketRef.current) userUpdateSocketRef.current.close();
     };
