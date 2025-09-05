@@ -78,7 +78,7 @@ const RemoveJobModal = ({ open, candidate, onClose, onRemoved }) => { // Removed
           sx={{ mt: 2 }}
         />
         <TextField
-          label="Comentarios de remoción (opcional)" // Changed label for clarity
+          label="Observaciones de remoción (opcional)" // Changed label for clarity
           value={removalComment} // Use new state variable
           onChange={(e) => setRemovalComment(e.target.value)} // Update new state variable
           fullWidth
@@ -89,7 +89,7 @@ const RemoveJobModal = ({ open, candidate, onClose, onRemoved }) => { // Removed
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} color="secondary">Cancelar</Button>
-        <Button onClick={handleRemove} variant="contained" color="primary">Quitar Empleo</Button>
+        <Button onClick={handleRemove} variant="contained" color="error">Quitar Empleo</Button>
       </DialogActions>
     </Dialog>
   );

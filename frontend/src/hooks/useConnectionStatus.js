@@ -21,6 +21,8 @@ export const useConnectionStatus = () => {
   const MIN_CHECK_INTERVAL = 5000; // 5 seconds
   const MAX_CHECK_INTERVAL = 30000; // 30 seconds
 
+  const PING_INTERVAL = 15000;
+
   // Ping the backend to check connectivity using your axios instance
   const pingBackend = useCallback(async () => {
     try {
@@ -54,7 +56,7 @@ export const useConnectionStatus = () => {
   // Check backend connectivity with exponential backoff
   const checkBackendConnectivity = useCallback(async () => {
     const now = Date.now();
-    if (now - lastCheckRef.current < MIN_CHECK_INTERVAL) {
+    if (now - lastCheckRef.current < PING_INTERVAL) {
       return; // Too soon since last check
     }
     

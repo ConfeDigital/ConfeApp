@@ -574,7 +574,7 @@ const Datasheet = () => {
                 variant="outlined"
                 color="secondary"
                 endIcon={<WorkOutlineIcon />}
-                onClick={() => navigate(`/candidatos/historial-empleos/${uid}`)}
+                onClick={() => navigate(`/candidatos/empleo/${uid}`)}
                 sx={{
                   minWidth: "120px",
                   // fontSize: { xs: "0.75rem", sm: "0.875rem" },

@@ -66,6 +66,7 @@ import CargaMasivaCandidatos from "./pages/scenes/cargaMasivaCandidatos";
 import CargaMasivaRespuestas from "./pages/scenes/CargaMasivaRespuestas";
 import CandidateAidHistory from "./pages/scenes/CandidateAidHistory";
 import CandidateJobHistory from "./pages/scenes/CandidateJobHistory";
+import EmploymentDashboard from "./pages/scenes/EmploymentDashboard";
 import TablasEquivalencia from "./pages/tablas_de_equivalencia/TablasEquivalencia";
 import TablaDetalle from "./pages/tablas_de_equivalencia/TablaDetalle";
 import NavegacionSeguimiento from "./pages/seguimiento/NavegacionSeguimiento";
@@ -256,41 +257,42 @@ function App({ instance }) {
                       </ProtectedRoute>
                     }
                   >
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/candidatos" element={<CandidateConsult />} />
-                    <Route path="/calendar" element={<Calendar />} />
-                    <Route path="/calendar-microsoft" element={<CalendarMicrosoft />} />
-                    <Route path="/candidatos/:uid" element={<Datasheet />} />
-                    <Route path="/candidatos/visualizar/:uid" element={<DatasheetReadOnly />} />
-                    <Route path="/candidatos/:uid/:cuestionarioId" element={<PaginaCuestionario />} />
-                    <Route path="/seguimiento-candidatos/:uid" element={<Seguimiento />} />
-                    <Route path="/seguimiento-candidatos" element={<NavegacionSeguimiento />} />
-                    <Route path="/dashboard/*" element={<NotFound />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/candidatos/crear" element={<CandidateCreate />} />
-                    <Route path="/candidatos/editar/:uid" element={<CandidateEdit />} />
-                    <Route path="/candidatos/historial-apoyos/:uid" element={<CandidateAidHistory />} />
-                    <Route path="/candidatos/historial-empleos/:uid" element={<CandidateJobHistory />} />
-                    <Route path="/candidatos/proyecto-vida/:uid" element={<ProyectoDeVidaSeguimiento />} />
-                    <Route path="/discapacidades" element={<Disabilities />} />
-                    <Route path="/apoyos/evaluacion-diagnostica" element={<TechnicalAids />} />
-                    <Route path="/apoyos/SIS" element={<SISAids />} />
-                    <Route path="/apoyos/cuadro-habilidades" element={<CHAids />} />
-                    <Route path="/configuracion" element={<Settings />} />
-                    <Route path="/anuncios" element={<Announcements />} />
-                    <Route path="/comunicacion-centros" element={<CenterChat />} />
-                    <Route path="/foro" element={<CenterForum />} />
-                    <Route path="/demo" element={<ProfileFieldDemo />} />
-                  </Route>
-                  <Route
-                    element={
-                      <ProtectedRoute allowedRoles={["agencia_laboral"]}>
-                        <SidebarProvider>
-                          <DashboardLayout />
-                        </SidebarProvider>
-                      </ProtectedRoute>
-                    }
-                  >
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/candidatos" element={<CandidateConsult />} />
+                  <Route path="/calendar" element={<Calendar />} />
+                  <Route path="/calendar-microsoft" element={<CalendarMicrosoft />} />
+                  <Route path="/candidatos/:uid" element={<Datasheet />} />
+                  <Route path="/candidatos/visualizar/:uid" element={<DatasheetReadOnly />} />
+                  <Route path="/candidatos/:uid/:cuestionarioId" element={<PaginaCuestionario />} />
+                  <Route path="/seguimiento-candidatos/:uid" element={<Seguimiento />} />
+                  <Route path="/seguimiento-candidatos" element={<NavegacionSeguimiento />} />
+                  <Route path="/dashboard/*" element={<NotFound />} />
+                  <Route path="/profile" element={<Profile />} />
+                  <Route path="/candidatos/crear" element={<CandidateCreate />} />
+                  <Route path="/candidatos/editar/:uid" element={<CandidateEdit />} />
+                  <Route path="/candidatos/historial-apoyos/:uid" element={<CandidateAidHistory />} />
+                  <Route path="/candidatos/historial-empleos/:uid" element={<CandidateJobHistory />} />
+                  <Route path="/candidatos/empleo/:uid" element={<EmploymentDashboard />} />
+                  <Route path="/candidatos/proyecto-vida/:uid" element={<ProyectoDeVidaSeguimiento />} />
+                  <Route path="/discapacidades" element={<Disabilities />} />
+                  <Route path="/apoyos/evaluacion-diagnostica" element={<TechnicalAids />} />
+                  <Route path="/apoyos/SIS" element={<SISAids />} />
+                  <Route path="/apoyos/cuadro-habilidades" element={<CHAids />} />
+                  <Route path="/configuracion" element={<Settings />} />
+                  <Route path="/anuncios" element={<Announcements />} />
+                  <Route path="/comunicacion-centros" element={<CenterChat />} />
+                  <Route path="/foro" element={<CenterForum />} />
+                  <Route path="/demo" element={<ProfileFieldDemo />} />
+                </Route>
+                <Route
+                  element={
+                    <ProtectedRoute allowedRoles={["agencia_laboral"]}>
+                      <SidebarProvider>
+                        <DashboardLayout />
+                      </SidebarProvider>
+                    </ProtectedRoute>
+                  }
+                >
                     <Route path="/agencia-laboral/dashboard" element={<AgenciaLaboralDashboard />} />
                     <Route path="/agencia-laboral/empleo/:jobId" element={<JobCandidatesPage />} />
                     <Route path="/agencia-laboral/administracion" element={<AdminAgencia />} />

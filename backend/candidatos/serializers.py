@@ -128,7 +128,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def get_disability_name(self, obj):
         disabilities = obj.disability.all()
-        return ", ".join(disability.name for disability in disabilities) if disabilities else "Sin discapacidad"
+        return ", ".join(disability.name for disability in disabilities) if disabilities else "Sin discapacidad asignada"
 
 class UserProfileMinimalSerializer(serializers.ModelSerializer):
     # Adjust this to match your UserProfile model fields and your display needs
