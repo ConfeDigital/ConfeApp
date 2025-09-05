@@ -66,7 +66,7 @@ import CargaMasivaCandidatos from "./pages/scenes/cargaMasivaCandidatos";
 import CargaMasivaRespuestas from "./pages/scenes/CargaMasivaRespuestas";
 import CandidateAidHistory from "./pages/scenes/CandidateAidHistory";
 import CandidateJobHistory from "./pages/scenes/CandidateJobHistory";
-import EmploymentDashboard from "./components/employment/EmploymentDashboard";
+import EmploymentDashboard from "./pages/scenes/EmploymentDashboard";
 import TablasEquivalencia from "./pages/tablas_de_equivalencia/TablasEquivalencia";
 import TablaDetalle from "./pages/tablas_de_equivalencia/TablaDetalle";
 import NavegacionSeguimiento from "./pages/seguimiento/NavegacionSeguimiento";

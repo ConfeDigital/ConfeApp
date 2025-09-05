@@ -239,11 +239,11 @@ const AssignJobModal = ({ open, candidate, availableJobs, onClose, onAssigned })
                 ))}
 
                 <FormControl fullWidth sx={{ mt: 2 }}>
-                  <InputLabel id="mode-select-label">Modo de Transporte</InputLabel>
+                  <InputLabel id="mode-select-label">Visualizar Ruta por Modo de Transporte</InputLabel>
                   <Select
                     labelId="mode-select-label"
                     value={routeMode}
-                    label="Modo de Transporte"
+                    label="Visualizar Ruta por Modo de Transporte"
                     onChange={e => setRouteMode(e.target.value)}
                   >
                     {modes.map(m => (
@@ -298,10 +298,10 @@ const AssignJobModal = ({ open, candidate, availableJobs, onClose, onAssigned })
                       onCloseClick={() => setHoveredMarker(null)}
                     >
                       <Box sx={{ maxWidth: 200 }}>
-                        <Typography variant="subtitle2">
+                        <Typography variant="subtitle2" color='black'>
                           <strong>{availableJobs.find(j => j.id === hoveredMarker.id)?.name}</strong>
                         </Typography>
-                        <Typography variant="body2">
+                        <Typography variant="body2" color='black'>
                           {availableJobs.find(j => j.id === hoveredMarker.id)?.company_name}
                         </Typography>
                       </Box>

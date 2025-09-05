@@ -34,6 +34,7 @@ const CandidateEdit = () => {
     medical: false,
   });
   const [accordionErrors, setAccordionErrors] = useState({});
+  const [isInitializaing, setIsInitializaing] = useState(true);
 
   const methods = useForm({
     resolver: yupResolver(candidateSchema),
@@ -210,6 +211,8 @@ const CandidateEdit = () => {
       } catch (err) {
         setError('Error al obtener la información');
         console.error(err);
+      } finally {
+        setIsInitializaing(false);
       }
     };
   
@@ -256,6 +259,10 @@ const CandidateEdit = () => {
       Volver al Perfil
     </Button>
   );
+
+  if (isInitializaing) {
+    return <Typography variant="h6" sx={{ ml: 2 }}>Cargando...</Typography>
+  }
 
   return (
     <Box m={3}>

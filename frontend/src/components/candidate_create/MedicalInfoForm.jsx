@@ -33,6 +33,42 @@ const MedicalInfoForm = () => {
       </Grid>
       <Grid item xs={12}>
         <Controller
+          name="receives_psychological_care"
+          control={control}
+          render={({ field }) => (
+            <FormControlLabel
+              control={<Checkbox {...field} checked={field.value} />}
+              label="Atención psicológica"
+            />
+          )}
+        />
+      </Grid>
+      <Grid item xs={12}>
+        <Controller
+          name="receives_psychiatric_care"
+          control={control}
+          render={({ field }) => (
+            <FormControlLabel
+              control={<Checkbox {...field} checked={field.value} />}
+              label="Atención psiquiátrica"
+            />
+          )}
+        />
+      </Grid>
+      <Grid item xs={12}>
+        <Controller
+          name="has_seizures"
+          control={control}
+          render={({ field }) => (
+            <FormControlLabel
+              control={<Checkbox {...field} checked={field.value} />}
+              label="Presenta convulsiones"
+            />
+          )}
+        />
+      </Grid>
+            <Grid item xs={12}>
+        <Controller
           name="receives_pension"
           control={control}
           defaultValue=""
@@ -69,42 +105,6 @@ const MedicalInfoForm = () => {
                 <MenuItem value="OTRO">Otro</MenuItem>
               </Select>
             </FormControl>
-          )}
-        />
-      </Grid>
-      <Grid item xs={12}>
-        <Controller
-          name="receives_psychological_care"
-          control={control}
-          render={({ field }) => (
-            <FormControlLabel
-              control={<Checkbox {...field} checked={field.value} />}
-              label="Atención psicológica"
-            />
-          )}
-        />
-      </Grid>
-      <Grid item xs={12}>
-        <Controller
-          name="receives_psychiatric_care"
-          control={control}
-          render={({ field }) => (
-            <FormControlLabel
-              control={<Checkbox {...field} checked={field.value} />}
-              label="Atención psiquiátrica"
-            />
-          )}
-        />
-      </Grid>
-      <Grid item xs={12}>
-        <Controller
-          name="has_seizures"
-          control={control}
-          render={({ field }) => (
-            <FormControlLabel
-              control={<Checkbox {...field} checked={field.value} />}
-              label="Presenta convulsiones"
-            />
           )}
         />
       </Grid>

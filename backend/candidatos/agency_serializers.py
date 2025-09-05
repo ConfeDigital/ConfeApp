@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import UserProfile, JobHistory, JobHistoryComment # Import the new model
-from .serializers import CandidatePrimaryKeyRelatedField, UserSerializer, DomicileSerializer # Ensure these are correct paths
+from .serializers import CandidatePrimaryKeyRelatedField, UserSerializer, DomicileSerializer, MedicationSerializer
 from agencia.models import Job
 from agencia.serializers import JobSerializer
 from django.contrib.auth import get_user_model
@@ -153,10 +153,13 @@ class CandidateListAgencySerializer(serializers.ModelSerializer):
     current_job_start = serializers.SerializerMethodField()
     estado_agencia = serializers.SerializerMethodField()
     domicile = DomicileSerializer(read_only=True)
+    disability_name = serializers.SerializerMethodField()
+    medications = MedicationSerializer(many=True, read_only=True)
 
     class Meta:
         model = UserProfile
-        fields = ['id', 'nombre_completo', 'email', 'user', 'agency_state', 'estado_agencia', 'current_job', 'current_job_name', 'current_job_company', 'current_job_start', 'domicile']
+        fields = ['id', 'nombre_completo', 'email', 'phone_number', 'user', 'agency_state', 'estado_agencia', 'current_job', 'current_job_name', 'current_job_company', 'current_job_start',
+        'domicile', 'birth_date', 'photo', 'gender', 'disability_name', 'curp', 'rfc', 'nss', 'blood_type', 'allergies', 'dietary_restrictions', 'physical_restrictions', 'has_seizures', 'medications']
         read_only_fields = ['user']
 
     def get_nombre_completo(self, obj):
@@ -193,6 +196,10 @@ class CandidateListAgencySerializer(serializers.ModelSerializer):
             "Des": "Desempleado",
         }
         return stage_mapping.get(obj.agency_state, obj.agency_state)
+
+    def get_disability_name(self, obj):
+        disabilities = obj.disability.all()
+        return ", ".join(disability.name for disability in disabilities) if disabilities else "Sin discapacidad asignada"
 
 class CurrentJobHistoryDetailSerializer(serializers.ModelSerializer):
     # This assumes JobHistory has a ForeignKey to Job

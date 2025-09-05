@@ -81,16 +81,25 @@ def normalizar_nombre_cuestionario(nombre):
 
 
 class CuestionarioSeleccion(APIView):
-    """Lista todos los cuestionarios agrupados por BaseCuestionarios o un cuestionario específico por ID"""
+    """
+    Lista todos los cuestionarios, opcionalmente filtrados por 'estado_desbloqueo'.
+    """
     permission_classes = [permissions.AllowAny]
 
-    def get(self, request, id=None):
-        if id:
-            base_cuestionario = get_object_or_404(BaseCuestionarios, id=id)
-            serializer = BaseCuestionariosSerializer(base_cuestionario)
-        else:
-            base_cuestionarios = BaseCuestionarios.objects.all()
-            serializer = BaseCuestionariosSerializer(base_cuestionarios, many=True)
+    def get(self, request):
+        # Start with all objects
+        base_cuestionarios = BaseCuestionarios.objects.all()
+        
+        # Get the 'estado_desbloqueo' parameter from the URL query string
+        estado_desbloqueo = request.query_params.get('estado_desbloqueo', None)
+        
+        # If the parameter exists, filter the queryset
+        if estado_desbloqueo:
+            base_cuestionarios = base_cuestionarios.filter(estado_desbloqueo=estado_desbloqueo)
+
+        # Serialize the filtered or complete queryset
+        serializer = BaseCuestionariosSerializer(base_cuestionarios, many=True)
+        
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class CrearNuevaVersionCuestionario(APIView):
@@ -1895,15 +1904,23 @@ def procesar_respuesta_para_tipo(respuesta, tipo):
 
 class CuestionariosConRespuestasView(APIView):
     """
-    Devuelve TODOS los base_cuestionarios disponibles para el usuario:
-    - Si el usuario tiene respuestas en un base_cuestionario → devolver ese cuestionario
-    - Si no tiene respuestas → devolver el cuestionario activo de ese base_cuestionario
-    Con el estado de finalización pero sin las preguntas.
+    Devuelve los base_cuestionarios disponibles para el usuario,
+    opcionalmente filtrados por 'estado_desbloqueo'.
     """
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, usuario_id):
-        print(f"🔍 Consultando cuestionarios para usuario ID: {usuario_id}")
+        # print(f"🔍 Consultando cuestionarios para usuario ID: {usuario_id}")
+
+        # Get the 'estado_desbloqueo' parameter from the URL query string
+        estado_desbloqueo_filter = request.query_params.get('estado_desbloqueo', None)
+
+        # Get all base_cuestionarios, applying the filter if it exists
+        base_cuestionarios = BaseCuestionarios.objects.all()
+        if estado_desbloqueo_filter:
+            base_cuestionarios = base_cuestionarios.filter(estado_desbloqueo=estado_desbloqueo_filter)
+
+        # print(f"🔍 Total de base_cuestionarios a procesar: {base_cuestionarios.count()}")
         
         # Obtener cuestionarios que tengan respuestas del usuario
         cuestionarios_con_respuestas = Respuesta.objects.filter(
@@ -1914,18 +1931,15 @@ class CuestionariosConRespuestasView(APIView):
             respuestas_count__gt=0
         ).values_list('cuestionario_id', flat=True)
         
-        print(f"🧾 Cuestionarios con respuestas: {list(cuestionarios_con_respuestas)}")
-        
-        # Obtener todos los base_cuestionarios
-        base_cuestionarios = BaseCuestionarios.objects.all()
-        print(f"🔍 Total de base_cuestionarios en el sistema: {base_cuestionarios.count()}")
-        for bc in base_cuestionarios:
-            print(f"  - {bc.nombre} (estado: {bc.estado_desbloqueo})")
+        # print(f"🧾 Cuestionarios con respuestas: {list(cuestionarios_con_respuestas)}")
         
         resultado = []
         
-        # Procesar cada base_cuestionario
+        # Procesar cada base_cuestionario filtrado
         for base_cuestionario in base_cuestionarios:
+            # The rest of your existing logic remains unchanged
+            # It will now operate on the filtered `base_cuestionarios` queryset
+            
             # Buscar cuestionarios de este base_cuestionario que tengan respuestas
             cuestionarios_con_respuestas_de_base = Cuestionario.objects.filter(
                 base_cuestionario=base_cuestionario,
@@ -1933,12 +1947,10 @@ class CuestionariosConRespuestasView(APIView):
             )
             
             if cuestionarios_con_respuestas_de_base.exists():
-                # Si hay respuestas, usar el cuestionario con respuestas (priorizar el más reciente)
                 cuestionario_seleccionado = cuestionarios_con_respuestas_de_base.order_by('-version').first()
                 tiene_respuestas = True
-                print(f"✅ Base '{base_cuestionario.nombre}': usando cuestionario con respuestas (ID: {cuestionario_seleccionado.id})")
+                # print(f"✅ Base '{base_cuestionario.nombre}': usando cuestionario con respuestas (ID: {cuestionario_seleccionado.id})")
             else:
-                # Si no hay respuestas, usar el cuestionario activo
                 cuestionario_activo = Cuestionario.objects.filter(
                     base_cuestionario=base_cuestionario,
                     activo=True
@@ -1947,17 +1959,15 @@ class CuestionariosConRespuestasView(APIView):
                 if cuestionario_activo:
                     cuestionario_seleccionado = cuestionario_activo
                     tiene_respuestas = False
-                    print(f"📋 Base '{base_cuestionario.nombre}': usando cuestionario activo (ID: {cuestionario_activo.id})")
+                    # print(f"📋 Base '{base_cuestionario.nombre}': usando cuestionario activo (ID: {cuestionario_activo.id})")
                 else:
-                    # Si no hay cuestionario activo, usar el más reciente
                     cuestionario_seleccionado = Cuestionario.objects.filter(
                         base_cuestionario=base_cuestionario
                     ).order_by('-version').first()
                     tiene_respuestas = False
-                    print(f"⚠️ Base '{base_cuestionario.nombre}': usando cuestionario más reciente (ID: {cuestionario_seleccionado.id})")
+                    # print(f"⚠️ Base '{base_cuestionario.nombre}': usando cuestionario más reciente (ID: {cuestionario_seleccionado.id})")
             
             if cuestionario_seleccionado:
-                # Obtener el estado de finalización
                 estado_obj = EstadoCuestionario.objects.filter(
                     usuario_id=usuario_id, 
                     cuestionario=cuestionario_seleccionado
@@ -1981,7 +1991,7 @@ class CuestionariosConRespuestasView(APIView):
                     "tiene_respuestas": tiene_respuestas
                 })
         
-        print(f"✅ Total base_cuestionarios procesados: {len(resultado)}")
+        # print(f"✅ Total base_cuestionarios procesados: {len(resultado)}")
         return Response(resultado, status=status.HTTP_200_OK)
 
 class CargaMasivaRespuestasView(APIView):
