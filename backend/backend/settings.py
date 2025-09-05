@@ -55,6 +55,7 @@ REST_FRAMEWORK = {
 client_secret = os.getenv('CLIENT_SECRET')
 client_id = os.getenv('CLIENT_ID')
 tenant_id = os.getenv('TENANT_ID')
+email_user = os.getenv('EMAIL_USER')
 
 ADFS_ISSUER   = f"https://login.microsoftonline.com/{tenant_id}/v2.0"
 ADFS_AUDIENCE = client_id
@@ -200,23 +201,9 @@ DOMAIN = os.getenv('DOMAIN')
 SITE_NAME = os.getenv('SITE_NAME')
 
 # Email
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_HOST_USER = os.getenv("EMAIL_ACC")
-EMAIL_HOST_PASSWORD = os.getenv("ACC_PWD")
-EMAIL_USE_TLS = True
-
-#DATABASES = {
-#    "default": {
-#        "ENGINE": "django.db.backends.postgresql",
-#        "NAME": os.getenv("DB_NAME"),
-#        "USER": os.getenv("DB_USER"),
-#        "PASSWORD": os.getenv("DB_PWD"),
-#        "HOST": os.getenv("DB_HOST"),
-#        "PORT": os.getenv("DB_PORT"),
-#    }
-#}
+EMAIL_BACKEND = 'api.email_backends.MicrosoftGraphEmailBackend'
+DEFAULT_FROM_EMAIL = email_user
+SERVER_EMAIL = email_user
 
 
 # Password validation
