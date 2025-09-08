@@ -47,7 +47,6 @@ const InterviewDialog = lazy(() =>
 
 import useDocumentTitle from "../../hooks/useDocumentTitle";
 import CandidateDetails from "../../components/candidate_create/DetailSection";
-import LoadingPopup from "../../components/LoadingPopup";
 import CuestionarioReportView from "../cuestionarios/CuestionarioReportView";
 
 // Define the ordered stages based on your Django STAGE_CHOICES with subphases for Capacitación.
@@ -903,47 +902,51 @@ const Datasheet = () => {
               : "Seleccione el documento"}
           </DialogTitle>
           <DialogContent>
-            <Box display="flex" justifyContent="center" gap={2} mt={1}>
-              <Button
-                variant={selectedTab === 0 ? "contained" : "outlined"}
-                color="primary"
-                onClick={() => setSelectedTab(0)}
-                endIcon={<PictureAsPdfIcon />}
-              >
-                Ficha Técnica
-              </Button>
-              <Button
-                variant={selectedTab === 1 ? "contained" : "outlined"}
-                color="primary"
-                onClick={() => setSelectedTab(1)}
-                endIcon={<PictureAsPdfIcon />}
-              >
-                Habilidades
-              </Button>
-              <Button
-                variant={selectedTab === 2 ? "contained" : "outlined"}
-                color="primary"
-                onClick={() => setSelectedTab(2)}
-                endIcon={<PictureAsPdfIcon />}
-              >
-                Plan Personalizado de Apoyos
-              </Button>
-              <Button
-                variant={selectedTab === 3 ? "contained" : "outlined"}
-                color="primary"
-                onClick={() => setSelectedTab(3)}
-                endIcon={<FileDownloadIcon />}
-              >
-                Proyecto de Vida
-              </Button>
-              <Button
-                variant={selectedTab === 4 ? "contained" : "outlined"}
-                color="secondary"
-                onClick={() => setSelectedTab(4)}
-                endIcon={<AssignmentIcon />}
-              >
-                Reporte de Cuestionarios
-              </Button>
+            <Box display="flex" flexDirection="column" gap={2} justifyContent="center">
+              <Box display="flex" justifyContent="center" gap={2} mt={1}>
+                <Button
+                  variant={selectedTab === 0 ? "contained" : "outlined"}
+                  color="primary"
+                  onClick={() => setSelectedTab(0)}
+                  endIcon={<PictureAsPdfIcon />}
+                >
+                  Ficha Técnica
+                </Button>
+                <Button
+                  variant={selectedTab === 1 ? "contained" : "outlined"}
+                  color="primary"
+                  onClick={() => setSelectedTab(1)}
+                  endIcon={<PictureAsPdfIcon />}
+                >
+                  Habilidades
+                </Button>
+                <Button
+                  variant={selectedTab === 2 ? "contained" : "outlined"}
+                  color="primary"
+                  onClick={() => setSelectedTab(2)}
+                  endIcon={<PictureAsPdfIcon />}
+                >
+                  Plan Personalizado de Apoyos
+                </Button>
+                <Button
+                  variant={selectedTab === 3 ? "contained" : "outlined"}
+                  color="primary"
+                  onClick={() => setSelectedTab(3)}
+                  endIcon={<FileDownloadIcon />}
+                >
+                  Proyecto de Vida
+                </Button>
+              </Box>
+              <Box display="flex" justifyContent="center" gap={2}>
+                <Button
+                  variant={selectedTab === 4 ? "contained" : "outlined"}
+                  color="secondary"
+                  onClick={() => setSelectedTab(4)}
+                  endIcon={<AssignmentIcon />}
+                >
+                  Reporte de Cuestionarios
+                </Button>
+              </Box>
             </Box>
 
             {/* Questionnaire Report Content */}

@@ -4,6 +4,7 @@ from .serializers import CandidatePrimaryKeyRelatedField, UserSerializer, Domici
 from agencia.models import Job
 from agencia.serializers import JobSerializer
 from django.contrib.auth import get_user_model
+from api.fields import SASImageField
 
 User = get_user_model()
 
@@ -155,6 +156,7 @@ class CandidateListAgencySerializer(serializers.ModelSerializer):
     domicile = DomicileSerializer(read_only=True)
     disability_name = serializers.SerializerMethodField()
     medications = MedicationSerializer(many=True, read_only=True)
+    photo = SASImageField(read_only=True)
 
     class Meta:
         model = UserProfile

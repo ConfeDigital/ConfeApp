@@ -82,25 +82,31 @@ def normalizar_nombre_cuestionario(nombre):
 
 class CuestionarioSeleccion(APIView):
     """
-    Lista todos los cuestionarios, opcionalmente filtrados por 'estado_desbloqueo'.
+    Lista todos los cuestionarios, opcionalmente filtrados por 'estado_desbloqueo'
+    o un cuestionario específico por ID.
     """
     permission_classes = [permissions.AllowAny]
 
-    def get(self, request):
-        # Start with all objects
-        base_cuestionarios = BaseCuestionarios.objects.all()
-        
-        # Get the 'estado_desbloqueo' parameter from the URL query string
-        estado_desbloqueo = request.query_params.get('estado_desbloqueo', None)
-        
-        # If the parameter exists, filter the queryset
-        if estado_desbloqueo:
-            base_cuestionarios = base_cuestionarios.filter(estado_desbloqueo=estado_desbloqueo)
+    def get(self, request, id=None):
+        if id:
+            # Handle request for a single item by ID
+            base_cuestionario = get_object_or_404(BaseCuestionarios, id=id)
+            serializer = BaseCuestionariosSerializer(base_cuestionario)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        else:
+            # Handle list request, with optional filtering
+            base_cuestionarios = BaseCuestionarios.objects.all()
+            
+            # Get the 'estado_desbloqueo' parameter from the URL query string
+            estado_desbloqueo = request.query_params.get('estado_desbloqueo', None)
+            
+            # If the parameter exists, filter the queryset
+            if estado_desbloqueo:
+                base_cuestionarios = base_cuestionarios.filter(estado_desbloqueo=estado_desbloqueo)
 
-        # Serialize the filtered or complete queryset
-        serializer = BaseCuestionariosSerializer(base_cuestionarios, many=True)
-        
-        return Response(serializer.data, status=status.HTTP_200_OK)
+            # Serialize the filtered or complete queryset
+            serializer = BaseCuestionariosSerializer(base_cuestionarios, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
     
 class CrearNuevaVersionCuestionario(APIView):
     """Crea una nueva versión de un cuestionario existente"""
@@ -1703,21 +1709,8 @@ def procesar_respuesta_para_tipo(respuesta, tipo):
     """Procesa la respuesta según el tipo para asegurar compatibilidad con Azure SQL"""
     
     if tipo == 'abierta':
-        if isinstance(respuesta, str):
-            return {
-                'texto': respuesta,
-                'valor_original': respuesta
-            }
-        elif isinstance(respuesta, dict):
-            return {
-                'texto': respuesta.get('texto', respuesta.get('valor_original', str(respuesta))),
-                'valor_original': respuesta.get('valor_original', respuesta.get('texto', str(respuesta)))
-            }
-        else:
-            return {
-                'texto': str(respuesta),
-                'valor_original': str(respuesta)
-            }
+        # For abierta questions, keep it simple - just return the text directly
+        return str(respuesta) if respuesta else ""
     
     elif tipo == 'numero':
         if isinstance(respuesta, (int, float)):

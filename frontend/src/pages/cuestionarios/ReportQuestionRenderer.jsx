@@ -43,6 +43,38 @@ import api from "../../api";
 import ContactList from "../../components/candidate_create/ContactList";
 
 // Constants
+const QUESTION_TYPE_LABELS = {
+    abierta: "Pregunta Abierta",
+    multiple: "Opción Múltiple",
+    dropdown: "Lista Desplegable",
+    checkbox: "Casillas de Verificación",
+    binaria: "Sí/No",
+    numero: "Numérica",
+    imagen: "Imagen/Escala",
+    fecha: "Fecha",
+    fecha_hora: "Fecha y Hora",
+    numero_telefono: "Número de Teléfono",
+    sis: "SIS DE 0-4",
+    sis2: "SIS DE 0-2",
+    ch: "Cuadro de Habilidades",
+    ed: "Evaluación de Desempeño",
+    canalizacion: "Canalización",
+    canalizacion_centro: "Centro de Canalización",
+    datos_personales: "Datos Personales",
+    datos_domicilio: "Datos de Domicilio",
+    datos_medicos: "Datos Médicos",
+    contactos: "Contactos de Emergencia",
+    meta: "Meta del Proyecto",
+    tipo_discapacidad: "Tipo de Discapacidad",
+    // Profile field types
+    profile_field: "Campo de Perfil",
+    profile_field_choice: "Campo de Perfil - Selección",
+    profile_field_boolean: "Campo de Perfil - Sí/No",
+    profile_field_date: "Campo de Perfil - Fecha",
+    profile_field_textarea: "Campo de Perfil - Texto Largo",
+    profile_field_phonenumber: "Campo de Perfil - Teléfono",
+};
+
 const PENSION_OPTIONS = [
     { value: "No", label: "No recibe pensión" },
     { value: "Bie", label: "Sí, del Bienestar" },
@@ -68,7 +100,7 @@ const CANALIZACION_STAGES = {
 
 const CH_OPTIONS = [
     { value: "no_lo_hace", label: "No lo hace", icon: <HighlightOff color="error" /> },
-    { value: "en_proceso", label: "En proceso", icon: <HourglassEmpty color="warning" />},
+    { value: "en_proceso", label: "En proceso", icon: <HourglassEmpty color="warning" /> },
     { value: "lo_hace", label: "Lo hace", icon: <CheckCircle color="success" /> },
 ]
 
@@ -119,6 +151,13 @@ const getQuestionTypeIcon = (tipo) => {
         canalizacion: <Assignment color="primary" />,
         canalizacion_centro: <Assignment color="primary" />,
         numero_telefono: <Phone color="primary" />,
+        // Profile field types
+        profile_field: <Person color="primary" />,
+        profile_field_choice: <Person color="primary" />,
+        profile_field_boolean: <Person color="primary" />,
+        profile_field_date: <Person color="primary" />,
+        profile_field_textarea: <Person color="primary" />,
+        profile_field_phonenumber: <Phone color="primary" />,
         default: <Assignment color="primary" />
     };
 
@@ -542,11 +581,25 @@ const QuestionContentRenderers = {
         </Typography>
     ),
 
-    abierta: ({ responseData }) => (
-        <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
-            {ResponseDataProcessor.extractValue(responseData)}
-        </Typography>
-    ),
+    abierta: ({ responseData }) => {
+        // Handle both simple string responses and object responses
+        let textValue = "";
+
+        if (typeof responseData === "string") {
+            textValue = responseData;
+        } else if (typeof responseData === "object" && responseData !== null) {
+            // Extract text from object format (for backward compatibility)
+            textValue = responseData.texto || responseData.valor_original || String(responseData);
+        } else {
+            textValue = String(responseData || "");
+        }
+
+        return (
+            <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
+                {textValue || "Sin respuesta"}
+            </Typography>
+        );
+    },
 
     imagen: ({ responseData }) => (
         <Chip
@@ -759,11 +812,11 @@ const QuestionContentRenderers = {
         return (
             <Box sx={{ mt: 1, mb: 2 }}>
                 {/* Title for the meta information */}
-                <Typography 
-                    variant="h6" 
+                <Typography
+                    variant="h6"
                     gutterBottom
-                    sx={{ 
-                        fontWeight: 'bold', 
+                    sx={{
+                        fontWeight: 'bold',
                         color: 'text.primary',
                         borderBottom: '1px solid',
                         borderColor: 'divider',
@@ -773,12 +826,12 @@ const QuestionContentRenderers = {
                 >
                     {responseData.meta}
                 </Typography>
-    
+
                 {/* List of steps */}
                 <List dense>
                     {responseData.pasos.map((paso, index) => (
-                        <ListItem 
-                            key={index} 
+                        <ListItem
+                            key={index}
                             disablePadding
                             sx={{
                                 mb: 1,
@@ -798,11 +851,11 @@ const QuestionContentRenderers = {
                                 size="medium" // A slightly larger chip looks better
                                 sx={{ mb: 1, fontWeight: 'bold' }}
                             />
-                            
+
                             {/* Responsible Person */}
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                 <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                                     Encargado:
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                    Encargado:
                                 </Typography>
                                 <Typography variant="body1" sx={{ fontWeight: 'normal' }}>
                                     {paso.encargado}
@@ -820,7 +873,7 @@ const QuestionContentRenderers = {
         const formattedText = formatSelectValue(responseData.resultado, CH_OPTIONS);
         // Get the icon component
         const iconComponent = formatSelectValueIcon(responseData.resultado, CH_OPTIONS);
-    
+
         return (
             <Box display='flex' alignItems='center' gap={1}>
                 {iconComponent} {/* Render the icon component here */}
@@ -830,6 +883,67 @@ const QuestionContentRenderers = {
             </Box>
         );
     },
+
+    // Profile field renderers
+    profile_field: ({ responseData }) => (
+        <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
+            {ResponseDataProcessor.extractValue(responseData)}
+        </Typography>
+    ),
+
+    profile_field_choice: ({ responseData, pregunta }) => {
+        // Try to get the display value, fallback to raw value if needed
+        let displayValue = ResponseDataProcessor.extractValue(responseData);
+
+        // If we have the pregunta and it has profile_field_config, try to convert the value
+        if (pregunta && pregunta.profile_field_config && pregunta.profile_field_config.choices) {
+            const choice = pregunta.profile_field_config.choices.find(([val, label]) => val === responseData);
+            if (choice) {
+                displayValue = choice[1]; // Use the label
+            }
+        }
+
+        return (
+            <Box>
+                <Chip
+                    label={displayValue}
+                    color="primary"
+                    variant="outlined"
+                    icon={<RadioButtonChecked />}
+                />
+            </Box>
+        );
+    },
+
+    profile_field_boolean: ({ responseData }) => {
+        const isTrueResponse = responseData === "Sí" || responseData === "1" || responseData === 1 || responseData === true;
+        return (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                {isTrueResponse ? <CheckCircle color="success" /> : <Cancel color="error" />}
+                <Typography variant="body1" fontWeight="medium">
+                    {isTrueResponse ? "Sí" : "No"}
+                </Typography>
+            </Box>
+        );
+    },
+
+    profile_field_date: ({ responseData }) => (
+        <Typography variant="body1">
+            {formatDate(responseData)}
+        </Typography>
+    ),
+
+    profile_field_textarea: ({ responseData }) => (
+        <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
+            {ResponseDataProcessor.extractValue(responseData)}
+        </Typography>
+    ),
+
+    profile_field_phonenumber: ({ responseData }) => (
+        <Typography variant="body1" fontWeight="medium">
+            {formatCanonicalPhoneNumber(ResponseDataProcessor.extractValue(responseData))}
+        </Typography>
+    ),
 
     default: ({ responseData }) => (
         <Typography variant="body1" sx={{ whiteSpace: "pre-wrap" }}>
@@ -845,7 +959,7 @@ const ReportQuestionRenderer = ({ pregunta, respuesta, usuario }) => {
         const questionType = respuesta.tipo_pregunta;
 
         const renderer = QuestionContentRenderers[questionType] || QuestionContentRenderers.default;
-        return renderer({ responseData, usuario });
+        return renderer({ responseData, usuario, pregunta });
     };
 
     return (
@@ -866,7 +980,7 @@ const ReportQuestionRenderer = ({ pregunta, respuesta, usuario }) => {
 
                         <Box sx={{ display: "flex", gap: 1 }}>
                             <Chip
-                                label={respuesta.tipo_pregunta}
+                                label={QUESTION_TYPE_LABELS[respuesta.tipo_pregunta] || respuesta.tipo_pregunta}
                                 size="small"
                                 variant="outlined"
                                 color="secondary"

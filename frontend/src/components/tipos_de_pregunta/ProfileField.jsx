@@ -18,6 +18,15 @@ import dayjs from "dayjs";
 import axios from "../../api";
 import StandalonePhoneInputField from "../../components/phone_number/StandalonePhoneInputField";
 
+const DEBOUNCE_TIMES = {
+  text: 2000,
+  textarea: 2000, // Longer delay for more content
+  phonenumber: 1500,
+  choice: 250,    // Shorter delay since it's a single click
+  boolean: 250,    // Shorter delay since it's a single click
+  default: 500,
+};
+
 const ProfileField = ({
   pregunta,
   usuarioId,
@@ -88,8 +97,16 @@ const ProfileField = ({
           }
         }
         setValue(displayValue);
+        // Notify parent component of the loaded value
+        if (setSeleccionOpcion && displayValue !== null) {
+          setSeleccionOpcion(displayValue.toString());
+        }
       } else {
         setValue(null);
+        // Notify parent component that there's no value
+        if (setSeleccionOpcion) {
+          setSeleccionOpcion("");
+        }
       }
     } catch (err) {
       console.error("Error loading current value:", err);
@@ -167,12 +184,19 @@ const ProfileField = ({
     setError("");
     setSuccess("");
 
+    // Immediately notify parent component for validation purposes
+    if (setSeleccionOpcion && initialLoaded) {
+      setSeleccionOpcion(newValue?.toString() || "");
+    }
+
     if (!initialLoaded) return;
+
+    const debounceTime = DEBOUNCE_TIMES[fieldMetadata?.type] || DEBOUNCE_TIMES.default;
 
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       saveValue(newValue);
-    }, 1500);
+    }, debounceTime);
   };
 
   const renderField = () => {
