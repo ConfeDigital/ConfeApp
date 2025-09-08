@@ -164,10 +164,6 @@ class CopiarVersionCuestionario(APIView):
                     'tipo': pregunta.tipo,
                     'seccion_sis': pregunta.seccion_sis,
                     'nombre_seccion': pregunta.nombre_seccion,
-                    'campo_ficha_tecnica': pregunta.campo_ficha_tecnica,
-                    'campo_datos_personales': pregunta.campo_datos_personales,
-                    'actualiza_usuario': pregunta.actualiza_usuario,
-                    'ficha_tecnica': pregunta.ficha_tecnica,
                     'profile_field_path': pregunta.profile_field_path,
                     'profile_field_config': pregunta.profile_field_config,
                     'opciones': [],
@@ -1192,11 +1188,9 @@ class RespuestasUnlockedPathView(APIView):
 
         # Aplicar filtros adicionales si es necesario
         filtro_desbloqueada = request.query_params.get('desbloqueada')
-        filtro_ficha_tecnica = request.query_params.get('ficha_tecnica')
-        filtro_dato_personal = request.query_params.get('dato_personal')
         otros_filtros = {
             key: value for key, value in request.query_params.items()
-            if key not in ['desbloqueada', 'ficha_tecnica', 'dato_personal', 'usuario_id', 'cuestionario_id']
+            if key not in ['desbloqueada', 'usuario_id', 'cuestionario_id']
         }
 
         # Filtrar las respuestas serializadas
@@ -1208,22 +1202,6 @@ class RespuestasUnlockedPathView(APIView):
             if filtro_desbloqueada:
                 valores_filtro = filtro_desbloqueada.split(',')
                 if str(respuesta['desbloqueada']).lower() not in valores_filtro:
-                    cumple_filtros = False
-
-            # Aplicar filtro por ficha_tecnica
-            if filtro_ficha_tecnica:
-                ficha_tecnica_respuesta = str(respuesta.get('ficha_tecnica', False)).lower()
-                if filtro_ficha_tecnica.lower() == 'true' and ficha_tecnica_respuesta != 'true':
-                    cumple_filtros = False
-                elif filtro_ficha_tecnica.lower() == 'false' and ficha_tecnica_respuesta == 'true':
-                    cumple_filtros = False
-
-            # Aplicar filtro por dato_personal
-            if filtro_dato_personal:
-                dato_personal_respuesta = str(respuesta.get('dato_personal', False)).lower()
-                if filtro_dato_personal.lower() == 'true' and dato_personal_respuesta != 'true':
-                    cumple_filtros = False
-                elif filtro_dato_personal.lower() == 'false' and dato_personal_respuesta == 'true':
                     cumple_filtros = False
 
             # Aplicar otros filtros

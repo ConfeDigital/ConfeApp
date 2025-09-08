@@ -116,8 +116,6 @@ const CuestionarioReportView = ({
                         respuesta: displayValue,
                         tipo_pregunta: pregunta.tipo,
                         desbloqueada: true,
-                        ficha_tecnica: pregunta.ficha_tecnica || false,
-                        dato_personal: pregunta.campo_datos_personales || false,
                         fecha_respuesta: new Date().toISOString(), // Current timestamp as fallback
                     });
                 }

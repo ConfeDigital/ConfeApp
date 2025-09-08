@@ -66,12 +66,7 @@ class PreguntaSerializer(serializers.ModelSerializer):
             'nombre_seccion',
             'opciones',
             'imagenes',
-            'actualiza_usuario',
             'desbloqueos_recibidos',
-            'ficha_tecnica',
-            'campo_ficha_tecnica',
-            'actualiza_usuario',
-            'campo_datos_personales',
             'profile_field_path',
             'profile_field_config',
             'profile_field_metadata',
@@ -345,10 +340,6 @@ class RespuestaSISSerializer(serializers.ModelSerializer):
     tipo_pregunta = serializers.CharField(source='pregunta.tipo')
     seccion_sis = serializers.IntegerField(source='pregunta.seccion_sis')
     nombre_seccion = serializers.CharField(source='pregunta.nombre_seccion')
-    dato_personal = serializers.BooleanField(source='pregunta.actualiza_usuario')
-    ficha_tecnica = serializers.BooleanField(source='pregunta.ficha_tecnica')
-    campo_ficha_tecnica = serializers.CharField(source='pregunta.campo_ficha_tecnica')
-    campo_datos_personales = serializers.CharField(source='pregunta.campo_datos_personales')
     respuesta = serializers.SerializerMethodField()
     desbloqueada = serializers.SerializerMethodField()
 
@@ -364,10 +355,6 @@ class RespuestaSISSerializer(serializers.ModelSerializer):
             'seccion_sis',
             'nombre_seccion',
             'respuesta',
-            'ficha_tecnica',
-            'campo_ficha_tecnica',
-            'dato_personal',
-            'campo_datos_personales',
             'desbloqueada'
         ]
 
