@@ -34,6 +34,11 @@ import {
   AccordionSummary,
   AccordionDetails,
   styled,
+  Autocomplete,
+  LinearProgress,
+  List,
+  ListItem,
+  ListItemText,
 } from "@mui/material";
 import {
   WorkOutline as WorkIcon,
@@ -52,6 +57,7 @@ import {
   AddComment as AddCommentIcon,
   InfoOutlined as InfoOutlinedIcon,
   CheckCircleOutlined as CheckCircleOutlinedIcon,
+  Star as StarIcon,
   WarningOutlined as WarningOutlinedIcon,
   ErrorOutlineOutlined as ErrorOutlineOutlinedIcon,
   Map as MapIcon,
@@ -106,6 +112,11 @@ const EmploymentDashboard = () => {
   const [aptitudeQuestionnaires, setAptitudeQuestionnaires] = useState([]);
   const [stageQuestionnaires, setStageQuestionnaires] = useState([]);
   const [trackingComments, setTrackingComments] = useState([]);
+  
+  // Estados para evaluación de habilidades
+  const [habilidades, setHabilidades] = useState([]);
+  const [candidateHabilidades, setCandidateHabilidades] = useState([]);
+  const [loadingHabilidades, setLoadingHabilidades] = useState(false);
 
   // Estados para popups
   const [openAgencyPopup, setOpenAgencyPopup] = useState(false);
@@ -184,6 +195,8 @@ const EmploymentDashboard = () => {
       axios.get(jobsURL),
       fetchAptitudeQuestionnaires(),
       fetchStageQuestionnaires(),
+      fetchHabilidades(),
+      fetchCandidateHabilidades(),
     ])
       .then(([agenciaRes, histRes, jobsRes]) => {
         setCandidateProfile(agenciaRes.data);
@@ -249,6 +262,46 @@ const EmploymentDashboard = () => {
       console.error("❌ Error loading stage questionnaires:", error);
       setStageQuestionnaires([]);
       return Promise.resolve();
+    }
+  };
+
+  const fetchHabilidades = async () => {
+    try {
+      const response = await axios.get('/api/agencia/habilidades/');
+      setHabilidades(response.data);
+    } catch (error) {
+      console.error("Error al cargar habilidades:", error);
+    }
+  };
+
+  const fetchCandidateHabilidades = async () => {
+    if (!uid) return;
+    setLoadingHabilidades(true);
+    try {
+      const response = await axios.get(`/api/agencia/candidato-habilidades/?candidato=${uid}`);
+      setCandidateHabilidades(response.data);
+    } catch (error) {
+      console.error("Error al cargar habilidades del candidato:", error);
+      setCandidateHabilidades([]);
+    } finally {
+      setLoadingHabilidades(false);
+    }
+  };
+
+  const saveCandidateHabilidad = async (habilidadId, nivelCompetencia, observaciones = '') => {
+    try {
+      const payload = {
+        candidato: uid,
+        habilidad: habilidadId,
+        nivel_competencia: nivelCompetencia,
+        observaciones: observaciones
+      };
+      
+      await axios.post('/api/agencia/candidato-habilidades/', payload);
+      await fetchCandidateHabilidades(); // Recargar habilidades del candidato
+    } catch (error) {
+      console.error("Error al guardar habilidad del candidato:", error);
+      throw error;
     }
   };
 
@@ -505,11 +558,11 @@ const EmploymentDashboard = () => {
           <Button
             variant="contained"
             color="primary"
-            startIcon={<QuizIcon />}
+            startIcon={<StarIcon />}
             onClick={() => setOpenAgencyPopup(true)}
             sx={{ minWidth: "140px" }}
           >
-            Cuestionarios
+            Habilidades
           </Button>
 
           {/* Dynamic button based on employment state */}
@@ -679,12 +732,71 @@ const EmploymentDashboard = () => {
       {/* Popup para Etapa Agencia */}
       <Dialog open={openAgencyPopup} onClose={() => setOpenAgencyPopup(false)} maxWidth="lg" fullWidth>
         <DialogTitle>
-          Etapa Agencia - Cuestionarios Disponibles
+          Evaluación de Habilidades y Cuestionarios
         </DialogTitle>
         <DialogContent sx={{ p: 3 }}>
           <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
             Complete los cuestionarios de la etapa Agencia para evaluar las competencias del candidato.
           </Typography>
+
+          {/* Sección de Evaluación de Habilidades */}
+          <Accordion sx={{ mb: 3 }}>
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Box display="flex" alignItems="center" gap={1}>
+                <StarIcon color="primary" />
+                <Typography variant="h6">Evaluación de Habilidades</Typography>
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Evalúa las habilidades del candidato para mejorar el matching con empleos.
+              </Typography>
+              
+              {loadingHabilidades ? (
+                <Box display="flex" alignItems="center" gap={2}>
+                  <LinearProgress sx={{ flexGrow: 1 }} />
+                  <Typography variant="body2">Cargando habilidades...</Typography>
+                </Box>
+              ) : (
+                <Box>
+                  {/* Habilidades ya evaluadas */}
+                  {candidateHabilidades.length > 0 && (
+                    <Box sx={{ mb: 3 }}>
+                      <Typography variant="subtitle1" gutterBottom>
+                        Habilidades Evaluadas ({candidateHabilidades.length})
+                      </Typography>
+                      <List dense>
+                        {candidateHabilidades.map((habilidad) => (
+                          <ListItem key={habilidad.id} sx={{ py: 0.5 }}>
+                            <ListItemText
+                              primary={habilidad.habilidad_nombre}
+                              secondary={`Nivel: ${habilidad.nivel_competencia} | Categoría: ${habilidad.habilidad_categoria}`}
+                            />
+                            <Chip
+                              label={habilidad.nivel_competencia}
+                              size="small"
+                              color={
+                                habilidad.nivel_competencia === 'experto' ? 'success' :
+                                habilidad.nivel_competencia === 'avanzado' ? 'primary' :
+                                habilidad.nivel_competencia === 'intermedio' ? 'warning' : 'default'
+                              }
+                            />
+                          </ListItem>
+                        ))}
+                      </List>
+                    </Box>
+                  )}
+
+                  {/* Formulario para agregar nueva habilidad */}
+                  <CandidateHabilidadForm
+                    habilidades={habilidades}
+                    candidateHabilidades={candidateHabilidades}
+                    onSave={saveCandidateHabilidad}
+                  />
+                </Box>
+              )}
+            </AccordionDetails>
+          </Accordion>
 
           {stageQuestionnaires.length > 0 ? (
             <Grid container spacing={2}>
@@ -1100,6 +1212,98 @@ const EmploymentDashboard = () => {
         lat={candidateProfile.current_job?.location_details.address_lat}
         lng={candidateProfile.current_job?.location_details.address_lng}
         label="Ubicación del Empleo"
+      />
+    </Box>
+  );
+};
+
+// Componente para evaluar habilidades del candidato
+const CandidateHabilidadForm = ({ habilidades, candidateHabilidades, onSave }) => {
+  const [selectedHabilidad, setSelectedHabilidad] = useState(null);
+  const [nivelCompetencia, setNivelCompetencia] = useState('basico');
+  const [observaciones, setObservaciones] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  // Filtrar habilidades que no están ya evaluadas
+  const habilidadesDisponibles = habilidades.filter(h => 
+    !candidateHabilidades.some(ch => ch.habilidad === h.id)
+  );
+
+  const handleSave = async () => {
+    if (!selectedHabilidad) return;
+    
+    setSaving(true);
+    try {
+      await onSave(selectedHabilidad.id, nivelCompetencia, observaciones);
+      setSelectedHabilidad(null);
+      setNivelCompetencia('basico');
+      setObservaciones('');
+    } catch (error) {
+      console.error('Error al guardar habilidad:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+      <Typography variant="subtitle1" gutterBottom>
+        Agregar Nueva Habilidad
+      </Typography>
+      
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', mb: 2 }}>
+        <Autocomplete
+          options={habilidadesDisponibles}
+          getOptionLabel={(option) => `${option.nombre} (${option.categoria})`}
+          value={selectedHabilidad}
+          onChange={(event, newValue) => setSelectedHabilidad(newValue)}
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Seleccionar Habilidad"
+              placeholder="Buscar habilidad..."
+              size="small"
+              sx={{ minWidth: 250 }}
+            />
+          )}
+          disabled={saving}
+        />
+
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Nivel</InputLabel>
+          <Select
+            value={nivelCompetencia}
+            label="Nivel"
+            onChange={(e) => setNivelCompetencia(e.target.value)}
+            disabled={saving}
+          >
+            <MenuItem value="basico">Básico</MenuItem>
+            <MenuItem value="intermedio">Intermedio</MenuItem>
+            <MenuItem value="avanzado">Avanzado</MenuItem>
+            <MenuItem value="experto">Experto</MenuItem>
+          </Select>
+        </FormControl>
+
+        <Button
+          variant="contained"
+          onClick={handleSave}
+          disabled={!selectedHabilidad || saving}
+          size="small"
+        >
+          {saving ? 'Guardando...' : 'Agregar'}
+        </Button>
+      </Box>
+
+      <TextField
+        fullWidth
+        size="small"
+        label="Observaciones (opcional)"
+        multiline
+        rows={2}
+        value={observaciones}
+        onChange={(e) => setObservaciones(e.target.value)}
+        disabled={saving}
+        placeholder="Notas adicionales sobre esta habilidad..."
       />
     </Box>
   );

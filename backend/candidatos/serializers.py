@@ -6,7 +6,7 @@ from centros.models import Center
 from centros.serializers import CenterSerializer
 from discapacidad.models import TechnicalAid, SISHelp, CHItem
 from discapacidad.serializers import TechnicalAidSerializer, SISHelpFlatSerializer, CHItemSerializer
-from .models import UserProfile, EmergencyContact, Cycle, Domicile, Medication, Disability, TAidCandidateHistory, SISAidCandidateHistory, CHAidCandidateHistory
+from .models import UserProfile, EmergencyContact, Cycle, Domicile, Medication, Disability, TAidCandidateHistory, SISAidCandidateHistory, CHAidCandidateHistory, CandidatoHabilidadEvaluada
 from api.fields import SASImageField, SASFileField
 import json
 
@@ -1244,3 +1244,24 @@ class DatosMedicosSerializer(serializers.ModelSerializer):
             instance.medications.set(new_meds)
 
         return instance
+
+class CandidatoHabilidadEvaluadaSerializer(serializers.ModelSerializer):
+    habilidad_nombre = serializers.CharField(source='habilidad.nombre', read_only=True)
+    habilidad_categoria = serializers.CharField(source='habilidad.categoria', read_only=True)
+    evaluado_por_nombre = serializers.CharField(source='evaluado_por.get_full_name', read_only=True)
+    
+    class Meta:
+        model = CandidatoHabilidadEvaluada
+        fields = [
+            'id', 'candidato', 'habilidad', 'habilidad_nombre', 'habilidad_categoria',
+            'nivel_competencia', 'fecha_evaluacion', 'evaluado_por', 'evaluado_por_nombre',
+            'observaciones', 'es_activa'
+        ]
+        read_only_fields = ['fecha_evaluacion']
+
+    def create(self, validated_data):
+        # Set the evaluator to the current user if not provided
+        request = self.context.get('request')
+        if request and not validated_data.get('evaluado_por'):
+            validated_data['evaluado_por'] = request.user
+        return super().create(validated_data)

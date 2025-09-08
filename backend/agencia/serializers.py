@@ -1,12 +1,25 @@
 from rest_framework import serializers
 
-from .models import Location, Company, Job, Employer
+from .models import Location, Company, Job, Employer, Habilidad, JobHabilidadRequerida
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from candidatos.models import UserProfile 
+from candidatos.models import UserProfile, CandidatoHabilidadEvaluada
 from candidatos.serializers import UserProfileMinimalSerializer
 
 User = get_user_model()
+
+class HabilidadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Habilidad
+        fields = ['id', 'nombre', 'descripcion', 'categoria', 'es_activa', 'fecha_creacion']
+
+class JobHabilidadRequeridaSerializer(serializers.ModelSerializer):
+    habilidad_nombre = serializers.CharField(source='habilidad.nombre', read_only=True)
+    habilidad_categoria = serializers.CharField(source='habilidad.categoria', read_only=True)
+    
+    class Meta:
+        model = JobHabilidadRequerida
+        fields = ['id', 'habilidad', 'habilidad_nombre', 'habilidad_categoria', 'nivel_importancia', 'fecha_asignacion']
 
 class LocationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -34,24 +47,84 @@ class JobSerializer(serializers.ModelSerializer):
         allow_null=True,
         required=False
     )
+    # Habilidades requeridas
+    habilidades_requeridas = JobHabilidadRequeridaSerializer(
+        source='jobhabilidadrequerida_set',
+        many=True,
+        read_only=True
+    )
+    habilidades_ids = serializers.ListField(
+        child=serializers.IntegerField(),
+        write_only=True,
+        required=False,
+        help_text="Lista de IDs de habilidades requeridas"
+    )
 
     class Meta:
         model = Job
-        fields = ['id', 'name', 'company', 'company_name', 'location_details', 'location_id', 'job_description', 'vacancies']
+        fields = [
+            'id', 'name', 'company', 'company_name', 'location_details', 'location_id', 
+            'job_description', 'vacancies', 'horario', 'sueldo_base', 'prestaciones',
+            'habilidades_requeridas', 'habilidades_ids'
+        ]
 
     def create(self, validated_data):
+        # Extract habilidades_ids before creating the job
+        habilidades_ids = validated_data.pop('habilidades_ids', [])
+        
         # If no company specified, assign the current employer's company
         request = self.context.get('request')
         if validated_data.get('company') is None and request and hasattr(request.user, 'employer'):
             validated_data['company'] = request.user.employer.company
-        return super().create(validated_data)
+        
+        # Create the job
+        job = super().create(validated_data)
+        
+        # Add habilidades if provided
+        if habilidades_ids:
+            for habilidad_id in habilidades_ids:
+                try:
+                    habilidad = Habilidad.objects.get(id=habilidad_id)
+                    JobHabilidadRequerida.objects.create(
+                        job=job,
+                        habilidad=habilidad,
+                        nivel_importancia='importante'  # Default level
+                    )
+                except Habilidad.DoesNotExist:
+                    continue
+        
+        return job
 
     def update(self, instance, validated_data):
+        # Extract habilidades_ids before updating the job
+        habilidades_ids = validated_data.pop('habilidades_ids', None)
+        
         # Same logic on update: if they clear it, reset to their own company
         request = self.context.get('request')
         if 'company' in validated_data and validated_data['company'] is None and request and hasattr(request.user, 'employer'):
             validated_data['company'] = request.user.employer.company
-        return super().update(instance, validated_data)
+        
+        # Update the job
+        job = super().update(instance, validated_data)
+        
+        # Update habilidades if provided
+        if habilidades_ids is not None:
+            # Clear existing habilidades
+            JobHabilidadRequerida.objects.filter(job=job).delete()
+            
+            # Add new habilidades
+            for habilidad_id in habilidades_ids:
+                try:
+                    habilidad = Habilidad.objects.get(id=habilidad_id)
+                    JobHabilidadRequerida.objects.create(
+                        job=job,
+                        habilidad=habilidad,
+                        nivel_importancia='importante'  # Default level
+                    )
+                except Habilidad.DoesNotExist:
+                    continue
+        
+        return job
 
 class EmployerSerializer(serializers.ModelSerializer):
     id          = serializers.PrimaryKeyRelatedField(
@@ -139,7 +212,8 @@ class JobWithAssignedCandidatesSerializer(serializers.ModelSerializer):
         model = Job
         fields = [
             'id', 'name', 'company_name', 'location_details',
-            'job_description', 'vacancies', 'assigned_candidates'
+            'job_description', 'vacancies', 'horario', 'sueldo_base', 'prestaciones',
+            'assigned_candidates'
         ]
 
     def get_assigned_candidates(self, obj):

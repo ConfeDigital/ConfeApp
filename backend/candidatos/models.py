@@ -1,7 +1,7 @@
 from django.db import models
 from django.core.validators import RegexValidator
 from discapacidad.models import Disability, TechnicalAid, SISHelp, CHItem
-from agencia.models import Job
+from agencia.models import Job, Habilidad
 from centros.models import Center
 from django.conf import settings
 
@@ -187,11 +187,58 @@ class UserProfile(models.Model):
 
     agency_state = models.CharField(max_length=3, choices=AGENCY_STATE_CHOICES, default='Bol')
     current_job = models.ForeignKey(Job, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Habilidades evaluadas del candidato
+    habilidades_evaluadas = models.ManyToManyField(
+        Habilidad,
+        through='CandidatoHabilidadEvaluada',
+        related_name='candidatos_con_habilidad',
+        blank=True
+    )
 
     history = HistoricalRecords()
 
     def __str__(self,):
         return f"{self.curp} - {self.user.first_name} {self.user.last_name} {self.user.second_last_name}"
+
+class CandidatoHabilidadEvaluada(models.Model):
+    """
+    Modelo intermedio para almacenar las habilidades evaluadas de un candidato
+    con su nivel de competencia y fecha de evaluación.
+    """
+    NIVEL_COMPETENCIA_CHOICES = [
+        ('basico', 'Básico'),
+        ('intermedio', 'Intermedio'),
+        ('avanzado', 'Avanzado'),
+        ('experto', 'Experto'),
+    ]
+    
+    candidato = models.ForeignKey(UserProfile, on_delete=models.CASCADE)
+    habilidad = models.ForeignKey(Habilidad, on_delete=models.CASCADE)
+    nivel_competencia = models.CharField(
+        max_length=20,
+        choices=NIVEL_COMPETENCIA_CHOICES,
+        default='basico'
+    )
+    fecha_evaluacion = models.DateTimeField(auto_now_add=True)
+    evaluado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Usuario que realizó la evaluación"
+    )
+    observaciones = models.TextField(blank=True, null=True)
+    es_activa = models.BooleanField(default=True)
+    
+    class Meta:
+        unique_together = ['candidato', 'habilidad']
+        verbose_name = 'Habilidad Evaluada del Candidato'
+        verbose_name_plural = 'Habilidades Evaluadas de Candidatos'
+        ordering = ['-fecha_evaluacion']
+    
+    def __str__(self):
+        return f"{self.candidato.user.get_full_name()} - {self.habilidad.nombre} ({self.get_nivel_competencia_display()})"
 
 class TAidCandidateHistory(models.Model):
     candidate = models.ForeignKey(UserProfile, on_delete=models.CASCADE)

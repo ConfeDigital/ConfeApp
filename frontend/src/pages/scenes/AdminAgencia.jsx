@@ -39,6 +39,7 @@ const JobsCompaniesPage = () => {
   const [deleteType, setDeleteType] = useState(""); // 'job' o 'company'
   const [deleteId, setDeleteId] = useState(null);
 
+
   const [alert, setAlert] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -78,6 +79,7 @@ const JobsCompaniesPage = () => {
     setJobDialogData(null);
     setJobDialogOpen(true);
   };
+
 
   // Funciones para abrir diálogos de Empresa
   const handleCompanyEdit = (company) => {
@@ -277,6 +279,7 @@ const JobsCompaniesPage = () => {
         onClose={() => setDeleteDialogOpen(false)}
         onConfirm={confirmDelete}
       />
+
 
       <Snackbar
         open={!!alert}

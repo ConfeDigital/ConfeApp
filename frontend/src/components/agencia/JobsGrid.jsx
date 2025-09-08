@@ -1,7 +1,7 @@
 // components/agencia/JobsDataGrid.jsx
 import React, { useState } from 'react';
 import { DataGrid, GridToolbarContainer, GridToolbarQuickFilter, GridToolbar } from '@mui/x-data-grid';
-import { Tooltip, Typography, Box, ToggleButton, ToggleButtonGroup, CircularProgress, Button } from '@mui/material';
+import { Tooltip, Typography, Box, ToggleButton, ToggleButtonGroup, CircularProgress, Button, Chip } from '@mui/material';
 import { Map as MapIcon, GridOn as GridIcon } from '@mui/icons-material';
 import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -59,6 +59,54 @@ export default function JobsDataGrid({ rows, companyNameVisibility, isLoading })
     },
     { field: 'job_description', headerName: 'Descripción', flex: 1.5, minWidth: 250 },
     { field: 'vacancies', headerName: 'Vacantes', type: 'number', width: 100 },
+    { 
+      field: 'horario', 
+      headerName: 'Horario', 
+      flex: 0.8, 
+      minWidth: 120,
+      renderCell: (params) => {
+        return params.value || 'No especificado';
+      }
+    },
+    { 
+      field: 'sueldo_base', 
+      headerName: 'Sueldo Base', 
+      flex: 0.6, 
+      minWidth: 100,
+      renderCell: (params) => {
+        return params.value ? `$${params.value.toLocaleString()}` : 'No especificado';
+      }
+    },
+    {
+      field: 'habilidades_requeridas',
+      headerName: 'Habilidades',
+      flex: 1,
+      minWidth: 150,
+      renderCell: (params) => {
+        const habilidades = params.value || [];
+        if (habilidades.length === 0) return 'Sin habilidades';
+        
+        return (
+          <Tooltip
+            title={
+              <Box>
+                {habilidades.map((h, index) => (
+                  <Typography key={index} variant="body2">
+                    • {h.habilidad_nombre} ({h.nivel_importancia})
+                  </Typography>
+                ))}
+              </Box>
+            }
+          >
+            <Chip 
+              label={`${habilidades.length} habilidad${habilidades.length !== 1 ? 'es' : ''}`}
+              size="small"
+              variant="outlined"
+            />
+          </Tooltip>
+        );
+      }
+    },
   ];
 
   function CustomToolbar() {

@@ -101,6 +101,14 @@ class JobHistoryAdmin(admin.ModelAdmin):
     list_filter = ('job', 'start_date', 'end_date')
     search_fields = ('candidate__user__email', 'candidate__user__first_name', 'candidate__user__last_name', 'candidate__user__second_last_name', 'job__name')
 
+class CandidatoHabilidadEvaluadaAdmin(admin.ModelAdmin):
+    list_display = ('candidato', 'habilidad', 'nivel_competencia', 'evaluado_por', 'fecha_evaluacion', 'es_activa')
+    list_filter = ('nivel_competencia', 'es_activa', 'fecha_evaluacion', 'habilidad__categoria')
+    search_fields = ('candidato__user__email', 'candidato__user__first_name', 'candidato__user__last_name', 'habilidad__nombre')
+    autocomplete_fields = ('candidato', 'habilidad', 'evaluado_por')
+    list_editable = ('es_activa',)
+    ordering = ('-fecha_evaluacion',)
+
 admin.site.register(Cycle, CycleAdmin)
 admin.site.register(UserProfile, CandidateAdmin)
 admin.site.register(EmergencyContact, EmergencyContactAdmin)
@@ -108,3 +116,4 @@ admin.site.register(Domicile, DomicileAdmin)
 admin.site.register(TAidCandidateHistory, TAidCandidateHistoryAdmin)
 admin.site.register(CHAidCandidateHistory)
 admin.site.register(JobHistory, JobHistoryAdmin)
+admin.site.register(CandidatoHabilidadEvaluada, CandidatoHabilidadEvaluadaAdmin)
