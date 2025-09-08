@@ -174,10 +174,6 @@ def cargar_cuestionarios_desde_excel(ruta_archivo, cuestionario_id):
                     tipo=tipo,
                     seccion_sis=seccion_sis,
                     nombre_seccion=nombre_seccion,
-                    ficha_tecnica=row["¿Se incluye en ficha técnica? (si/no)"] == 'Sí',
-                    actualiza_usuario=row["¿Es información personal? (si,no)"] == 'Sí',
-                    campo_ficha_tecnica=row["Campo en Ficha tecnica (si aplica)"],
-                    campo_datos_personales=row["Campo en Informacion Personal  (si aplica)"]
                 )
 
                 if imagen_pregunta:

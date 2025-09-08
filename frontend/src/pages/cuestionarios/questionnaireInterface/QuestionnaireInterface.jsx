@@ -152,10 +152,6 @@ const EditorCuestionario = () => {
         desbloqueo: [], // Will be handled separately
         seccion: pregunta.nombre_seccion || "",
         seccion_sis: pregunta.seccion_sis || 0,
-        campo_ficha_tecnica: pregunta.campo_ficha_tecnica || "",
-        campo_datos_personales: pregunta.campo_datos_personales || "",
-        actualiza_usuario: pregunta.actualiza_usuario || false,
-        ficha_tecnica: pregunta.ficha_tecnica || false,
         profile_field_path: pregunta.profile_field_path || null,
         profile_field_config: pregunta.profile_field_config || null,
       }));

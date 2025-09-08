@@ -31,10 +31,6 @@ def guardar_cuestionario_desde_json(preguntas, cuestionario_id):
             tipo=tipo,
             nombre_seccion=seccion,
             seccion_sis=1,  # o asignar dinámicamente si se requiere
-            ficha_tecnica=False,
-            actualiza_usuario=False,
-            campo_ficha_tecnica="",
-            campo_datos_personales="",
             profile_field_path=profile_field_path,
             profile_field_config=profile_field_config
         )

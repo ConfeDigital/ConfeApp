@@ -131,18 +131,6 @@ class Pregunta(models.Model):
     seccion_sis = models.IntegerField(default=0, validators=[MinValueValidator(0)])
     nombre_seccion = models.CharField(max_length=1000, default=" ")
 
-    campo_ficha_tecnica = models.CharField(max_length=2500, default=" ")
-    campo_datos_personales = models.CharField(max_length=2500, default=" ")
-
-    actualiza_usuario = models.BooleanField(
-        default=False,
-        help_text="Si está marcado, la respuesta a esta pregunta actualizará la información del usuario."
-    )
-    ficha_tecnica = models.BooleanField(
-        default=False,
-        help_text="Si está marcado, la respuesta a esta pregunta se verá en el api de ficha tecnica"
-    )
-    
     # New fields for profile field questions
     profile_field_path = models.CharField(
         max_length=100,
