@@ -45,12 +45,12 @@ const nombreTipoPregunta = {
   abierta: "Abierta",
   numero: "Número",
   numero_telefono: "Número de Teléfono",
-  checkbox: "Checkbox",
-  binaria: "Binaria",
+  checkbox: "Casillas de Verificación",
+  binaria: "Sí/No",
   fecha: "Fecha",
   fecha_hora: "Fecha y Hora",
-  dropdown: "Dropdown",
-  imagen: "Deslizante",
+  dropdown: "Lista Desplegable",
+  imagen: "Escala",
   meta: "Meta",
   sis: "SIS DE 0-4",
   sis2: "SIS DE 0-2",
@@ -66,9 +66,10 @@ const nombreTipoPregunta = {
   ch: "Cuadro de Habilidades",
   profile_field: "Campo de Perfil",
   profile_field_choice: "Campo de Perfil - Selección",
-  profile_field_boolean: "Campo de Perfil - Booleano",
+  profile_field_boolean: "Campo de Perfil - Sí/No",
   profile_field_date: "Campo de Perfil - Fecha",
   profile_field_textarea: "Campo de Perfil - Texto Largo",
+  profile_field_phonenumber: "Campo de Perfil - Teléfono"
 };
 
 const PreguntaCard = ({
@@ -128,6 +129,8 @@ const PreguntaCard = ({
         return "profile_field_date";
       case "textarea":
         return "profile_field_textarea";
+      case "phonenumber":
+        return "profile_field_phonenumber"
       default:
         return "profile_field";
     }

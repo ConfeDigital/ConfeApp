@@ -204,8 +204,8 @@ const Preguntas = ({
           } else if (
             pregunta.tipo === "binaria" ||
             pregunta.tipo === "profile_field_boolean" ||
-            (pregunta.profile_field_path && 
-             pregunta.profile_field_metadata?.type === "boolean") ||
+            (pregunta.profile_field_path &&
+              pregunta.profile_field_metadata?.type === "boolean") ||
             (pregunta.opciones.length === 2 &&
               pregunta.opciones.some((op) => op.texto === "Sí") &&
               pregunta.opciones.some((op) => op.texto === "No"))
@@ -240,8 +240,8 @@ const Preguntas = ({
             }
           } else if (
             pregunta.tipo === "profile_field_choice" ||
-            (pregunta.profile_field_path && 
-             pregunta.profile_field_metadata?.type === "choice")
+            (pregunta.profile_field_path &&
+              pregunta.profile_field_metadata?.type === "choice")
           ) {
             // console.log("🔘 Procesando PROFILE_FIELD_CHOICE");
             // Para preguntas de campo de perfil tipo choice, usar valor numérico
@@ -307,19 +307,19 @@ const Preguntas = ({
     const profileFieldQuestions = cuestionario.preguntas.filter(
       (p) => p.profile_field_path
     );
-    
+
     const profileFieldValues = {};
-    
+
     for (const pregunta of profileFieldQuestions) {
       try {
         const response = await api.get(
           `/api/cuestionarios/profile-fields/user/${usuario}/value/${pregunta.profile_field_path}/`
         );
-        
+
         if (response.data.success && response.data.value !== null) {
           let displayValue = response.data.value;
           const fieldMetadata = pregunta.profile_field_metadata || pregunta.profile_field_config;
-          
+
           // Convert actual profile values to option indices for display (same logic as ProfileField)
           if (fieldMetadata?.type === "choice" && pregunta.opciones) {
             const choiceIndex = fieldMetadata.choices?.findIndex(
@@ -350,7 +350,7 @@ const Preguntas = ({
               displayValue = null;
             }
           }
-          
+
           if (displayValue !== null) {
             profileFieldValues[pregunta.id] = displayValue;
             // console.log(`Loaded profile field value for question ${pregunta.id}:`, displayValue);
@@ -360,7 +360,7 @@ const Preguntas = ({
         console.error(`Error loading profile field value for question ${pregunta.id}:`, error);
       }
     }
-    
+
     return profileFieldValues;
   };
 
@@ -463,7 +463,7 @@ const Preguntas = ({
       // Load profile field values and merge them with regular responses
       const profileFieldValues = await loadProfileFieldValues();
       const mergedRespuestas = { ...respuestasMap, ...profileFieldValues };
-      
+
       // console.log("Regular responses:", respuestasMap);
       // console.log("Profile field values:", profileFieldValues);
       // console.log("Merged responses:", mergedRespuestas);
@@ -489,7 +489,27 @@ const Preguntas = ({
   );
 
   // Función para validar si una respuesta es válida
-  const isRespuestaValida = useCallback((respuesta, tipoPregunta) => {
+  const isRespuestaValida = useCallback((respuesta, tipoPregunta, pregunta = null) => {
+    // Special handling for profile field questions
+    if (pregunta && pregunta.profile_field_path) {
+      // For profile field questions, any non-null, non-undefined value is valid
+      // This includes 0, false (which are valid for choice and boolean fields)
+      // Only exclude null, undefined, and empty strings
+      if (respuesta === null || respuesta === undefined) {
+        return false;
+      }
+      // For choice and boolean fields, 0 is a valid value
+      if (typeof respuesta === "number" || typeof respuesta === "boolean") {
+        return true;
+      }
+      // For string values, check if not empty
+      if (typeof respuesta === "string") {
+        return respuesta.trim() !== "";
+      }
+      // For other types, consider valid if not null/undefined
+      return true;
+    }
+
     // Validación base para respuestas nulas o indefinidas
     if (respuesta === undefined || respuesta === null) {
       return false;
@@ -636,64 +656,8 @@ const Preguntas = ({
         );
         if (!pregunta) return false;
 
-        // Validación inline para evitar dependencias
-        const respuestaParaValidar = respuesta;
-        if (
-          respuestaParaValidar === null ||
-          respuestaParaValidar === undefined
-        ) {
-          return false;
-        }
-
-        if (pregunta.tipo === "abierta") {
-          return (
-            typeof respuestaParaValidar === "string" &&
-            respuestaParaValidar.trim() !== ""
-          );
-        }
-
-        if (pregunta.tipo === "checkbox") {
-          if (Array.isArray(respuestaParaValidar)) {
-            return respuestaParaValidar.length > 0;
-          }
-          if (typeof respuestaParaValidar === "string") {
-            try {
-              const parsed = JSON.parse(respuestaParaValidar);
-              return Array.isArray(parsed) && parsed.length > 0;
-            } catch {
-              return false;
-            }
-          }
-          return false;
-        }
-
-        if (pregunta.tipo === "numero") {
-          return (
-            !isNaN(parseFloat(respuestaParaValidar)) &&
-            parseFloat(respuestaParaValidar) !== 0
-          );
-        }
-
-        if (pregunta.tipo === "imagen") {
-          return (
-            !isNaN(parseFloat(respuestaParaValidar)) &&
-            respuestaParaValidar !== null &&
-            respuestaParaValidar !== undefined
-          );
-        }
-
-        if (typeof respuestaParaValidar === "object") {
-          return (
-            respuestaParaValidar !== null &&
-            Object.keys(respuestaParaValidar).length > 0
-          );
-        }
-
-        return (
-          respuestaParaValidar !== "" &&
-          respuestaParaValidar !== null &&
-          respuestaParaValidar !== undefined
-        );
+        // Use the centralized validation function
+        return isRespuestaValida(respuesta, pregunta.tipo, pregunta);
       }
     ).length;
 
@@ -712,10 +676,8 @@ const Preguntas = ({
       // Procesar según el tipo de pregunta para asegurar compatibilidad con Azure SQL
       switch (pregunta.tipo) {
         case "abierta":
-          return {
-            texto: respuesta,
-            valor_original: respuesta,
-          };
+          // For abierta questions, send as simple string
+          return respuesta || "";
 
         case "numero":
           const valorNumerico = parseFloat(respuesta) || 0;
@@ -847,9 +809,22 @@ const Preguntas = ({
           (p) => p.id === preguntaId
         );
 
-        // Skip processing for profile field questions as they handle their own saving
+        // For profile field questions, just update local state for validation purposes
         if (preguntaActual.profile_field_path) {
-          // console.log("Skipping handleRespuestaChange for profile field question:", preguntaActual.texto);
+          // console.log("Updating local state for profile field question:", preguntaActual.texto);
+          setRespuestas((prev) => ({
+            ...prev,
+            [preguntaId]: respuesta,
+          }));
+
+          // Remove from unanswered questions if the response is valid
+          if (isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)) {
+            setPreguntasNoRespondidas((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(preguntaId);
+              return newSet;
+            });
+          }
           return;
         }
 
@@ -866,7 +841,7 @@ const Preguntas = ({
           return;
         }
 
-        if (!isRespuestaValida(respuesta, preguntaActual.tipo)) {
+        if (!isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)) {
           setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
           setNotificacion({
             mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, completa la respuesta antes de continuar.`,
@@ -1123,7 +1098,7 @@ const Preguntas = ({
 
       // Validar la respuesta según el tipo de pregunta
       const respuesta = respuestas[pregunta.id];
-      return !isRespuestaValida(respuesta, pregunta.tipo);
+      return !isRespuestaValida(respuesta, pregunta.tipo, pregunta);
     });
   };
 
@@ -1147,7 +1122,7 @@ const Preguntas = ({
       const pregunta = todasLasPreguntas.find(
         (p) => p.id === parseInt(preguntaId)
       );
-      return pregunta && isRespuestaValida(respuesta, pregunta.tipo);
+      return pregunta && isRespuestaValida(respuesta, pregunta.tipo, pregunta);
     }).length;
   };
 
@@ -1163,7 +1138,7 @@ const Preguntas = ({
         return false;
       }
       const respuesta = respuestas[pregunta.id];
-      return !isRespuestaValida(respuesta, pregunta.tipo);
+      return !isRespuestaValida(respuesta, pregunta.tipo, pregunta);
     });
     return preguntasNoRespondidas.length === 0;
   };
@@ -1183,7 +1158,7 @@ const Preguntas = ({
       }
 
       const respuesta = respuestas[pregunta.id];
-      if (!isRespuestaValida(respuesta, pregunta.tipo)) {
+      if (!isRespuestaValida(respuesta, pregunta.tipo, pregunta)) {
         noRespondidas.add(pregunta.id);
       }
     });
@@ -1196,7 +1171,7 @@ const Preguntas = ({
   const validarPregunta = useCallback(
     (preguntaId, respuesta, tipoPregunta) => {
       const pregunta = cuestionario.preguntas.find((p) => p.id === preguntaId);
-      if (!isRespuestaValida(respuesta, tipoPregunta)) {
+      if (!isRespuestaValida(respuesta, tipoPregunta, pregunta)) {
         setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
 
         // Mensaje específico según el tipo de pregunta
@@ -1267,7 +1242,7 @@ const Preguntas = ({
         return false;
       }
       const respuesta = respuestas[pregunta.id];
-      return !isRespuestaValida(respuesta, pregunta.tipo);
+      return !isRespuestaValida(respuesta, pregunta.tipo, pregunta);
     });
 
     // Si hay preguntas no respondidas

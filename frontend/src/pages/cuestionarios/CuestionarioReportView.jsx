@@ -58,6 +58,77 @@ const CuestionarioReportView = ({
         }
     }, [cuestionariosFinalizados, selectedCuestionarioId]);
 
+    const fetchProfileFieldResponses = async (preguntas) => {
+        const profileFieldQuestions = preguntas.filter(p => p.profile_field_path);
+        const profileFieldResponses = [];
+
+        for (const pregunta of profileFieldQuestions) {
+            try {
+                const response = await api.get(
+                    `/api/cuestionarios/profile-fields/user/${usuarioId}/value/${pregunta.profile_field_path}/`
+                );
+
+                if (response.data.success && response.data.value !== null) {
+                    let displayValue = response.data.value;
+                    const fieldMetadata = pregunta.profile_field_metadata || pregunta.profile_field_config;
+
+                    // Convert actual profile values to display format (same logic as ProfileField component)
+                    if (fieldMetadata?.type === "choice") {
+                        // First try to find the choice in the field metadata
+                        if (fieldMetadata.choices) {
+                            const choice = fieldMetadata.choices.find(([val, label]) => val === response.data.value);
+                            if (choice) {
+                                displayValue = choice[1]; // Use the label (second element)
+                            }
+                        }
+                        // Fallback: try to find in pregunta.opciones if metadata lookup failed
+                        if (!displayValue || displayValue === response.data.value) {
+                            const choiceIndex = fieldMetadata.choices?.findIndex(
+                                ([val, label]) => val === response.data.value
+                            );
+                            if (choiceIndex >= 0 && pregunta.opciones && pregunta.opciones[choiceIndex]) {
+                                displayValue = pregunta.opciones[choiceIndex].texto;
+                            }
+                        }
+                    } else if (fieldMetadata?.type === "boolean") {
+                        const boolValue = response.data.value;
+                        if (
+                            boolValue === true ||
+                            boolValue === "true" ||
+                            boolValue === 1 ||
+                            boolValue === "1"
+                        ) {
+                            displayValue = "Sí";
+                        } else if (
+                            boolValue === false ||
+                            boolValue === "false" ||
+                            boolValue === 0 ||
+                            boolValue === "0"
+                        ) {
+                            displayValue = "No";
+                        }
+                    }
+
+                    // Create a response object that matches the expected format
+                    profileFieldResponses.push({
+                        pregunta_id: pregunta.id,
+                        pregunta: pregunta.id,
+                        respuesta: displayValue,
+                        tipo_pregunta: pregunta.tipo,
+                        desbloqueada: true,
+                        ficha_tecnica: pregunta.ficha_tecnica || false,
+                        dato_personal: pregunta.campo_datos_personales || false,
+                        fecha_respuesta: new Date().toISOString(), // Current timestamp as fallback
+                    });
+                }
+            } catch (error) {
+                console.error(`Error loading profile field value for question ${pregunta.id}:`, error);
+            }
+        }
+
+        return profileFieldResponses;
+    };
+
     const fetchCuestionarioData = async (cuestionarioId) => {
         if (!cuestionarioId || !usuarioId) return;
 
@@ -66,13 +137,19 @@ const CuestionarioReportView = ({
             const cuestionarioResponse = await api.get(`/api/cuestionarios/${cuestionarioId}/`);
             setCuestionarioData(cuestionarioResponse.data);
 
+            // Fetch regular questionnaire responses
             const respuestasResponse = await api.get(
                 `/api/cuestionarios/usuario/respuestas-unlocked-path/?cuestionario_id=${cuestionarioId}&usuario_id=${usuarioId}`
             );
-            // console.log("🔍 Debug - Respuestas Response:", respuestasResponse.data);
-            setRespuestas(respuestasResponse.data);
 
-            groupQuestionsBySection(cuestionarioResponse.data.preguntas, respuestasResponse.data);
+            // Fetch profile field values for questions that have profile_field_path
+            const profileFieldResponses = await fetchProfileFieldResponses(cuestionarioResponse.data.preguntas);
+
+            // Merge regular responses with profile field responses
+            const mergedResponses = [...respuestasResponse.data, ...profileFieldResponses];
+
+            setRespuestas(mergedResponses);
+            groupQuestionsBySection(cuestionarioResponse.data.preguntas, mergedResponses);
 
         } catch (error) {
             console.error("Error fetching questionnaire data:", error);
@@ -82,7 +159,6 @@ const CuestionarioReportView = ({
     };
 
     const groupQuestionsBySection = (preguntas, respuestasData) => {
-        // console.log("🔍 Debug - Respuestas Data length:", respuestasData.length);
 
         const respuestasMap = new Map();
         respuestasData.forEach(r => {
@@ -92,7 +168,6 @@ const CuestionarioReportView = ({
             }
         });
 
-        // console.log("🔍 Debug - Respuestas Map size:", respuestasMap.size);
 
         // Just create a single section with all questions in order
         const questionsWithResponses = preguntas
@@ -106,7 +181,6 @@ const CuestionarioReportView = ({
             "Todas las Preguntas": questionsWithResponses
         };
 
-        // console.log("🔍 Debug - Grouped Questions:", grouped);
         setGroupedQuestions(grouped);
     };
 
