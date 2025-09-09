@@ -3,7 +3,7 @@
 // Dashboard completo para gestión de empleo del candidato
 // ==========================================
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Box,
   Typography,
@@ -12,7 +12,7 @@ import {
   Avatar,
   Chip,
   Divider,
-  Grid2 as Grid,
+  Grid,
   Card,
   CardContent,
   CardActions,
@@ -119,6 +119,8 @@ const importanceLabels = {
 
 const EmploymentDashboard = () => {
   useDocumentTitle('Expediente de Empleo')
+
+  const targetRef = useRef(null);
 
   const { uid } = useParams();
   const navigate = useNavigate();
@@ -336,6 +338,17 @@ const EmploymentDashboard = () => {
       default: return { icon: <InfoOutlinedIcon fontSize="small" />, color: theme.palette.info.main };
     }
   };
+
+  // Watch for comments being opened
+  useEffect(() => {
+    // Find the first jobId where comments are open
+    const openJobId = Object.keys(showComments).find(id => showComments[id]);
+
+    if (openJobId && targetRef.current) {
+      targetRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [showComments]);
+
 
   const toggleComments = (jobHistoryId) => {
     setShowComments(prev => ({
@@ -897,7 +910,7 @@ const EmploymentDashboard = () => {
 
               {/* Comments Section */}
               {showComments[currentJob.id] && (
-                <Box sx={{ mt: 3, borderTop: `1px solid ${theme.palette.divider}`, pt: 3 }}>
+                <Box ref={targetRef} sx={{ mt: 3, borderTop: `1px solid ${theme.palette.divider}`, pt: 3 }}>
                   <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
                     <AddCommentIcon color="primary" />
                     Observaciones
