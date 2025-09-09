@@ -167,6 +167,7 @@ class EmployerSerializer(serializers.ModelSerializer):
         allow_null=True
     )
     company_name = serializers.CharField(source='company.name', read_only=True)
+    company_logo = SASImageField(source="company.logo", read_only=True)
     company_details = CompanySerializer(source='company', read_only=True)
     nombre_completo = serializers.SerializerMethodField()
 
@@ -176,7 +177,7 @@ class EmployerSerializer(serializers.ModelSerializer):
             'id',
             'email', 'first_name', 'last_name', 'is_active',
             'password',
-            'company', 'company_name', 'company_details',
+            'company', 'company_name', 'company_logo', 'company_details',
             'nombre_completo',
         ]
 

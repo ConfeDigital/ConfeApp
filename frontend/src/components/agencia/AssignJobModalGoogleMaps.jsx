@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, FormControl, InputLabel, Select, MenuItem, Alert,
-  Typography, Box, Grid, Chip, LinearProgress, Accordion, 
+  Typography, Box, Grid, Chip, LinearProgress, Accordion,
   AccordionSummary, AccordionDetails, List, ListItem, ListItemText, Divider
 } from '@mui/material';
 import { ExpandMore as ExpandMoreIcon, Star as StarIcon } from '@mui/icons-material';
@@ -110,8 +110,8 @@ const AssignJobModal = ({ open, candidate, availableJobs, onClose, onAssigned })
     );
     const candPromise = candidate?.domicile
       ? getCoordinates(candidate.domicile, geocoder)
-          .then(pos => ({ id: 'cand', position: pos }))
-          .catch(() => null)
+        .then(pos => ({ id: 'cand', position: pos }))
+        .catch(() => null)
       : Promise.resolve(null);
     Promise.all([...jobPromises, candPromise])
       .then(arr => setMarkers(arr.filter(x => x)));
@@ -317,7 +317,7 @@ const AssignJobModal = ({ open, candidate, availableJobs, onClose, onAssigned })
                   <StarIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
                   Análisis de Coincidencia
                 </Typography>
-                
+
                 {loadingMatching ? (
                   <Box display="flex" alignItems="center" gap={2}>
                     <LinearProgress sx={{ flexGrow: 1 }} />
@@ -464,12 +464,24 @@ const AssignJobModal = ({ open, candidate, availableJobs, onClose, onAssigned })
                       position={hoveredMarker.position}
                       onCloseClick={() => setHoveredMarker(null)}
                     >
-                      <Box sx={{ maxWidth: 200 }}>
-                        <Typography variant="subtitle2" color='black'>
-                          <strong>{availableJobs.find(j => j.id === hoveredMarker.id)?.name}</strong>
-                        </Typography>
-                        <Typography variant="body2" color='black'>
-                          {availableJobs.find(j => j.id === hoveredMarker.id)?.company_name}
+                      <Box sx={{ maxWidth: 220 }}>
+                        <Box display="flex" alignItems="center" gap={1} mb={1}>
+                          <img
+                            src={availableJobs.find(j => j.id === hoveredMarker.id)?.company_logo}
+                            alt="Company Logo"
+                            style={{
+                              width: 40,
+                              height: 40,
+                              objectFit: "contain",
+                              borderRadius: "50%",
+                            }}
+                          />
+                          <Typography variant="body2" color="black">
+                            {availableJobs.find(j => j.id === hoveredMarker.id)?.company_name}
+                          </Typography>
+                        </Box>
+                        <Typography variant="subtitle2" color="black" fontWeight="bold">
+                          {availableJobs.find(j => j.id === hoveredMarker.id)?.name}
                         </Typography>
                       </Box>
                     </InfoWindow>
