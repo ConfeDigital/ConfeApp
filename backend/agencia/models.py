@@ -34,6 +34,7 @@ class Habilidad(models.Model):
 
 class Company(models.Model):
     name = models.CharField(max_length=255, unique=True)
+    logo = models.ImageField(upload_to='company_logos/', null=True, blank=True)
 
     is_active = models.BooleanField(default=True)
 
@@ -41,6 +42,8 @@ class Company(models.Model):
         return self.name
     
 class Location(models.Model):
+    alias = models.CharField(max_length=50, null=True, blank=True)
+
     address_road = models.CharField(max_length=50, null=True, blank=True)
     address_number = models.CharField(max_length=8, null=True, blank=True)
     address_number_int = models.CharField(max_length=8, null=True, blank=True)

@@ -18,7 +18,9 @@ import {
     Divider,
     Chip,
     Autocomplete,
+    InputAdornment,
 } from '@mui/material';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import { useForm, FormProvider } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -115,6 +117,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
             sueldo_base: '',
             prestaciones: '',
             locationForm: {
+                alias: '',
                 address_search: '',
                 address_road: '',
                 address_number: '',
@@ -160,6 +163,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                     sueldo_base: data.sueldo_base || '',
                     prestaciones: data.prestaciones || '',
                     locationForm: {
+                        alias: '',
                         address_search: '',
                         address_road: '',
                         address_number: '',
@@ -197,6 +201,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                     sueldo_base: '',
                     prestaciones: '',
                     locationForm: {
+                        alias: '',
                         address_search: '',
                         address_road: '',
                         address_number: '',
@@ -256,6 +261,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
         } else {
             // Clear location form when not creating new
             setValue('locationForm', {
+                alias: '',
                 address_search: '',
                 address_road: '',
                 address_number: '',
@@ -287,7 +293,6 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
 
             const payload = {
                 name: formData.name.trim(),
-                company: formData.company,
                 location_id: locationId,
                 job_description: formData.job_description.trim(),
                 vacancies: formData.vacancies,
@@ -296,6 +301,11 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                 prestaciones: formData.prestaciones?.trim() || '',
                 habilidades_ids: selectedHabilidades.map(h => h.id),
             };
+
+            // Only include company in payload if not editing (to avoid overwriting with null)
+            if (!isEdit) {
+                payload.company = formData.company;
+            }
 
             if (isEdit && data && data.id) {
                 const res = await api.put(`api/agencia/jobs/${data.id}/`, payload);
@@ -406,33 +416,57 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                         />
 
                         {newLocation ? (
-                            <AddressAutoCompleteForm 
-                                key={autocompleteKey} 
-                                prefix="locationForm" 
-                            />
+                            <Box>
+                                <TextField
+                                    margin="normal"
+                                    fullWidth
+                                    label="Alias de la ubicación (opcional)"
+                                    placeholder="Ej: Oficina Principal, Sucursal Norte, etc."
+                                    {...methods.register('locationForm.alias')}
+                                    helperText="Un nombre descriptivo para identificar fácilmente esta ubicación"
+                                />
+                                <AddressAutoCompleteForm 
+                                    key={autocompleteKey} 
+                                    prefix="locationForm" 
+                                />
+                            </Box>
                         ) : (
-                            <FormControl 
-                                fullWidth 
-                                margin="normal" 
-                                error={!!errors.location}
-                            >
-                                <InputLabel id="location-label">Ubicación</InputLabel>
-                                <Select
-                                    labelId="location-label"
-                                    label="Ubicación"
-                                    {...methods.register('location')}
-                                    value={watchedValues.location || ''}
-                                >
-                                    {locations.map((location) => (
-                                        <MenuItem key={location.id} value={location.id}>
-                                            {location.address_city} - {location.address_municip} - {location.address_road} {location.address_number}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                                {errors.location && (
-                                    <FormHelperText>{errors.location.message}</FormHelperText>
+                            <Autocomplete
+                                options={locations}
+                                getOptionLabel={(option) => option.display_name || `${option.address_city} - ${option.address_municip} - ${option.address_road} ${option.address_number}`}
+                                value={locations.find(loc => loc.id === watchedValues.location) || null}
+                                onChange={(event, newValue) => {
+                                    setValue('location', newValue ? newValue.id : '');
+                                    if (newValue) {
+                                        clearErrors('location');
+                                    }
+                                }}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Ubicación"
+                                        margin="normal"
+                                        error={!!errors.location}
+                                        helperText={errors.location?.message}
+                                        placeholder="Buscar ubicación..."
+                                    />
                                 )}
-                            </FormControl>
+                                renderOption={(props, option) => (
+                                    <Box component="li" {...props}>
+                                        <Box>
+                                            <Typography variant="body2" fontWeight="bold">
+                                                {option.alias || `${option.address_road} ${option.address_number || ''}`}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {option.address_col && `${option.address_col}, `}
+                                                {option.address_municip}, {option.address_city}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                )}
+                                noOptionsText="No se encontraron ubicaciones"
+                                isOptionEqualToValue={(option, value) => option.id === value.id}
+                            />
                         )}
 
                         <TextField
@@ -457,6 +491,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                             })}
                             error={!!errors.vacancies}
                             helperText={errors.vacancies?.message}
+                            defaultValue={0}
                             slotProps={{
                                 input: {
                                     inputProps: {
@@ -485,7 +520,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                         <TextField
                             margin="normal"
                             fullWidth
-                            label="Sueldo Base (Mensual)"
+                            label="Sueldo Base (Mensual MXN)"
                             type="number"
                             placeholder="Ej: 15000"
                             {...methods.register('sueldo_base', { 
@@ -498,8 +533,13 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                                 input: {
                                     inputProps: {
                                         min: 0,
-                                        step: 0.01,
+                                        step: 1000,
                                     },
+                                    startAdornment: (
+                                      <InputAdornment position="start">
+                                        <AttachMoneyIcon />
+                                      </InputAdornment>
+                                    ),
                                 },
                             }}
                         />

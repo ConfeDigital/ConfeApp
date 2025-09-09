@@ -199,7 +199,7 @@ export default function Settings() {
   }
 
   return (
-    <Box sx={{ width: "100%", minHeight: "100vh", p: 3 }}>
+    <Box sx={{ width: "100%", p: 3 }}>
       <Grid container spacing={3}>
         {/* Notification Settings */}
         <Grid item xs={12} sm={6}>

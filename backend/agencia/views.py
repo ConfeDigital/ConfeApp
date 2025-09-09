@@ -21,6 +21,19 @@ class LocationViewSet(viewsets.ModelViewSet):
         qs = Location.objects.select_related('company').all()
         if not self.request.user.is_staff and not self.request.user.groups.filter(name='agencia_laboral').exists():
             qs = qs.filter(company=self.request.user.employer.company)
+        
+        # Add search functionality
+        search = self.request.query_params.get('search', None)
+        if search:
+            qs = qs.filter(
+                Q(alias__icontains=search) |
+                Q(address_road__icontains=search) |
+                Q(address_col__icontains=search) |
+                Q(address_municip__icontains=search) |
+                Q(address_city__icontains=search) |
+                Q(address_state__icontains=search)
+            )
+        
         return qs
 
 class CompanyViewSet(viewsets.ModelViewSet):
@@ -98,12 +111,12 @@ class HabilidadViewSet(viewsets.ModelViewSet):
     """
     ViewSet para gestionar las habilidades disponibles en el sistema.
     """
-    queryset = Habilidad.objects.filter(es_activa=True)
+    queryset = Habilidad.objects.all()
     serializer_class = HabilidadSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        qs = Habilidad.objects.filter(es_activa=True)
+        qs = Habilidad.objects.all()
         categoria = self.request.query_params.get('categoria', None)
         if categoria:
             qs = qs.filter(categoria=categoria)

@@ -51,6 +51,7 @@ import SISAids from "./pages/scenes/SISAids";
 import CHAids from "./pages/scenes/CHAids";
 import AgenciaLaboralDashboard from "./pages/scenes/AgenciaLaboral";
 import AdminAgencia from "./pages/scenes/AdminAgencia";
+import HabilidadesEmpleo from "./pages/scenes/HabilidadesEmpleo";
 import CandidateCreate from "./pages/scenes/CandidateCreate";
 import CandidateEdit from "./pages/scenes/CandidateEdit";
 import Settings from "./pages/scenes/Settings";
@@ -296,6 +297,7 @@ function App({ instance }) {
                     <Route path="/agencia-laboral/dashboard" element={<AgenciaLaboralDashboard />} />
                     <Route path="/agencia-laboral/empleo/:jobId" element={<JobCandidatesPage />} />
                     <Route path="/agencia-laboral/administracion" element={<AdminAgencia />} />
+                    <Route path="/agencia-laboral/habilidades" element={<HabilidadesEmpleo />} />
                   </Route>
                 </Routes>
                 <SessionExpiredDialog
