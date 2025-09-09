@@ -24,6 +24,7 @@ class JobHistoryCommentSerializer(serializers.ModelSerializer):
 # --- MODIFIED: JobHistorySerializer ---
 class JobHistorySerializer(serializers.ModelSerializer):
     candidate = CandidatePrimaryKeyRelatedField(queryset=UserProfile.objects.all())
+    candidate_name = serializers.SerializerMethodField()
     job = JobSerializer(read_only=True)
     job_id = serializers.PrimaryKeyRelatedField(queryset=Job.objects.all(), write_only=True, source='job')
     # Use nested serializer for comments, many=True for multiple comments
@@ -31,9 +32,11 @@ class JobHistorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = JobHistory
-        fields = ['id', 'candidate', 'job', 'job_id', 'start_date', 'end_date', 'comments']
+        fields = ['id', 'candidate', 'candidate_name', 'job', 'job_id', 'start_date', 'end_date', 'comments']
         # 'comments' field is now derived from the related JobHistoryComment objects
 
+    def get_candidate_name(self, obj):
+        return f"{obj.candidate.user.first_name} {obj.candidate.user.last_name} {obj.candidate.user.second_last_name}"
     # If you want to allow creating comments when creating/updating JobHistory,
     # you'll need to define a writeable nested field or handle it explicitly.
     # For simplicity, we'll assume comments are added separately or in a different workflow.
