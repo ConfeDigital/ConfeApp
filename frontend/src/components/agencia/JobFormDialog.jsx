@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Button, TextField, Select, MenuItem, FormControlLabel, Checkbox,
-  FormControl, InputLabel, Box
+  FormControl, InputLabel, Box, Chip, Autocomplete, Typography, Divider
 } from '@mui/material';
 import api from '../../api';
 
@@ -12,7 +12,11 @@ const JobFormDialog = ({ open, data, isEdit, onClose, onSubmit, companies, locat
     company: '',
     location: '',
     job_description: '',
-    vacancies: '0'
+    vacancies: '0',
+    horario: '',
+    sueldo_base: '',
+    prestaciones: '',
+    habilidades_ids: []
   });
   const [newLocation, setNewLocation] = useState(false);
   const [locationFormData, setLocationFormData] = useState({
@@ -26,6 +30,8 @@ const JobFormDialog = ({ open, data, isEdit, onClose, onSubmit, companies, locat
     address_number_int: '',
   });
   const [postalData, setPostalData] = useState(null);
+  const [habilidades, setHabilidades] = useState([]);
+  const [selectedHabilidades, setSelectedHabilidades] = useState([]);
 
   useEffect(() => {
     if (data) {
@@ -34,8 +40,17 @@ const JobFormDialog = ({ open, data, isEdit, onClose, onSubmit, companies, locat
         company: data.company || '',
         location: data.location_details ? data.location_details.id : '',
         job_description: data.job_description,
-        vacancies: data.vacancies.toString()
+        vacancies: data.vacancies.toString(),
+        horario: data.horario || '',
+        sueldo_base: data.sueldo_base || '',
+        prestaciones: data.prestaciones || '',
+        habilidades_ids: data.habilidades_requeridas ? data.habilidades_requeridas.map(h => h.habilidad) : []
       });
+      setSelectedHabilidades(data.habilidades_requeridas ? data.habilidades_requeridas.map(h => ({
+        id: h.habilidad,
+        nombre: h.habilidad_nombre,
+        categoria: h.habilidad_categoria
+      })) : []);
       setNewLocation(false);
     } else {
       setJobFormData({
@@ -43,8 +58,13 @@ const JobFormDialog = ({ open, data, isEdit, onClose, onSubmit, companies, locat
         company: '',
         location: '',
         job_description: '',
-        vacancies: '0'
+        vacancies: '0',
+        horario: '',
+        sueldo_base: '',
+        prestaciones: '',
+        habilidades_ids: []
       });
+      setSelectedHabilidades([]);
       setNewLocation(false);
       setLocationFormData({
         address_PC: '',
@@ -58,6 +78,19 @@ const JobFormDialog = ({ open, data, isEdit, onClose, onSubmit, companies, locat
       });
     }
   }, [data, open]);
+
+  // Cargar habilidades disponibles
+  useEffect(() => {
+    if (open) {
+      api.get('/api/agencia/habilidades/')
+        .then((res) => {
+          setHabilidades(res.data);
+        })
+        .catch((err) => {
+          console.error('Error al cargar habilidades:', err);
+        });
+    }
+  }, [open]);
 
   useEffect(() => {
     if (newLocation && locationFormData.address_PC && locationFormData.address_PC.length === 5) {
@@ -113,7 +146,13 @@ const JobFormDialog = ({ open, data, isEdit, onClose, onSubmit, companies, locat
         // Si no se modificó la ubicación, usar la que ya tenía
         locationId = data.location_details.id;
       }
-      const payload = { ...jobFormData, location_id: locationId };
+      
+      const payload = { 
+        ...jobFormData, 
+        location_id: locationId,
+        habilidades_ids: selectedHabilidades.map(h => h.id)
+      };
+      
       if (isEdit && data && data.id) {
         await api.put(`api/agencia/jobs/${data.id}/`, payload);
       } else {
@@ -289,6 +328,82 @@ const JobFormDialog = ({ open, data, isEdit, onClose, onSubmit, companies, locat
                   },
               },
           }}
+          sx={{ mt: 2 }}
+        />
+        
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="h6" sx={{ mb: 2 }}>Detalles del Empleo</Typography>
+        
+        <TextField
+          label="Horario de Trabajo"
+          name="horario"
+          value={jobFormData.horario}
+          onChange={handleJobFormChange}
+          fullWidth
+          placeholder="Ej: Lunes a Viernes 8:00-17:00"
+          sx={{ mt: 2 }}
+        />
+        
+        <TextField
+          label="Sueldo Base (Mensual)"
+          name="sueldo_base"
+          value={jobFormData.sueldo_base}
+          onChange={handleJobFormChange}
+          fullWidth
+          type="number"
+          placeholder="Ej: 15000"
+          slotProps={{
+              input: {
+                  inputProps: {
+                      min: 0,
+                      step: 0.01,
+                  },
+              },
+          }}
+          sx={{ mt: 2 }}
+        />
+        
+        <TextField
+          label="Prestaciones"
+          name="prestaciones"
+          value={jobFormData.prestaciones}
+          onChange={handleJobFormChange}
+          fullWidth
+          multiline
+          rows={3}
+          placeholder="Ej: Seguro médico, vales de despensa, bonos de productividad"
+          sx={{ mt: 2 }}
+        />
+        
+        <Divider sx={{ my: 2 }} />
+        <Typography variant="h6" sx={{ mb: 2 }}>Habilidades Requeridas</Typography>
+        
+        <Autocomplete
+          multiple
+          options={habilidades}
+          getOptionLabel={(option) => `${option.nombre} (${option.categoria})`}
+          value={selectedHabilidades}
+          onChange={(event, newValue) => {
+            setSelectedHabilidades(newValue);
+          }}
+          renderTags={(value, getTagProps) =>
+            value.map((option, index) => (
+              <Chip
+                variant="outlined"
+                label={`${option.nombre} (${option.categoria})`}
+                {...getTagProps({ index })}
+                key={option.id}
+              />
+            ))
+          }
+          renderInput={(params) => (
+            <TextField
+              {...params}
+              label="Seleccionar Habilidades"
+              placeholder="Buscar y seleccionar habilidades requeridas"
+              helperText="Selecciona las habilidades que requiere este empleo"
+            />
+          )}
           sx={{ mt: 2 }}
         />
       </DialogContent>

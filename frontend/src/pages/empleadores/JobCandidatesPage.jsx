@@ -18,7 +18,16 @@ import {
     useTheme,
     Divider,
     IconButton,
-    Tooltip
+    Tooltip,
+    Grid,
+    Card,
+    CardContent,
+    Chip,
+    Avatar,
+    Stack,
+    TextField,
+    Autocomplete,
+    InputAdornment
 } from '@mui/material';
 import Header from '../../components/Header';
 import useDocumentTitle from "../../hooks/useDocumentTitle";
@@ -31,14 +40,25 @@ import AddCommentIcon from '@mui/icons-material/AddComment'; // For adding comme
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'; // For expanding comments
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'; // For collapsing comments
 import EditIcon from '@mui/icons-material/Edit'; // Icon for editing job
+import SaveIcon from '@mui/icons-material/Save'; // Icon for saving
+import CancelIcon from '@mui/icons-material/Cancel'; // Icon for canceling
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import LocationOnIcon from '@mui/icons-material/LocationOn';
+import AccessTimeIcon from '@mui/icons-material/AccessTime';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import CardGiftcardIcon from '@mui/icons-material/CardGiftcard';
+import WorkIcon from '@mui/icons-material/Work';
+import BusinessIcon from '@mui/icons-material/Business';
+import PeopleIcon from '@mui/icons-material/People';
+import SkillIcon from '@mui/icons-material/Psychology';
+import MapIcon from '@mui/icons-material/Map';
 
 // Assuming you have these models for comments
-import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
 import *as Yup from 'yup';
+import MapModal from '../../components/MapModal'; // adjust path if needed
 
-// Import JobFormDialog for editing job details
-import JobFormDialog from "../../components/agencia/JobFormDialogGoogle";
+// Inline editing for job details
 
 dayjs.locale('es');
 
@@ -48,6 +68,19 @@ const commentTypeDisplayNames = {
     success: 'Éxito',
     warning: 'Advertencia',
     error: 'Error',
+};
+
+// Mapping for skill importance levels
+const importanceColors = {
+    esencial: '#d32f2f',
+    importante: '#f57c00',
+    deseable: '#388e3c'
+};
+
+const importanceLabels = {
+    esencial: 'Esencial',
+    importante: 'Importante',
+    deseable: 'Deseable'
 };
 
 const JobCandidatesPage = () => {
@@ -72,11 +105,14 @@ const JobCandidatesPage = () => {
     // State to manage visibility of comments for each candidate
     const [showComments, setShowComments] = useState({});
 
-    // States for Job editing dialog
-    const [jobDialogOpen, setJobDialogOpen] = useState(false);
-    const [jobDialogData, setJobDialogData] = useState(null);
-    const [isJobEdit, setIsJobEdit] = useState(false);
-    const [companies, setCompanies] = useState([]); // State to hold companies for JobFormDialog
+    // States for inline job editing
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedJob, setEditedJob] = useState({});
+    const [habilidades, setHabilidades] = useState([]);
+    const [selectedHabilidades, setSelectedHabilidades] = useState([]);
+    const [saving, setSaving] = useState(false);
+
+    const [mapOpen, setMapOpen] = useState(false);
 
     // Backend endpoint for job with assigned candidates
     const jobAssignedCandidatesURL = `/api/agencia/jobs/${jobId}/assigned-candidates/`;
@@ -84,13 +120,13 @@ const JobCandidatesPage = () => {
     const commentsURL = `/api/candidatos/employment/comments/`;
     // Backend endpoint for JobHistory (to fetch it for commenting)
     const jobHistoryURL = `/api/candidatos/historial-empleos/`;
-    // Backend endpoint for companies (needed for JobFormDialog)
-    const companiesURL = "/api/agencia/companies/";
+    // Backend endpoint for habilidades
+    const habilidadesURL = "/api/agencia/habilidades/";
 
 
     const commentSchema = Yup.object({
-        comment_text: Yup.string().required('El comentario no puede estar vacío').max(1000, 'El comentario es demasiado largo'),
-        type: Yup.string().oneOf(['info', 'success', 'warning', 'error']).required('Debe seleccionar un tipo de comentario'),
+        comment_text: Yup.string().required('La observación no puede estar vacía').max(1000, 'La observación es demasiado larga'),
+        type: Yup.string().oneOf(['info', 'success', 'warning', 'error']).required('Debe seleccionar un tipo de observación'),
     });
 
     /**
@@ -109,21 +145,40 @@ const JobCandidatesPage = () => {
     };
 
     /**
-     * Fetches the job data including assigned candidates and also the list of companies from the backend.
+     * Fetches the job data including assigned candidates and habilidades.
      */
     const fetchJobData = async () => {
         setLoading(true);
         setError(null);
         try {
-            const [jobRes, companiesRes] = await Promise.all([
+            const [jobRes, habilidadesRes] = await Promise.all([
                 axios.get(jobAssignedCandidatesURL),
-                axios.get(companiesURL), // Fetch companies for JobFormDialog
+                axios.get(habilidadesURL),
             ]);
             setJobData(jobRes.data);
-            setCompanies(companiesRes.data); // Set companies state
+            setHabilidades(habilidadesRes.data);
+
+            // Set selected habilidades for editing
+            if (jobRes.data.habilidades_requeridas) {
+                console.log('Habilidades requeridas from backend:', jobRes.data.habilidades_requeridas);
+                console.log('Available habilidades:', habilidadesRes.data);
+
+                const mappedHabilidades = jobRes.data.habilidades_requeridas.map(h => {
+                    // Find the matching habilidad from the available options
+                    const matchingHabilidad = habilidadesRes.data.find(hab => hab.id === h.habilidad);
+                    return matchingHabilidad || {
+                        id: h.habilidad,
+                        nombre: h.habilidad_nombre,
+                        categoria: h.habilidad_categoria
+                    };
+                });
+
+                console.log('Mapped habilidades for selection:', mappedHabilidades);
+                setSelectedHabilidades(mappedHabilidades);
+            }
         } catch (err) {
-            console.error("Error fetching job data, assigned candidates, or companies:", err);
-            setError("No se pudo cargar la información del empleo, los candidatos asignados o las empresas.");
+            console.error("Error fetching job data or habilidades:", err);
+            setError("No se pudo cargar la información del empleo o las habilidades.");
         } finally {
             setLoading(false);
         }
@@ -160,7 +215,7 @@ const JobCandidatesPage = () => {
             }
         } catch (err) {
             console.error("Error fetching job history for comment:", err);
-            setError("Error al preparar el formulario de comentario.");
+            setError("Error al preparar el formulario de observación.");
         }
     };
 
@@ -191,12 +246,12 @@ const JobCandidatesPage = () => {
             // Re-fetch all data to ensure comments are updated
             fetchJobData();
             setOpenCommentDialog(false);
-            setAlert({ severity: "success", message: "Comentario añadido correctamente." });
+            setAlert({ severity: "success", message: "Observación añadida correctamente." });
             // Clear the alert after 3 seconds
             setTimeout(() => setAlert(null), 3000);
         } catch (e) {
             console.error(e);
-            const errorMessage = e.response?.data?.comment_text?.[0] || e.response?.data?.non_field_errors?.[0] || 'Error al añadir comentario';
+            const errorMessage = e.response?.data?.comment_text?.[0] || e.response?.data?.non_field_errors?.[0] || 'Error al añadir observación';
             setCommentErrorMsg(errorMessage);
         }
     };
@@ -213,15 +268,85 @@ const JobCandidatesPage = () => {
     };
 
     /**
-     * Opens the JobFormDialog for editing the current job details.
+     * Starts inline editing mode for the job.
      */
     const handleJobEdit = () => {
-        setIsJobEdit(true);
-        setJobDialogData(jobData); // Pass the current job data to the dialog
-        setJobDialogOpen(true);
+        setIsEditing(true);
+        setEditedJob({
+            name: jobData.name || '',
+            job_description: jobData.job_description || '',
+            vacancies: jobData.vacancies || 0,
+            horario: jobData.horario || '',
+            sueldo_base: jobData.sueldo_base || '',
+            prestaciones: jobData.prestaciones || ''
+        });
     };
 
-    const handleDownload = async ( candidate ) => {
+    /**
+     * Cancels inline editing and resets form.
+     */
+    const handleCancelEdit = () => {
+        setIsEditing(false);
+        setEditedJob({});
+        // Reset selected habilidades to original
+        if (jobData.habilidades_requeridas) {
+            const mappedHabilidades = jobData.habilidades_requeridas.map(h => {
+                // Find the matching habilidad from the available options
+                const matchingHabilidad = habilidades.find(hab => hab.id === h.habilidad);
+                return matchingHabilidad || {
+                    id: h.habilidad,
+                    nombre: h.habilidad_nombre,
+                    categoria: h.habilidad_categoria
+                };
+            });
+            setSelectedHabilidades(mappedHabilidades);
+        }
+    };
+
+    /**
+     * Saves the edited job data.
+     */
+    const handleSaveEdit = async () => {
+        setSaving(true);
+        try {
+            const payload = {
+                name: editedJob.name.trim(),
+                job_description: editedJob.job_description.trim(),
+                vacancies: parseInt(editedJob.vacancies) || 0,
+                horario: editedJob.horario?.trim() || '',
+                sueldo_base: editedJob.sueldo_base ? parseFloat(editedJob.sueldo_base) : null,
+                prestaciones: editedJob.prestaciones?.trim() || '',
+                habilidades_ids: selectedHabilidades.map(h => h.id),
+            };
+
+            await axios.put(`/api/agencia/jobs/${jobId}/`, payload);
+
+            setAlert({ severity: "success", message: "Empleo actualizado correctamente." });
+            setTimeout(() => setAlert(null), 3000);
+
+            setIsEditing(false);
+            fetchJobData(); // Refresh data
+        } catch (error) {
+            console.error("Error updating job:", error);
+            const errorMessage = error.response?.data?.detail || 'Error al actualizar el empleo.';
+            setAlert({ severity: "error", message: errorMessage });
+            setTimeout(() => setAlert(null), 5000);
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    /**
+     * Handles changes in the edit form fields.
+     */
+    const handleEditChange = (field, value) => {
+        setEditedJob(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
+
+    const handleDownload = async (candidate) => {
         setDownloadLoading(true);
         try {
             const downloadResponse = await axios.get(
@@ -253,20 +378,28 @@ const JobCandidatesPage = () => {
         setDownloadLoading(false);
     };
 
+    // Format salary function
+    const formatSalary = (salary) => {
+        if (!salary) return null;
+        return new Intl.NumberFormat('es-MX', {
+            style: 'currency',
+            currency: 'MXN'
+        }).format(salary);
+    };
 
     // Button to navigate back to the jobs page
     const actionBtn = (
-        <Button 
-            variant="outlined" 
+        <Button
+            variant="outlined"
             onClick={() => {
-                if (location.pathname === `/empleador/empleo/${jobId}` ) {
+                if (location.pathname === `/empleador/empleo/${jobId}`) {
                     navigate('/empleador');
                 } else {
                     navigate('/agencia-laboral/administracion');
                 }
                 console.log(location.pathname)
             }
-        }>
+            }>
             Volver a Empleos
         </Button>
     );
@@ -310,29 +443,356 @@ const JobCandidatesPage = () => {
                 </Alert>
             )}
 
-            <Header subtitle={jobData.name} actionButton={actionBtn} />
-            <Paper elevation={1} sx={{ p: 2, mb: 3, borderRadius: '8px' }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                    <Typography variant="h6">Detalles del Empleo</Typography>
-                    <Tooltip title="Editar Empleo">
-                        <IconButton color="primary" onClick={handleJobEdit}>
-                            <EditIcon />
-                        </IconButton>
-                    </Tooltip>
-                </Box>
-                <Typography><strong>Empresa:</strong> {jobData.company_name}</Typography>
-                <Typography><strong>Descripción:</strong> {jobData.job_description || 'N/A'}</Typography>
-                <Typography><strong>Vacantes:</strong> {jobData.vacancies || 'Indefinido'}</Typography>
-                <Typography><strong>Ubicación:</strong>
-                    {jobData.location_details
-                        ? `${jobData.location_details.address_road} ${jobData.location_details.address_number || ''}, ${jobData.location_details.address_municip || ''}, ${jobData.location_details.address_city || ''}`
-                        : 'N/A'}
-                </Typography>
-            </Paper>
+            <Header actionButton={actionBtn} />
 
-            <Typography variant="h6" gutterBottom>Candidatos Asignados Actualmente ({jobData.assigned_candidates.length})</Typography>
+            {/* Enhanced Job Details Section */}
+            <Card
+                elevation={3}
+                sx={{
+                    mb: 4,
+                    borderRadius: 3,
+                    background: `linear-gradient(135deg, ${theme.palette.primary.main}10 0%, ${theme.palette.secondary.main}05 100%)`,
+                    border: `1px solid ${theme.palette.primary.main}20`
+                }}
+            >
+                <CardContent sx={{ p: 3 }}>
+                    {/* Header with Company Info and Edit Button */}
+                    <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={3}>
+                        <Box display="flex" alignItems="center" gap={2} flex={1} mr={2}>
+                            {/* Company Logo */}
+                            <Avatar
+                                src={jobData.company_logo}
+                                sx={{
+                                    width: 64,
+                                    height: 64,
+                                    border: `2px solid ${theme.palette.primary.main}30`
+                                }}
+                            >
+                                <BusinessIcon sx={{ fontSize: 32 }} />
+                            </Avatar>
+                            <Box flex={1}>
+                                {isEditing ? (
+                                    <TextField
+                                        fullWidth
+                                        variant="outlined"
+                                        value={editedJob.name}
+                                        onChange={(e) => handleEditChange('name', e.target.value)}
+                                        sx={{ mb: 1 }}
+                                        inputProps={{ style: { fontSize: '2rem', fontWeight: 'bold' } }}
+                                    />
+                                ) : (
+                                    <Typography variant="h4" fontWeight="bold" color="primary">
+                                        {jobData.name}
+                                    </Typography>
+                                )}
+                                <Typography variant="h6" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <BusinessIcon fontSize="small" />
+                                    {jobData.company_name}
+                                </Typography>
+                            </Box>
+                        </Box>
+
+                        {/* Edit/Save/Cancel Buttons */}
+                        <Box display="flex" gap={1}>
+                            {isEditing ? (
+                                <>
+                                    <Tooltip title="Guardar Cambios">
+                                        <IconButton
+                                            color="success"
+                                            onClick={handleSaveEdit}
+                                            disabled={saving}
+                                            sx={{
+                                                backgroundColor: theme.palette.success.main + '10',
+                                                '&:hover': {
+                                                    backgroundColor: theme.palette.success.main + '20'
+                                                }
+                                            }}
+                                        >
+                                            <SaveIcon />
+                                        </IconButton>
+                                    </Tooltip>
+                                    <Tooltip title="Cancelar">
+                                        <IconButton
+                                            color="error"
+                                            onClick={handleCancelEdit}
+                                            disabled={saving}
+                                            sx={{
+                                                backgroundColor: theme.palette.error.main + '10',
+                                                '&:hover': {
+                                                    backgroundColor: theme.palette.error.main + '20'
+                                                }
+                                            }}
+                                        >
+                                            <CancelIcon />
+                                        </IconButton>
+                                    </Tooltip>
+                                </>
+                            ) : (
+                                <Tooltip title="Editar Empleo">
+                                    <IconButton
+                                        color="primary"
+                                        onClick={handleJobEdit}
+                                        sx={{
+                                            backgroundColor: theme.palette.primary.main + '10',
+                                            '&:hover': {
+                                                backgroundColor: theme.palette.primary.main + '20'
+                                            }
+                                        }}
+                                    >
+                                        <EditIcon />
+                                    </IconButton>
+                                </Tooltip>
+                            )}
+                        </Box>
+                    </Box>
+
+                    {/* Job Details Grid */}
+                    <Grid container spacing={3}>
+                        {/* Job Description */}
+                        <Grid item xs={12}>
+                            <Paper
+                                elevation={1}
+                                sx={{
+                                    p: 2,
+                                    borderRadius: 2,
+                                    backgroundColor: theme.palette.background.default,
+                                    border: `1px solid ${theme.palette.divider}`
+                                }}
+                            >
+                                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <WorkIcon color="primary" />
+                                    Descripción del Puesto
+                                </Typography>
+                                {isEditing ? (
+                                    <TextField
+                                        fullWidth
+                                        multiline
+                                        rows={4}
+                                        variant="outlined"
+                                        value={editedJob.job_description}
+                                        onChange={(e) => handleEditChange('job_description', e.target.value)}
+                                        placeholder="Descripción del puesto"
+                                    />
+                                ) : (
+                                    <Typography variant="body1" color="text.secondary">
+                                        {jobData.job_description || 'No hay descripción disponible'}
+                                    </Typography>
+                                )}
+                            </Paper>
+                        </Grid>
+
+                        {/* Key Information Cards */}
+                        <Grid item xs={12} md={6}>
+                            <Paper elevation={1} sx={{ p: 2, borderRadius: 2, height: '100%' }}>
+                                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <LocationOnIcon color="primary" />
+                                    Ubicación
+                                </Typography>
+                                <Box display="flex" alignItems="center" gap={2}>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {jobData.location_details
+                                            ? `${jobData.location_details.address_road} ${jobData.location_details.address_number || ''}, ${jobData.location_details.address_col || ''}, ${jobData.location_details.address_municip || ''}, ${jobData.location_details.address_city || ''}`
+                                            : 'Ubicación no especificada'}
+                                    </Typography>
+                                    {jobData.location_details?.address_lat && jobData.location_details?.address_lng && (
+                                        <Button
+                                            variant="outlined"
+                                            size="small"
+                                            onClick={() => setMapOpen(true)}
+                                            endIcon={<MapIcon />}
+                                        >
+                                            Ver Mapa
+                                        </Button>
+                                    )}
+                                </Box>
+                            </Paper>
+                        </Grid>
+
+                        <Grid item xs={12} md={6}>
+                            <Paper elevation={1} sx={{ p: 2, borderRadius: 2, height: '100%' }}>
+                                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <PeopleIcon color="primary" />
+                                    Vacantes Disponibles
+                                </Typography>
+                                {isEditing ? (
+                                    <TextField
+                                        type="number"
+                                        variant="outlined"
+                                        value={editedJob.vacancies}
+                                        onChange={(e) => handleEditChange('vacancies', e.target.value)}
+                                        inputProps={{ min: 0, max: 999 }}
+                                        sx={{ width: '120px' }}
+                                    />
+                                ) : (
+                                    <Typography variant="h4" color="primary" fontWeight="bold">
+                                        {jobData.vacancies || 'Indefinido'}
+                                    </Typography>
+                                )}
+                            </Paper>
+                        </Grid>
+
+                        {/* Additional Job Information */}
+                        {(jobData.horario || isEditing) && (
+                            <Grid item xs={12} md={6}>
+                                <Paper elevation={1} sx={{ p: 2, borderRadius: 2, height: '100%' }}>
+                                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <AccessTimeIcon color="primary" />
+                                        Horario
+                                    </Typography>
+                                    {isEditing ? (
+                                        <TextField
+                                            fullWidth
+                                            variant="outlined"
+                                            value={editedJob.horario}
+                                            onChange={(e) => handleEditChange('horario', e.target.value)}
+                                            placeholder="Ej: Lunes a Viernes 8:00-17:00"
+                                        />
+                                    ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                            {jobData.horario}
+                                        </Typography>
+                                    )}
+                                </Paper>
+                            </Grid>
+                        )}
+
+                        {(jobData.sueldo_base || isEditing) && (
+                            <Grid item xs={12} md={6}>
+                                <Paper elevation={1} sx={{ p: 2, borderRadius: 2, height: '100%' }}>
+                                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <AttachMoneyIcon color="primary" />
+                                        Sueldo Base (Mensual MXN)
+                                    </Typography>
+                                    {isEditing ? (
+                                        <TextField
+                                            type="number"
+                                            variant="outlined"
+                                            value={editedJob.sueldo_base}
+                                            onChange={(e) => handleEditChange('sueldo_base', e.target.value)}
+                                            placeholder="15000"
+                                            InputProps={{
+                                                startAdornment: (
+                                                    <InputAdornment position="start">
+                                                        <AttachMoneyIcon />
+                                                    </InputAdornment>
+                                                ),
+                                            }}
+                                            sx={{ width: '200px' }}
+                                        />
+                                    ) : (
+                                        <Typography variant="h5" color="success.main" fontWeight="bold">
+                                            {formatSalary(jobData.sueldo_base)}
+                                        </Typography>
+                                    )}
+                                </Paper>
+                            </Grid>
+                        )}
+
+                        {/* Benefits */}
+                        {(jobData.prestaciones || isEditing) && (
+                            <Grid item xs={12}>
+                                <Paper elevation={1} sx={{ p: 2, borderRadius: 2 }}>
+                                    <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <CardGiftcardIcon color="primary" />
+                                        Prestaciones
+                                    </Typography>
+                                    {isEditing ? (
+                                        <TextField
+                                            fullWidth
+                                            multiline
+                                            rows={3}
+                                            variant="outlined"
+                                            value={editedJob.prestaciones}
+                                            onChange={(e) => handleEditChange('prestaciones', e.target.value)}
+                                            placeholder="Ej: Seguro médico, vales de despensa, bonos de productividad"
+                                        />
+                                    ) : (
+                                        <Typography variant="body2" color="text.secondary">
+                                            {jobData.prestaciones}
+                                        </Typography>
+                                    )}
+                                </Paper>
+                            </Grid>
+                        )}
+
+                        {/* Required Skills */}
+                        <Grid item xs={12}>
+                            <Paper elevation={1} sx={{ p: 2, borderRadius: 2 }}>
+                                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <SkillIcon color="primary" />
+                                    Habilidades Requeridas
+                                </Typography>
+                                {isEditing ? (
+                                    <Autocomplete
+                                        multiple
+                                        options={habilidades}
+                                        getOptionLabel={(option) => `${option.nombre} (${option.categoria})`}
+                                        value={selectedHabilidades}
+                                        onChange={(event, newValue) => {
+                                            console.log('Autocomplete onChange:', newValue);
+                                            setSelectedHabilidades(newValue);
+                                        }}
+                                        isOptionEqualToValue={(option, value) => option.id === value.id}
+                                        renderTags={(value, getTagProps) =>
+                                            value.map((option, index) => (
+                                                <Chip
+                                                    variant="outlined"
+                                                    label={`${option.nombre} (${option.categoria})`}
+                                                    {...getTagProps({ index })}
+                                                    key={option.id}
+                                                />
+                                            ))
+                                        }
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                placeholder="Buscar y seleccionar habilidades requeridas"
+                                                variant="outlined"
+                                            />
+                                        )}
+                                    />
+                                ) : (
+                                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                        {jobData.habilidades_requeridas && jobData.habilidades_requeridas.length > 0 ? (
+                                            jobData.habilidades_requeridas.map((habilidad, index) => (
+                                                <Chip
+                                                    key={index}
+                                                    label={`${habilidad.nombre} - ${importanceLabels[habilidad.nivel_importancia] || habilidad.nivel_importancia}`}
+                                                    variant="outlined"
+                                                    size="small"
+                                                    sx={{
+                                                        borderColor: importanceColors[habilidad.nivel_importancia] || theme.palette.primary.main,
+                                                        color: importanceColors[habilidad.nivel_importancia] || theme.palette.primary.main,
+                                                        mb: 1
+                                                    }}
+                                                />
+                                            ))
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">
+                                                No hay habilidades específicas requeridas
+                                            </Typography>
+                                        )}
+                                    </Stack>
+                                )}
+                            </Paper>
+                        </Grid>
+                    </Grid>
+                </CardContent>
+            </Card>
+
+            {/* Candidates Section */}
+            <Typography variant="h5" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1, fontWeight: 'bold' }}>
+                <PersonIcon color="primary" />
+                Candidatos Asignados Actualmente ({jobData.assigned_candidates.length})
+            </Typography>
+
             {jobData.assigned_candidates.length === 0 ? (
-                <Typography color="text.secondary">No hay candidatos actualmente asignados a este empleo.</Typography>
+                <Paper elevation={1} sx={{ p: 3, textAlign: 'center', borderRadius: 2 }}>
+                    <PersonIcon sx={{ fontSize: 64, color: theme.palette.text.disabled, mb: 2 }} />
+                    <Typography color="text.secondary" variant="h6">
+                        No hay candidatos actualmente asignados a este empleo.
+                    </Typography>
+                </Paper>
             ) : (
                 <List>
                     {jobData.assigned_candidates.map(candidate => (
@@ -351,7 +811,7 @@ const JobCandidatesPage = () => {
                                             <PictureAsPdfIcon />
                                         </IconButton>
                                     </Tooltip>
-                                    <Tooltip title="Añadir Comentario al Candidato">
+                                    <Tooltip title="Añadir Observación al Candidato">
                                         <IconButton
                                             color="primary"
                                             onClick={() => openAddCommentDialog(candidate.id)}
@@ -361,7 +821,7 @@ const JobCandidatesPage = () => {
                                     </Tooltip>
                                     {/* Toggle button for comments */}
                                     {candidate.current_job_history_comments && candidate.current_job_history_comments.length > 0 && (
-                                        <Tooltip title={showComments[candidate.id] ? "Ocultar Comentarios" : "Ver Comentarios"}>
+                                        <Tooltip title={showComments[candidate.id] ? "Ocultar Observaciones" : "Ver Observaciones"}>
                                             <IconButton onClick={() => toggleComments(candidate.id)}>
                                                 {showComments[candidate.id] ? <ExpandLessIcon /> : <ExpandMoreIcon />}
                                             </IconButton>
@@ -379,7 +839,7 @@ const JobCandidatesPage = () => {
                             {/* Display comments if showComments is true for this candidate */}
                             {showComments[candidate.id] && candidate.current_job_history_comments && candidate.current_job_history_comments.length > 0 && (
                                 <Box sx={{ mt: 2, borderTop: `1px solid ${theme.palette.divider}`, pt: 2 }}>
-                                    <Typography variant="subtitle1" gutterBottom>Comentarios:</Typography>
+                                    <Typography variant="subtitle1" gutterBottom>Observaciones:</Typography>
                                     {candidate.current_job_history_comments
                                         .sort((a, b) => dayjs(b.created_at).diff(dayjs(a.created_at))) // Sort by most recent
                                         .map(comment => {
@@ -404,7 +864,7 @@ const JobCandidatesPage = () => {
                             {/* If no comments and comments are shown, display a message */}
                             {showComments[candidate.id] && (!candidate.current_job_history_comments || candidate.current_job_history_comments.length === 0) && (
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
-                                    No hay comentarios para este candidato en este empleo.
+                                    No hay observaciones para este candidato en este empleo.
                                 </Typography>
                             )}
                         </Paper>
@@ -414,11 +874,11 @@ const JobCandidatesPage = () => {
 
             {/* New Comment Add Dialog (reused from CandidateJobHistoryPage) */}
             <Dialog open={openCommentDialog} onClose={() => setOpenCommentDialog(false)} fullWidth maxWidth="sm">
-                <DialogTitle>Añadir Comentario a Historial de {jobHistoryForComment?.candidate_name}</DialogTitle>
+                <DialogTitle>Añadir Observación a Historial de {jobHistoryForComment?.candidate_name}</DialogTitle>
                 <DialogContent>
                     {commentErrorMsg && <Alert severity="error" sx={{ mb: 2 }}>{commentErrorMsg}</Alert>}
                     <TextField
-                        label="Comentario"
+                        label="Observación"
                         name="comment_text"
                         value={commentFormData.comment_text}
                         onChange={handleCommentFormChange}
@@ -431,12 +891,12 @@ const JobCandidatesPage = () => {
                         helperText={commentErrorMsg} // Display generic error message
                     />
                     <FormControl fullWidth margin="dense">
-                        <InputLabel id="comment-type-label">Tipo de Comentario</InputLabel>
+                        <InputLabel id="comment-type-label">Tipo de Observación</InputLabel>
                         <Select
                             labelId="comment-type-label"
                             name="type"
                             value={commentFormData.type}
-                            label="Tipo de Comentario"
+                            label="Tipo de Observación"
                             onChange={handleCommentFormChange}
                         >
                             <MenuItem value="info">Información</MenuItem>
@@ -449,33 +909,31 @@ const JobCandidatesPage = () => {
                 <DialogActions>
                     <Button onClick={() => setOpenCommentDialog(false)} color='secondary'>Cancelar</Button>
                     <Button variant="contained" onClick={submitCommentForm}>
-                        Añadir Comentario
+                        Añadir Observación
                     </Button>
                 </DialogActions>
             </Dialog>
 
-            {/* Job Edit Dialog */}
-            <JobFormDialog
-                open={jobDialogOpen}
-                data={jobDialogData}
-                isEdit={isJobEdit}
-                onClose={() => setJobDialogOpen(false)}
-                onSubmit={() => {
-                    setJobDialogOpen(false);
-                    fetchJobData(); // Re-fetch job data to show updated details
-                    setAlert({ severity: "success", message: "Empleo actualizado correctamente." });
-                    setTimeout(() => setAlert(null), 3000);
-                }}
-                companies={companies} // Pass the fetched companies list
-                // setJobs prop is not needed here as we only display a single job
-                setAlert={setAlert} // Pass alert handler
-            />
+
             <Backdrop
                 sx={{ color: '#fff', zIndex: (theme) => theme.zIndex.modal + 2 }}
-                open={downloadLoading}
+                open={downloadLoading || saving}
             >
                 <CircularProgress color="inherit" />
+                {saving && (
+                    <Typography variant="h6" sx={{ ml: 2 }}>
+                        Guardando cambios...
+                    </Typography>
+                )}
             </Backdrop>
+
+            <MapModal
+                open={mapOpen}
+                onClose={() => setMapOpen(false)}
+                lat={jobData.location_details?.address_lat}
+                lng={jobData.location_details?.address_lng}
+                label="Ubicación del Candidato"
+            />
         </Box>
     );
 };

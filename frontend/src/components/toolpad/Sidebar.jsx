@@ -224,12 +224,21 @@ const Sidebar = forwardRef((props, ref) => {
             </SubMenu>
 
             {hasGroup("agencia_laboral") && (
-              <Item
-                title="Agencia Laboral"
-                to="/agencia-laboral/administracion"
+              <SubMenu
+                label="Agencia Laboral"
                 icon={<BusinessCenterOutlinedIcon />}
-                selected={selected}
-              />
+              >
+                <Item
+                  title="Administración"
+                  to="/agencia-laboral/administracion"
+                  selected={selected}
+                />
+                <Item
+                  title="Habilidades"
+                  to="/agencia-laboral/habilidades"
+                  selected={selected}
+                />
+              </SubMenu>
             )}
 
             {hasGroup("admin") && (

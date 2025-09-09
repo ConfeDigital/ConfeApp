@@ -13,7 +13,14 @@ import {
     FormControlLabel,
     Checkbox,
     FormHelperText,
+    Box,
+    Typography,
+    Divider,
+    Chip,
+    Autocomplete,
+    InputAdornment,
 } from '@mui/material';
+import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import { useForm, FormProvider } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import * as yup from 'yup';
@@ -60,6 +67,23 @@ const jobValidationSchema = yup.object().shape({
         .integer('Las vacantes deben ser un número entero')
         .required('Las vacantes son obligatorias'),
     
+    horario: yup
+        .string()
+        .max(255, 'El horario no puede exceder 255 caracteres')
+        .optional(),
+    
+    sueldo_base: yup
+        .number()
+        .typeError('El sueldo base debe ser un número')
+        .min(0, 'El sueldo base no puede ser negativo')
+        .max(999999.99, 'El sueldo base no puede exceder 999,999.99')
+        .optional(),
+    
+    prestaciones: yup
+        .string()
+        .max(2000, 'Las prestaciones no pueden exceder 2000 caracteres')
+        .optional(),
+    
     // Conditional location form validation when creating new location
     locationForm: yup
         .object()
@@ -74,6 +98,8 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
     const [locations, setLocations] = useState([]);
     const [newLocation, setNewLocation] = useState(false);
     const [autocompleteKey, setAutocompleteKey] = useState(0);
+    const [habilidades, setHabilidades] = useState([]);
+    const [selectedHabilidades, setSelectedHabilidades] = useState([]);
 
     const methods = useForm({
         resolver: yupResolver(jobValidationSchema),
@@ -87,7 +113,11 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
             location: '',
             job_description: '',
             vacancies: 0,
+            horario: '',
+            sueldo_base: '',
+            prestaciones: '',
             locationForm: {
+                alias: '',
                 address_search: '',
                 address_road: '',
                 address_number: '',
@@ -121,6 +151,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
     useEffect(() => {
         if (open) {
             fetchLocations();
+            fetchHabilidades();
             if (isEdit && data) {
                 reset({
                     name: data.name || '',
@@ -128,7 +159,11 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                     location: data.location_details?.id || data.location || '',
                     job_description: data.job_description || '',
                     vacancies: data.vacancies !== null ? data.vacancies : 0,
+                    horario: data.horario || '',
+                    sueldo_base: data.sueldo_base || '',
+                    prestaciones: data.prestaciones || '',
                     locationForm: {
+                        alias: '',
                         address_search: '',
                         address_road: '',
                         address_number: '',
@@ -144,6 +179,17 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                     }
                 });
                 setNewLocation(false);
+                
+                // Cargar habilidades del empleo si está editando
+                if (data.habilidades_requeridas) {
+                    setSelectedHabilidades(data.habilidades_requeridas.map(h => ({
+                        id: h.habilidad,
+                        nombre: h.habilidad_nombre,
+                        categoria: h.habilidad_categoria
+                    })));
+                } else {
+                    setSelectedHabilidades([]);
+                }
             } else {
                 reset({
                     name: '',
@@ -151,7 +197,11 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                     location: '',
                     job_description: '',
                     vacancies: 0,
+                    horario: '',
+                    sueldo_base: '',
+                    prestaciones: '',
                     locationForm: {
+                        alias: '',
                         address_search: '',
                         address_road: '',
                         address_number: '',
@@ -167,6 +217,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                     }
                 });
                 setNewLocation(false);
+                setSelectedHabilidades([]);
             }
         }
     }, [open, isEdit, data, reset]);
@@ -191,6 +242,15 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
         }
     };
 
+    const fetchHabilidades = async () => {
+        try {
+            const res = await api.get('api/agencia/habilidades/');
+            setHabilidades(res.data);
+        } catch (err) {
+            console.error("Error al obtener habilidades", err);
+        }
+    };
+
     const handleNewLocationChange = (e) => {
         const checked = e.target.checked;
         setNewLocation(checked);
@@ -201,6 +261,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
         } else {
             // Clear location form when not creating new
             setValue('locationForm', {
+                alias: '',
                 address_search: '',
                 address_road: '',
                 address_number: '',
@@ -232,11 +293,19 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
 
             const payload = {
                 name: formData.name.trim(),
-                company: formData.company,
                 location_id: locationId,
                 job_description: formData.job_description.trim(),
                 vacancies: formData.vacancies,
+                horario: formData.horario?.trim() || '',
+                sueldo_base: formData.sueldo_base || null,
+                prestaciones: formData.prestaciones?.trim() || '',
+                habilidades_ids: selectedHabilidades.map(h => h.id),
             };
+
+            // Only include company in payload if not editing (to avoid overwriting with null)
+            if (!isEdit) {
+                payload.company = formData.company;
+            }
 
             if (isEdit && data && data.id) {
                 const res = await api.put(`api/agencia/jobs/${data.id}/`, payload);
@@ -347,33 +416,57 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                         />
 
                         {newLocation ? (
-                            <AddressAutoCompleteForm 
-                                key={autocompleteKey} 
-                                prefix="locationForm" 
-                            />
+                            <Box>
+                                <TextField
+                                    margin="normal"
+                                    fullWidth
+                                    label="Alias de la ubicación (opcional)"
+                                    placeholder="Ej: Oficina Principal, Sucursal Norte, etc."
+                                    {...methods.register('locationForm.alias')}
+                                    helperText="Un nombre descriptivo para identificar fácilmente esta ubicación"
+                                />
+                                <AddressAutoCompleteForm 
+                                    key={autocompleteKey} 
+                                    prefix="locationForm" 
+                                />
+                            </Box>
                         ) : (
-                            <FormControl 
-                                fullWidth 
-                                margin="normal" 
-                                error={!!errors.location}
-                            >
-                                <InputLabel id="location-label">Ubicación</InputLabel>
-                                <Select
-                                    labelId="location-label"
-                                    label="Ubicación"
-                                    {...methods.register('location')}
-                                    value={watchedValues.location || ''}
-                                >
-                                    {locations.map((location) => (
-                                        <MenuItem key={location.id} value={location.id}>
-                                            {location.address_city} - {location.address_municip} - {location.address_road} {location.address_number}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                                {errors.location && (
-                                    <FormHelperText>{errors.location.message}</FormHelperText>
+                            <Autocomplete
+                                options={locations}
+                                getOptionLabel={(option) => option.display_name || `${option.address_city} - ${option.address_municip} - ${option.address_road} ${option.address_number}`}
+                                value={locations.find(loc => loc.id === watchedValues.location) || null}
+                                onChange={(event, newValue) => {
+                                    setValue('location', newValue ? newValue.id : '');
+                                    if (newValue) {
+                                        clearErrors('location');
+                                    }
+                                }}
+                                renderInput={(params) => (
+                                    <TextField
+                                        {...params}
+                                        label="Ubicación"
+                                        margin="normal"
+                                        error={!!errors.location}
+                                        helperText={errors.location?.message}
+                                        placeholder="Buscar ubicación..."
+                                    />
                                 )}
-                            </FormControl>
+                                renderOption={(props, option) => (
+                                    <Box component="li" {...props}>
+                                        <Box>
+                                            <Typography variant="body2" fontWeight="bold">
+                                                {option.alias || `${option.address_road} ${option.address_number || ''}`}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {option.address_col && `${option.address_col}, `}
+                                                {option.address_municip}, {option.address_city}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                )}
+                                noOptionsText="No se encontraron ubicaciones"
+                                isOptionEqualToValue={(option, value) => option.id === value.id}
+                            />
                         )}
 
                         <TextField
@@ -398,6 +491,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                             })}
                             error={!!errors.vacancies}
                             helperText={errors.vacancies?.message}
+                            defaultValue={0}
                             slotProps={{
                                 input: {
                                     inputProps: {
@@ -408,6 +502,90 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                                 },
                             }}
                             sx={{ mt: 2 }}
+                        />
+
+                        <Divider sx={{ my: 2 }} />
+                        <Typography variant="h6" sx={{ mb: 2 }}>Detalles del Empleo</Typography>
+
+                        <TextField
+                            margin="normal"
+                            fullWidth
+                            label="Horario de Trabajo"
+                            placeholder="Ej: Lunes a Viernes 8:00-17:00"
+                            {...methods.register('horario')}
+                            error={!!errors.horario}
+                            helperText={errors.horario?.message}
+                        />
+
+                        <TextField
+                            margin="normal"
+                            fullWidth
+                            label="Sueldo Base (Mensual MXN)"
+                            type="number"
+                            placeholder="Ej: 15000"
+                            {...methods.register('sueldo_base', { 
+                                valueAsNumber: true,
+                                setValueAs: (value) => value === '' ? null : parseFloat(value)
+                            })}
+                            error={!!errors.sueldo_base}
+                            helperText={errors.sueldo_base?.message}
+                            slotProps={{
+                                input: {
+                                    inputProps: {
+                                        min: 0,
+                                        step: 1000,
+                                    },
+                                    startAdornment: (
+                                      <InputAdornment position="start">
+                                        <AttachMoneyIcon />
+                                      </InputAdornment>
+                                    ),
+                                },
+                            }}
+                        />
+
+                        <TextField
+                            margin="normal"
+                            fullWidth
+                            multiline
+                            rows={3}
+                            label="Prestaciones"
+                            placeholder="Ej: Seguro médico, vales de despensa, bonos de productividad"
+                            {...methods.register('prestaciones')}
+                            error={!!errors.prestaciones}
+                            helperText={errors.prestaciones?.message}
+                        />
+
+                        <Divider sx={{ my: 2 }} />
+                        <Typography variant="h6" sx={{ mb: 2 }}>Habilidades Requeridas</Typography>
+
+                        <Autocomplete
+                            multiple
+                            options={habilidades}
+                            getOptionLabel={(option) => `${option.nombre} (${option.categoria})`}
+                            value={selectedHabilidades}
+                            onChange={(event, newValue) => {
+                                setSelectedHabilidades(newValue);
+                            }}
+                            renderTags={(value, getTagProps) =>
+                                value.map((option, index) => (
+                                    <Chip
+                                        variant="outlined"
+                                        label={`${option.nombre} (${option.categoria})`}
+                                        {...getTagProps({ index })}
+                                        key={option.id}
+                                    />
+                                ))
+                            }
+                            renderInput={(params) => (
+                                <TextField
+                                    {...params}
+                                    label="Seleccionar Habilidades"
+                                    placeholder="Buscar y seleccionar habilidades requeridas"
+                                    helperText="Selecciona las habilidades que requiere este empleo"
+                                    margin="normal"
+                                />
+                            )}
                         />
                     </DialogContent>
                     <DialogActions>

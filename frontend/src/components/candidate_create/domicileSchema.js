@@ -1,6 +1,7 @@
 import * as yup from "yup";
 
 const domicileSchema = yup.object().shape({
+  alias: yup.string().max(50, "El alias es demasiado largo").nullable(),
   address_road: yup.string().max(50, "La calle es demasiado larga").required("La calle es requerida"),
   address_number: yup.string().max(8, "El número es demasiado largo").required("El número es requerido"),
   address_number_int: yup.string().max(8, "El número interior es demasiado largo").nullable(),

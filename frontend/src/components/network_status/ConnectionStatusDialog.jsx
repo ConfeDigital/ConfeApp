@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -9,10 +9,12 @@ import {
   Button,
   Alert,
   Snackbar,
+  IconButton, // Import IconButton
 } from '@mui/material';
 import WifiOffIcon from '@mui/icons-material/WifiOff';
 import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
 import RefreshIcon from '@mui/icons-material/Refresh';
+import SyncProblemIcon from '@mui/icons-material/SyncProblem'; // Icon for limited connection
 import { useConnectionStatus } from '../../hooks/useConnectionStatus';
 import { useSelector } from 'react-redux';
 
@@ -27,21 +29,32 @@ const ConnectionStatusDialog = () => {
     isConnected,
     hasRealTimeConnection
   } = useConnectionStatus();
-  
+
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
+  const [isSnackbarOpen, setIsSnackbarOpen] = useState(true);
+
+  // Determine if the subtle icon should be shown
+  const shouldShowSubtleWarning = isAuthenticated && isConnected && !hasRealTimeConnection && !isWsConnecting && !isProviderInitializing;
 
   // Only show blocking dialog for critical connectivity issues
   const shouldShowBlockingDialog = isAuthenticated && !isConnected && !isWsConnecting && !isProviderInitializing;
-  
-  // Show non-blocking notification when WebSocket is down but HTTP works
-  const shouldShowWebSocketWarning = isAuthenticated && isConnected && !hasRealTimeConnection && !isWsConnecting && !isProviderInitializing;
+
+  // Show non-blocking notification only if not dismissed
+  const shouldShowWebSocketWarning = shouldShowSubtleWarning && isSnackbarOpen;
 
   const handleRetry = () => {
     window.location.reload();
   };
+  
+  const handleSnackbarClose = (event, reason) => {
+    if (reason === 'clickaway') {
+      return;
+    }
+    setIsSnackbarOpen(false);
+  };
 
-  // Determine what to display based on the current status
   const getDialogContent = () => {
+    // ... (rest of the getDialogContent function is unchanged)
     if (!isNetworkOnline) {
       return {
         icon: <WifiOffIcon sx={{ fontSize: 60, color: 'error.main' }} />,
@@ -70,7 +83,7 @@ const ConnectionStatusDialog = () => {
 
   return (
     <>
-      {/* Blocking dialog - only shows for critical backend connectivity issues */}
+      {/* ... (rest of the Dialog component is unchanged) */}
       <Dialog 
         open={shouldShowBlockingDialog}
         disableEscapeKeyDown
@@ -93,7 +106,7 @@ const ConnectionStatusDialog = () => {
           <Typography variant="body1" sx={{ mb: 2 }}>
             {dialogContent.body}
           </Typography>
-          
+
           {dialogContent.showRetry && (
             <Button
               variant="contained"
@@ -104,17 +117,16 @@ const ConnectionStatusDialog = () => {
               Recargar Página
             </Button>
           )}
-          
-          {/* Debug info (remove in production) */}
+
           {process.env.NODE_ENV === 'development' && (
             <Box sx={{ mt: 2, p: 1, backgroundColor: 'grey.100', borderRadius: 1 }}>
               <Typography variant="caption" component="div">
-                Network: {isNetworkOnline ? '✓' : '✗'} | 
-                Backend: {isBackendReachable ? '✓' : '✗'} | 
+                Network: {isNetworkOnline ? '✓' : '✗'} |
+                Backend: {isBackendReachable ? '✓' : '✗'} |
                 WS: {isWsConnected ? '✓' : '✗'}
               </Typography>
               <Typography variant="caption" component="div">
-                Connecting: {isWsConnecting ? 'Yes' : 'No'} | 
+                Connecting: {isWsConnecting ? 'Yes' : 'No'} |
                 Initializing: {isProviderInitializing ? 'Yes' : 'No'}
               </Typography>
             </Box>
@@ -122,16 +134,19 @@ const ConnectionStatusDialog = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Non-blocking WebSocket warning */}
+      {/* Non-blocking WebSocket warning snackbar */}
       <Snackbar
         open={shouldShowWebSocketWarning}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+        onClose={handleSnackbarClose}
+        autoHideDuration={8000}
         sx={{ mt: 2 }}
       >
-        <Alert 
-          severity="warning" 
+        <Alert
+          onClose={handleSnackbarClose}
+          severity="warning"
           variant="filled"
-          sx={{ 
+          sx={{
             minWidth: 300,
             '& .MuiAlert-message': {
               fontSize: '0.875rem'
@@ -146,6 +161,27 @@ const ConnectionStatusDialog = () => {
           </Typography>
         </Alert>
       </Snackbar>
+      
+      {/* Subtle, persistent indicator */}
+      {shouldShowSubtleWarning && !isSnackbarOpen && (
+        <Box
+          sx={{
+            position: 'fixed',
+            bottom: 16,
+            right: 16,
+            zIndex: 1300, // Make sure it's above most content
+          }}
+        >
+          <IconButton
+            color="warning"
+            aria-label="Limited connection"
+            title="Limited connection"
+            onClick={() => setIsSnackbarOpen(true)} // Allow user to re-open snackbar
+          >
+            <SyncProblemIcon />
+          </IconButton>
+        </Box>
+      )}
     </>
   );
 };
