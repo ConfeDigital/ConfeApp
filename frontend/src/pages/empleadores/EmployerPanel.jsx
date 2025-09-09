@@ -9,9 +9,12 @@ import {
   Alert,
   Typography,
   Paper,
+  Avatar,
+  useTheme,
 } from "@mui/material";
 import PostAddOutlinedIcon from "@mui/icons-material/PostAddOutlined";
 import PersonAddAlt from "@mui/icons-material/PersonAddAlt";
+import BusinessIcon from '@mui/icons-material/Business';
 
 import api from "../../api";
 import JobsDataGrid from "../../components/agencia/JobsGrid";
@@ -24,7 +27,8 @@ import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 export default function EmployerPanel() {
   useDocumentTitle('Panel de Empleos');
-  
+  const theme = useTheme();
+
   const [tab, setTab] = useState(0);
   const [jobs, setJobs] = useState([]);
   const [employers, setEmployers] = useState([]);
@@ -81,25 +85,26 @@ export default function EmployerPanel() {
 
   return (
     <Box p={2}>
-      <Paper
-        sx={{
-          p: 3, // Increased padding for more breathing room
-          borderRadius: 2, // Slightly rounded corners (adjust as needed, 1-4 common)
-          boxShadow: 3, // A subtle shadow for elevation (adjust from 1-24)
-          bgcolor: "background.paper", // Ensures it uses the theme's paper background
-        }}
-      >
-        <Typography variant="h4" fontWeight="bold" color="info.main">
-          Empresa: {currentEmployer.company_name}
-        </Typography>
-      </Paper>
-      <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
-        <Tab label="Empleos" />
-        <Tab label="Empleadores" />
-      </Tabs>
-
-      {tab === 0 ? (
+      <Box display="flex" alignItems="center" gap={2} ml={2}>
+        <Avatar
+          src={currentEmployer.company_logo}
+          sx={{ width: 64, height: 64 }}
+        >
+          <BusinessIcon sx={{ fontSize: 32 }} />
+        </Avatar>
         <Box>
+          <Typography variant="h4" fontWeight="bold">
+            {currentEmployer.company_name}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+        <Tabs value={tab} onChange={(_, v) => setTab(v)}>
+          <Tab label="Empleos" />
+          <Tab label="Empleadores" />
+        </Tabs>
+        {tab === 0 ? (
           <Button
             variant="contained"
             onClick={() => {
@@ -110,6 +115,21 @@ export default function EmployerPanel() {
           >
             Nuevo Empleo
           </Button>
+        ) : (
+          <Button
+            variant="contained"
+            onClick={() => {
+              setEditEmp(null);
+              openEmpDialog(true);
+            }}
+            startIcon={<PersonAddAlt />}
+          >
+            Nuevo Colaborador
+          </Button>
+        )}
+      </Box>
+      {tab === 0 ? (
+        <Box>
           <JobsDataGrid
             rows={jobs}
             onEdit={(j) => {
@@ -122,16 +142,6 @@ export default function EmployerPanel() {
         </Box>
       ) : (
         <Box>
-          <Button
-            variant="contained"
-            onClick={() => {
-              setEditEmp(null);
-              openEmpDialog(true);
-            }}
-            startIcon={<PersonAddAlt />}
-          >
-            Nuevo Colaborador
-          </Button>
           <EmployersDataGrid
             rows={employers}
             onEdit={(e) => {

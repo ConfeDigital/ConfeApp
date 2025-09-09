@@ -64,7 +64,7 @@ export default function EmployersDataGrid({
   };
 
   return (
-    <Box mt={2} display="grid" height="70vh" className="custom-datagrid">
+    <Box mt={2} display="grid" height="68vh" className="custom-datagrid">
       <DataGrid
         rows={rows}
         columns={columns}

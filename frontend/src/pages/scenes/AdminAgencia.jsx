@@ -1,5 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { Box, Tabs, Tab, Button, Alert, Snackbar } from "@mui/material";
+import {
+  Box,
+  Tabs,
+  Tab,
+  Button,
+  Alert,
+  Snackbar,
+  Card,
+  CardContent,
+  Typography,
+  Avatar,
+  Grid,
+  Chip,
+  IconButton,
+  Tooltip,
+  Breadcrumbs,
+  Link,
+  TextField,
+  InputAdornment
+} from "@mui/material";
 import JobsDataGrid from "../../components/agencia/JobsGrid";
 import CompaniesDataGrid from "../../components/agencia/CompaniesGrid";
 import EmployersDataGrid from "../../components/agencia/EmployersGrid";
@@ -11,6 +30,11 @@ import api from "../../api";
 import AddBusinessOutlinedIcon from "@mui/icons-material/AddBusinessOutlined";
 import PostAddOutlinedIcon from "@mui/icons-material/PostAddOutlined";
 import PersonAddAlt from "@mui/icons-material/PersonAddAlt";
+import BusinessIcon from "@mui/icons-material/Business";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import SearchIcon from "@mui/icons-material/Search";
 import useDocumentTitle from "../../hooks/useDocumentTitle";
 
 const JobsCompaniesPage = () => {
@@ -19,6 +43,8 @@ const JobsCompaniesPage = () => {
   const [jobs, setJobs] = useState([]);
   const [companies, setCompanies] = useState([]);
   const [employers, setEmployers] = useState([]);
+  const [selectedCompany, setSelectedCompany] = useState(null);
+  const [view, setView] = useState('companies'); // 'companies' or 'company-detail'
   const [tabIndex, setTabIndex] = useState(0);
 
   // Estados para diálogos de creación/edición
@@ -38,6 +64,8 @@ const JobsCompaniesPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteType, setDeleteType] = useState(""); // 'job' o 'company'
   const [deleteId, setDeleteId] = useState(null);
+
+  const [searchTerm, setSearchTerm] = useState("");
 
 
   const [alert, setAlert] = useState(null);
@@ -63,8 +91,29 @@ const JobsCompaniesPage = () => {
     setIsLoading(false);
   };
 
+  // Filter jobs and employers by selected company
+  const filteredJobs = selectedCompany
+    ? jobs.filter(job => job.company === selectedCompany.id)
+    : jobs;
+
+  const filteredEmployers = selectedCompany
+    ? employers.filter(employer => employer.company === selectedCompany.id)
+    : employers;
+
   const handleTabChange = (event, newValue) => {
     setTabIndex(newValue);
+  };
+
+  const handleCompanySelect = (company) => {
+    setSelectedCompany(company);
+    setView('company-detail');
+    setTabIndex(0); // Reset to jobs tab
+  };
+
+  const handleBackToCompanies = () => {
+    setSelectedCompany(null);
+    setView('companies');
+    setTabIndex(0);
   };
 
   // Funciones para abrir diálogos de Empleo
@@ -123,9 +172,8 @@ const JobsCompaniesPage = () => {
         setCompanies((co) => co.map((c) => (c.id === res.data.id ? res.data : c)));
         setAlert({
           severity: "success",
-          message: `Empresa ${
-            res.data.is_active ? "activada" : "desactivada"
-          } correctamente`,
+          message: `Empresa ${res.data.is_active ? "activada" : "desactivada"
+            } correctamente`,
         });
       })
       .catch(() =>
@@ -143,9 +191,8 @@ const JobsCompaniesPage = () => {
         setEmployers((em) => em.map((e) => (e.id === res.data.id ? res.data : e)));
         setAlert({
           severity: "success",
-          message: `Usuario ${
-            res.data.is_active ? "activado" : "desactivado"
-          } correctamente`,
+          message: `Usuario ${res.data.is_active ? "activado" : "desactivado"
+            } correctamente`,
         });
       })
       .catch(() =>
@@ -171,65 +218,214 @@ const JobsCompaniesPage = () => {
 
   return (
     <Box p={2}>
-      <Tabs value={tabIndex} onChange={handleTabChange} sx={{ mb: 2 }}>
-        <Tab label="Empresas" />
-        <Tab label="Empleadores" />
-        <Tab label="Empleos" />
-      </Tabs>
-
-      {tabIndex === 0 && (
+      {view === 'companies' ? (
+        // Companies List View
         <Box>
-          <Button
-            variant="contained"
-            onClick={handleCompanyCreate}
-            endIcon={<AddBusinessOutlinedIcon />}
-          >
-            Crear Empresa
-          </Button>
-          <CompaniesDataGrid
-            rows={companies}
-            onEdit={handleCompanyEdit}
-            onDelete={(id) => handleDelete("company", id)}
-            handleToggleActive={handleToggleActiveCompany}
-            isLoading={isLoading}
-          />
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+            <TextField
+              size="small"
+              label="Buscar empresa..."
+              variant="outlined"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              slotProps={{
+                input: {
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
+                },
+            }}
+            />
+            <Button
+              variant="contained"
+              onClick={handleCompanyCreate}
+              endIcon={<AddBusinessOutlinedIcon />}
+            >
+              Crear Empresa
+            </Button>
+          </Box>
+
+          <Grid container spacing={3}>
+            {companies
+              .filter((company) =>
+                company.name.toLowerCase().includes(searchTerm.toLowerCase())
+              )
+              .map((company) => (
+                <Grid item xs={12} sm={6} md={4} key={company.id}>
+                  <Card
+                    sx={{
+                      cursor: 'pointer',
+                      transition: 'all 0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-2px)',
+                        boxShadow: 4
+                      }
+                    }}
+                    onClick={() => handleCompanySelect(company)}
+                  >
+                    <CardContent>
+                      <Box display="flex" alignItems="center" gap={2} mb={2}>
+                        <Avatar
+                          src={company.logo}
+                          sx={{ width: 48, height: 48 }}
+                        >
+                          <BusinessIcon />
+                        </Avatar>
+                        <Box flex={1}>
+                          <Typography variant="h6" fontWeight="bold">
+                            {company.name}
+                          </Typography>
+                          <Typography variant="body2" color="text.secondary">
+                            {company.email}
+                          </Typography>
+                        </Box>
+                      </Box>
+
+                      <Box display="flex" gap={1} mb={2}>
+                        <Chip
+                          label={`${jobs.filter(j => j.company === company.id).length} Empleos`}
+                          size="small"
+                          color="primary"
+                          variant="outlined"
+                        />
+                        <Chip
+                          label={`${employers.filter(e => e.company === company.id).length} Empleadores`}
+                          size="small"
+                          color="secondary"
+                          variant="outlined"
+                        />
+                      </Box>
+
+                      <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Chip
+                          label={company.is_active ? "Activa" : "Inactiva"}
+                          size="small"
+                          color={company.is_active ? "success" : "default"}
+                          variant={company.is_active ? "filled" : "outlined"}
+                        />
+                        <Box>
+                          <Tooltip title="Editar Empresa">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleCompanyEdit(company);
+                              }}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                          {/* <Tooltip title="Eliminar Empresa">
+                            <IconButton
+                              size="small"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDelete("company", company.id);
+                              }}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip> */}
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              ))}
+          </Grid>
         </Box>
-      )}
-
-      {tabIndex === 1 && (
+      ) : (
+        // Company Detail View
         <Box>
-          <Button
-            variant="contained"
-            onClick={handleEmployerCreate}
-            endIcon={<PersonAddAlt />}
-          >
-            Crear Empleador
-          </Button>
-          <EmployersDataGrid
-            rows={employers}
-            onEdit={handleEmployerEdit}
-            onDelete={(id) => handleDelete("employer", id)}
-            handleToggleActive={handleToggleActiveEmployer}
-            isLoading={isLoading}
-          />
-        </Box>
-      )}
+          {/* Breadcrumbs */}
+          {/* <Breadcrumbs sx={{ mb: 2 }}>
+            <Link
+              component="button"
+              variant="body1"
+              onClick={handleBackToCompanies}
+              sx={{ textDecoration: 'none' }}
+            >
+              Empresas
+            </Link>
+            <Typography color="text.primary">
+              {selectedCompany?.name}
+            </Typography>
+          </Breadcrumbs> */}
 
-      {tabIndex === 2 && (
-        <Box>
-          <Button
-            variant="contained"
-            onClick={handleJobCreate}
-            endIcon={<PostAddOutlinedIcon />}
-          >
-            Crear Empleo
-          </Button>
-          <JobsDataGrid
-            rows={jobs}
-            onEdit={handleJobEdit}
-            onDelete={(id) => handleDelete("job", id)}
-            isLoading={isLoading}
-          />
+          {/* Company Header */}
+          <Box display="flex" alignItems="center" gap={2} >
+            <IconButton onClick={handleBackToCompanies}>
+              <ArrowBackIcon />
+            </IconButton>
+            <Avatar
+              src={selectedCompany?.logo}
+              sx={{ width: 64, height: 64 }}
+            >
+              <BusinessIcon sx={{ fontSize: 32 }} />
+            </Avatar>
+            <Box>
+              <Typography variant="h4" fontWeight="bold">
+                {selectedCompany?.name}
+              </Typography>
+              <Typography variant="body1" color="text.secondary">
+                {selectedCompany?.email}
+              </Typography>
+            </Box>
+          </Box>
+
+          {/* Tabs for Jobs and Employers */}
+          <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+            <Tabs value={tabIndex} onChange={handleTabChange}>
+              <Tab label="Empleos" />
+              <Tab label="Empleadores" />
+            </Tabs>
+            {tabIndex === 0 ? (
+              <Button
+                variant="contained"
+                onClick={handleJobCreate}
+                endIcon={<PostAddOutlinedIcon />}
+                sx={{ mb: 2 }}
+              >
+                Crear Empleo
+              </Button>
+            ) : (
+              <Button
+                variant="contained"
+                onClick={handleEmployerCreate}
+                endIcon={<PersonAddAlt />}
+                sx={{ mb: 2 }}
+              >
+                Crear Empleador
+              </Button>
+            )}
+          </Box>
+
+          {tabIndex === 0 && (
+            <Box>
+              <JobsDataGrid
+                rows={filteredJobs}
+                onEdit={handleJobEdit}
+                onDelete={(id) => handleDelete("job", id)}
+                isLoading={isLoading}
+                companyNameVisibility={false}
+              />
+            </Box>
+          )}
+
+          {tabIndex === 1 && (
+            <Box>
+              <EmployersDataGrid
+                rows={filteredEmployers}
+                onEdit={handleEmployerEdit}
+                onDelete={(id) => handleDelete("employer", id)}
+                handleToggleActive={handleToggleActiveEmployer}
+                isLoading={isLoading}
+                companyNameVisibility={false}
+              />
+            </Box>
+          )}
         </Box>
       )}
 
@@ -240,9 +436,9 @@ const JobsCompaniesPage = () => {
         onClose={() => setJobDialogOpen(false)}
         onSubmit={() => {
           setJobDialogOpen(false);
-          // fetchData();
+          fetchData();
         }}
-        companies={companies}
+        companies={selectedCompany ? [selectedCompany] : companies}
         setJobs={setJobs}
         setAlert={setAlert}
       />
@@ -254,7 +450,7 @@ const JobsCompaniesPage = () => {
         onClose={() => setCompanyDialogOpen(false)}
         onSubmit={() => {
           setCompanyDialogOpen(false);
-          // fetchData();
+          fetchData();
         }}
         setCompanies={setCompanies}
         setAlert={setAlert}
@@ -267,9 +463,9 @@ const JobsCompaniesPage = () => {
         onClose={() => setEmployerDialogOpen(false)}
         onSubmit={() => {
           setEmployerDialogOpen(false);
-          // fetchData();
+          fetchData();
         }}
-        companies={companies}
+        companies={selectedCompany ? [selectedCompany] : companies}
         setEmployers={setEmployers}
         setAlert={setAlert}
       />
@@ -288,7 +484,7 @@ const JobsCompaniesPage = () => {
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
         <Alert
-          severity={alert ? alert.severity : 'info' }
+          severity={alert ? alert.severity : 'info'}
           onClose={() => setAlert(null)}
           sx={{ mb: 2 }}
         >
