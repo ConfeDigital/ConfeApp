@@ -13,17 +13,152 @@ const WebSocketProvider = ({ instance, children }) => {
   const isUnmounted = useRef(false);
   const retries = useRef({ notifications: 0, userUpdates: 0 });
   const MAX_RETRIES_EXPONENTIAL = 5; // Use exponential backoff for the first 5 retries
-  const LONG_RETRY_INTERVAL = 30000; // 30 seconds for long-interval polling
+  const LONG_RETRY_INTERVAL = 10000; // 10 seconds for long-interval polling (reduced from 30s)
+  const MAX_TOTAL_RETRIES = 20; // Maximum total retries before giving up
   const [isWsConnected, setIsWsConnected] = useState(false);
   const [isWsConnecting, setIsWsConnecting] = useState(false);
   const [isProviderInitializing, setIsProviderInitializing] = useState(true);
   const debounceTimeoutRef = useRef(null);
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
 
+  // Move connectWebSocket outside useEffect so it's accessible to forceReconnect
+  const connectWebSocket = React.useCallback((type, url) => {
+    setIsWsConnecting(true);
+
+    const createSocket = () => {
+      const authType = sessionStorage.getItem(AUTH_TYPE);
+      let tokenPromise;
+  
+      if (authType === "msal" && instance) {
+        const account = instance.getActiveAccount();
+        if (!account) {
+          console.error("No active MSAL account found");
+          return null;
+        }
+        tokenPromise = instance.acquireTokenSilent({ ...loginRequest, account }).then(response => response.accessToken);
+      } else if (authType === "djoser") {
+        tokenPromise = Promise.resolve(sessionStorage.getItem(ACCESS_TOKEN));
+      } else {
+        setIsWsConnecting(false);
+        return null;
+      }
+  
+      return tokenPromise.then(token => {
+        if (token) {
+          return new WebSocket(`${url}?token=${token}`);
+        }
+        console.error(`[${type}] No token available for WebSocket connection`);
+        setIsWsConnecting(false);
+        return null;
+      }).catch(err => {
+        console.error(`[${type}] Token fetch failed during reconnect:`, err);
+        setIsWsConnecting(false);
+        // Don't return null here, let the reconnection logic handle it
+        throw err;
+      });
+    };
+  
+    const connect = () => {
+      createSocket().then(socket => {
+        if (!socket) {
+          console.log(`[${type}] Failed to create socket, will retry...`);
+          return;
+        }
+  
+        if (type === 'notifications') notificationSocketRef.current = socket;
+        if (type === 'userUpdates') userUpdateSocketRef.current = socket;
+  
+        socket.onopen = () => {
+          console.log(`[${type}] WebSocket connected`);
+          retries.current[type] = 0;
+          setIsWsConnecting(false);
+          
+          // Clear any pending debounces and set connected status immediately
+          if (debounceTimeoutRef.current) {
+              clearTimeout(debounceTimeoutRef.current);
+          }
+          setIsWsConnected(true);
+        };
+  
+        socket.onmessage = (event) => {
+          const data = JSON.parse(event.data);
+          if (type === "notifications" && data.type === "notification") {
+            dispatch(addNotification({
+              id: data.id,
+              message: data.message,
+              link: data.link,
+              created_at: data.created_at,
+            }));
+            if (!localStorage.getItem(SOUND_ALERT) || localStorage.getItem(SOUND_ALERT) === 'true') {
+              const notificationSound = new Audio('../../assets/sounds/notification.wav');
+              notificationSound.volume = 0.3;
+              notificationSound.play().catch(e => console.error("Sound error:", e));
+            }
+          } else if (type === "userUpdates" && data.type === "user_update") {
+            dispatch(setUser(data.data));
+          }
+        };
+  
+        socket.onclose = (e) => {
+          console.log(`[${type}] WebSocket closed:`, e.code, e.reason);
+          console.log(`[${type}] isUnmounted:`, isUnmounted.current, 'isAuthenticated:', isAuthenticated);
+          // Use debounced function to update connection status on close
+          setIsWsConnected(false);
+          
+          if (!isUnmounted.current && isAuthenticated) {
+            // Check if we've exceeded maximum retries
+            if (retries.current[type] >= MAX_TOTAL_RETRIES) {
+              console.log(`[${type}] Maximum retries (${MAX_TOTAL_RETRIES}) exceeded. Stopping reconnection attempts.`);
+              setIsWsConnecting(false);
+              return;
+            }
+
+            let timeout = 0;
+            if (retries.current[type] < MAX_RETRIES_EXPONENTIAL) {
+              timeout = Math.min(1000 * 2 ** retries.current[type], 30000);
+              console.log(`[${type}] Reconnecting in ${timeout}ms... (Retry ${retries.current[type] + 1}/${MAX_RETRIES_EXPONENTIAL})`);
+            } else {
+              timeout = LONG_RETRY_INTERVAL;
+              console.log(`[${type}] Exponential retries exhausted, switching to long-interval polling. Reconnecting in ${timeout}ms... (Total retry ${retries.current[type] + 1}/${MAX_TOTAL_RETRIES})`);
+              setIsWsConnecting(false);
+            }
+  
+            setTimeout(() => {
+              console.log(`[${type}] Timeout callback - isUnmounted:`, isUnmounted.current, 'isAuthenticated:', isAuthenticated);
+              if (!isUnmounted.current && isAuthenticated) {
+                retries.current[type] += 1;
+                console.log(`[${type}] Attempting reconnection #${retries.current[type]}...`);
+                connect();
+              } else {
+                console.log(`[${type}] Skipping reconnection - isUnmounted:`, isUnmounted.current, 'isAuthenticated:', isAuthenticated);
+              }
+            }, timeout);
+          }
+        };
+  
+        socket.onerror = (error) => {
+          console.error(`[${type}] WebSocket error:`, error);
+          socket.close();
+        };
+      }).catch(err => {
+        console.error(`[${type}] Failed to create WebSocket connection:`, err);
+        // Trigger reconnection logic by simulating a close event
+        if (!isUnmounted.current && isAuthenticated) {
+          setTimeout(() => {
+            if (!isUnmounted.current && isAuthenticated) {
+              retries.current[type] += 1;
+              console.log(`[${type}] Retrying after token/connection error... (Retry ${retries.current[type]})`);
+              connect();
+            }
+          }, 5000); // Wait 5 seconds before retrying on token errors
+        }
+      });
+    };
+  
+    connect();
+  }, [isAuthenticated, instance, dispatch]);
+
   useEffect(() => {
-    const notificationSound = new Audio('../../assets/sounds/notification.wav');
-    notificationSound.volume = 0.3;
-    
     const isDev = import.meta.env.MODE === 'development';
 
     const urls = {
@@ -35,127 +170,12 @@ const WebSocketProvider = ({ instance, children }) => {
         : import.meta.env.VITE_USER_UPDATES_WEBSOCKET_PROD,
     };
 
-    const updateConnectionStatus = () => {
-      const isNotificationsConnected = notificationSocketRef.current?.readyState === WebSocket.OPEN;
-      const isUserUpdatesConnected = userUpdateSocketRef.current?.readyState === WebSocket.OPEN;
-      return isNotificationsConnected || isUserUpdatesConnected;
-    };
-
-    const debouncedSetIsWsConnected = () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-      debounceTimeoutRef.current = setTimeout(() => {
-        setIsWsConnected(updateConnectionStatus());
-      }, 500); // 500ms debounce
-    };
-
-    const connectWebSocket = (type, url) => {
-      setIsWsConnecting(true);
-
-      const createSocket = () => {
-        const authType = sessionStorage.getItem(AUTH_TYPE);
-        let tokenPromise;
-    
-        if (authType === "msal" && instance) {
-          const account = instance.getActiveAccount();
-          if (!account) {
-            console.error("No active MSAL account found");
-            return null;
-          }
-          tokenPromise = instance.acquireTokenSilent({ ...loginRequest, account }).then(response => response.accessToken);
-        } else if (authType === "djoser") {
-          tokenPromise = Promise.resolve(sessionStorage.getItem(ACCESS_TOKEN));
-        } else {
-          setIsWsConnecting(false);
-          return null;
-        }
-    
-        return tokenPromise.then(token => {
-          if (token) {
-            return new WebSocket(`${url}?token=${token}`);
-          }
-          setIsWsConnecting(false);
-          return null;
-        }).catch(err => {
-          console.error("Token fetch failed during reconnect:", err);
-          setIsWsConnecting(false);
-          return null;
-        });
-      };
-    
-      const connect = () => {
-        createSocket().then(socket => {
-          if (!socket) return;
-    
-          if (type === 'notifications') notificationSocketRef.current = socket;
-          if (type === 'userUpdates') userUpdateSocketRef.current = socket;
-    
-          socket.onopen = () => {
-            console.log(`[${type}] WebSocket connected`);
-            retries.current[type] = 0;
-            setIsWsConnecting(false);
-            
-            // Clear any pending debounces and set connected status immediately
-            if (debounceTimeoutRef.current) {
-                clearTimeout(debounceTimeoutRef.current);
-            }
-            setIsWsConnected(updateConnectionStatus());
-          };
-    
-          socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (type === "notifications" && data.type === "notification") {
-              dispatch(addNotification({
-                id: data.id,
-                message: data.message,
-                link: data.link,
-                created_at: data.created_at,
-              }));
-              if (!localStorage.getItem(SOUND_ALERT) || localStorage.getItem(SOUND_ALERT) === 'true') {
-                notificationSound.play().catch(e => console.error("Sound error:", e));
-              }
-            } else if (type === "userUpdates" && data.type === "user_update") {
-              dispatch(setUser(data.data));
-            }
-          };
-    
-          socket.onclose = (e) => {
-            console.log(`[${type}] WebSocket closed:`, e.code, e.reason);
-            // Use debounced function to update connection status on close
-            debouncedSetIsWsConnected();
-            
-            if (!isUnmounted.current) {
-              let timeout = 0;
-              if (retries.current[type] < MAX_RETRIES_EXPONENTIAL) {
-                timeout = Math.min(1000 * 2 ** retries.current[type], 30000);
-                console.log(`[${type}] Reconnecting in ${timeout}ms... (Retry ${retries.current[type] + 1}/${MAX_RETRIES_EXPONENTIAL})`);
-              } else {
-                timeout = LONG_RETRY_INTERVAL;
-                console.log(`[${type}] Max retries reached, switching to long-interval polling. Reconnecting in ${timeout}ms...`);
-                setIsWsConnecting(false);
-              }
-    
-              setTimeout(() => {
-                retries.current[type] += 1;
-                connect();
-              }, timeout);
-            }
-          };
-    
-          socket.onerror = (error) => {
-            console.error(`[${type}] WebSocket error:`, error);
-            socket.close();
-          };
-        });
-      };
-    
-      connect();
-    };    
-
     if (isAuthenticated) {
       // If we are authenticated, start the connection process
       setIsProviderInitializing(true);
+      // Reset retry counters when authentication state changes
+      retries.current = { notifications: 0, userUpdates: 0 };
+      
       const authType = sessionStorage.getItem(AUTH_TYPE);
       if (authType === "msal" || authType === "djoser") {
         connectWebSocket("notifications", urls.notifications);
@@ -174,6 +194,8 @@ const WebSocketProvider = ({ instance, children }) => {
         userUpdateSocketRef.current.close();
         userUpdateSocketRef.current = null;
       }
+      // Reset retry counters when not authenticated
+      retries.current = { notifications: 0, userUpdates: 0 };
     }
 
     return () => {
@@ -184,10 +206,79 @@ const WebSocketProvider = ({ instance, children }) => {
       if (notificationSocketRef.current) notificationSocketRef.current.close();
       if (userUpdateSocketRef.current) userUpdateSocketRef.current.close();
     };
-  }, [isAuthenticated, instance, dispatch]);
+  }, [isAuthenticated, instance, dispatch, connectWebSocket]);
+
+  // Manual reconnection function for debugging
+  const forceReconnect = React.useCallback(() => {
+    console.log("Force reconnecting WebSockets...");
+    // Reset retry counters for manual reconnection
+    retries.current = { notifications: 0, userUpdates: 0 };
+    
+    if (notificationSocketRef.current) {
+      notificationSocketRef.current.close();
+    }
+    if (userUpdateSocketRef.current) {
+      userUpdateSocketRef.current.close();
+    }
+    
+    // Restart connections
+    const isDev = import.meta.env.MODE === 'development';
+    const urls = {
+      notifications: isDev
+        ? import.meta.env.VITE_NOTIFICATIONS_WEBSOCKET_LOCAL
+        : import.meta.env.VITE_NOTIFICATIONS_WEBSOCKET_PROD,
+      userUpdates: isDev
+        ? import.meta.env.VITE_USER_UPDATES_WEBSOCKET_LOCAL
+        : import.meta.env.VITE_USER_UPDATES_WEBSOCKET_PROD,
+    };
+    
+    if (isAuthenticated) {
+      connectWebSocket("notifications", urls.notifications);
+      connectWebSocket("userUpdates", urls.userUpdates);
+    }
+  }, [isAuthenticated, connectWebSocket]);
+
+  // Add to window for debugging
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.forceWebSocketReconnect = forceReconnect;
+      window.getWebSocketStatus = () => ({
+        isWsConnected,
+        isWsConnecting,
+        isProviderInitializing,
+        retries: retries.current,
+        notificationSocket: notificationSocketRef.current?.readyState,
+        userUpdateSocket: userUpdateSocketRef.current?.readyState,
+        isAuthenticated,
+        isUnmounted: isUnmounted.current
+      });
+      
+      // Test function to simulate Redis restart
+      window.testRedisRestart = () => {
+        console.log("🧪 Testing Redis restart scenario...");
+        console.log("Current status:", window.getWebSocketStatus());
+        
+        // Close existing connections
+        if (notificationSocketRef.current) {
+          console.log("Closing notification socket...");
+          notificationSocketRef.current.close();
+        }
+        if (userUpdateSocketRef.current) {
+          console.log("Closing user update socket...");
+          userUpdateSocketRef.current.close();
+        }
+        
+        // Wait a bit then force reconnection
+        setTimeout(() => {
+          console.log("Forcing reconnection...");
+          forceReconnect();
+        }, 2000);
+      };
+    }
+  }, [isWsConnected, isWsConnecting, isProviderInitializing, isAuthenticated]);
 
   return (
-    <WebSocketContext.Provider value={{ isWsConnected, isWsConnecting, isProviderInitializing }}>
+    <WebSocketContext.Provider value={{ isWsConnected, isWsConnecting, isProviderInitializing, forceReconnect }}>
       {children}
     </WebSocketContext.Provider>
   );
