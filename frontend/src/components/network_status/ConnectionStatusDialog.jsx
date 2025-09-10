@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -16,6 +16,7 @@ import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SyncProblemIcon from '@mui/icons-material/SyncProblem'; // Icon for limited connection
 import { useConnectionStatus } from '../../hooks/useConnectionStatus';
+import { useWebSocketStatus } from '../../websocket/WebSocketContext';
 import { useSelector } from 'react-redux';
 
 const ConnectionStatusDialog = () => {
@@ -30,28 +31,84 @@ const ConnectionStatusDialog = () => {
     hasRealTimeConnection
   } = useConnectionStatus();
 
+  const { forceReconnect } = useWebSocketStatus();
+
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const [isSnackbarOpen, setIsSnackbarOpen] = useState(true);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [showFailureMessage, setShowFailureMessage] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   // Determine if the subtle icon should be shown
-  const shouldShowSubtleWarning = isAuthenticated && isConnected && !hasRealTimeConnection && !isWsConnecting && !isProviderInitializing;
+  // Show warning if: authenticated AND no real-time connection (regardless of snackbar state)
+  const shouldShowSubtleWarning = isAuthenticated && !hasRealTimeConnection && !isProviderInitializing;
 
-  // Only show blocking dialog for critical connectivity issues
+  // Only show blocking dialog for critical connectivity issues (no HTTP connection)
   const shouldShowBlockingDialog = isAuthenticated && !isConnected && !isWsConnecting && !isProviderInitializing;
 
-  // Show non-blocking notification only if not dismissed
-  const shouldShowWebSocketWarning = shouldShowSubtleWarning && isSnackbarOpen;
+  // Show non-blocking notification if no real-time connection and not dismissed
+  // const shouldShowWebSocketWarning = isAuthenticated && !hasRealTimeConnection && !isProviderInitializing;
+  const shouldShowWebSocketWarning =
+  isAuthenticated &&
+  !isProviderInitializing &&
+  (showSuccessMessage || showFailureMessage || isRetrying || !hasRealTimeConnection);
+
 
   const handleRetry = () => {
-    window.location.reload();
+    setIsRetrying(true);
+    setIsSnackbarOpen(true);
+    setShowFailureMessage(false); // Reset failure message
+
+    if (forceReconnect) {
+      console.log('Attempting to force WebSocket reconnection...');
+      forceReconnect();
+
+      // Check if reconnection succeeded after a delay
+      setTimeout(() => {
+        if (!hasRealTimeConnection) {
+          // Reconnection failed, show failure message briefly
+          setShowFailureMessage(true);
+          setIsRetrying(false);
+
+          // Hide snackbar after showing failure message
+          setTimeout(() => {
+            setIsSnackbarOpen(false);
+            setShowFailureMessage(false);
+          }, 3000); // Show failure message for 3 seconds
+        } else {
+          setIsRetrying(false);
+        }
+      }, 10000); // Wait 10 seconds for connection attempt
+    } else {
+      console.log('Force reconnect not available, reloading page...');
+      window.location.reload();
+    }
   };
-  
+
+  const handleShowSnackbar = () => {
+    setIsSnackbarOpen(true);
+  };
+
   const handleSnackbarClose = (event, reason) => {
     if (reason === 'clickaway') {
       return;
     }
     setIsSnackbarOpen(false);
   };
+
+  useEffect(() => {
+    if (hasRealTimeConnection && isRetrying) {
+      setIsRetrying(false);
+      setShowFailureMessage(false);
+      setShowSuccessMessage(true); // show success briefly
+
+      // Auto-hide success after 3s
+      setTimeout(() => {
+        setShowSuccessMessage(false);
+        setIsSnackbarOpen(false);
+      }, 3100);
+    }
+  }, [hasRealTimeConnection, isRetrying]);
 
   const getDialogContent = () => {
     // ... (rest of the getDialogContent function is unchanged)
@@ -84,7 +141,7 @@ const ConnectionStatusDialog = () => {
   return (
     <>
       {/* ... (rest of the Dialog component is unchanged) */}
-      <Dialog 
+      <Dialog
         open={shouldShowBlockingDialog}
         disableEscapeKeyDown
         PaperProps={{
@@ -136,16 +193,39 @@ const ConnectionStatusDialog = () => {
 
       {/* Non-blocking WebSocket warning snackbar */}
       <Snackbar
-        open={shouldShowWebSocketWarning}
+        open={shouldShowWebSocketWarning && isSnackbarOpen}
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         onClose={handleSnackbarClose}
-        autoHideDuration={8000}
+        autoHideDuration={
+          isRetrying ? null : (showFailureMessage || showSuccessMessage ? 2900 : 8000)
+        }
         sx={{ mt: 2 }}
       >
         <Alert
           onClose={handleSnackbarClose}
-          severity="warning"
+          severity={
+            showSuccessMessage
+              ? "success"
+              : showFailureMessage
+                ? "error"
+                : isRetrying
+                  ? "info"
+                  : "warning"
+          }
           variant="filled"
+          action={
+            !showFailureMessage && !showSuccessMessage ? (
+              <Button
+                color="inherit"
+                size="small"
+                onClick={handleRetry}
+                startIcon={<RefreshIcon />}
+                disabled={isRetrying}
+              >
+                {isRetrying ? "Reconectando..." : "Reintentar"}
+              </Button>
+            ) : null
+          }
           sx={{
             minWidth: 300,
             '& .MuiAlert-message': {
@@ -154,14 +234,29 @@ const ConnectionStatusDialog = () => {
           }}
         >
           <Typography variant="body2" component="div">
-            <strong>Conexión limitada</strong>
+            <strong>
+              {showSuccessMessage
+                ? "Conexión restablecida"
+                : showFailureMessage
+                  ? "Reconexión fallida"
+                  : isRetrying
+                    ? "Reconectando..."
+                    : "Conexión limitada"}
+            </strong>
           </Typography>
           <Typography variant="caption" component="div">
-            Las actualizaciones en tiempo real no están disponibles. La aplicación funciona normalmente.
+            {showSuccessMessage
+              ? "La conexión en tiempo real se restableció correctamente."
+              : showFailureMessage
+                ? "No se pudo restablecer la conexión. Inténtalo más tarde."
+                : isRetrying
+                  ? "Intentando restablecer la conexión en tiempo real..."
+                  : "Las actualizaciones en tiempo real no están disponibles. La aplicación funciona normalmente."
+            }
           </Typography>
         </Alert>
       </Snackbar>
-      
+
       {/* Subtle, persistent indicator */}
       {shouldShowSubtleWarning && !isSnackbarOpen && (
         <Box
@@ -174,9 +269,9 @@ const ConnectionStatusDialog = () => {
         >
           <IconButton
             color="warning"
-            aria-label="Limited connection"
-            title="Limited connection"
-            onClick={() => setIsSnackbarOpen(true)} // Allow user to re-open snackbar
+            aria-label="Limited connection - Click to show options"
+            title="Conexión limitada - Click para ver opciones"
+            onClick={handleShowSnackbar}
           >
             <SyncProblemIcon />
           </IconButton>

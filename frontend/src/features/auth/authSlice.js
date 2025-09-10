@@ -244,6 +244,9 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.user = null;
       state.isLoading = false;
+      sessionStorage.removeItem(ACCESS_TOKEN);
+      sessionStorage.removeItem(REFRESH_TOKEN);
+      sessionStorage.removeItem(AUTH_TYPE);
     },
     setUser(state, action) {
       state.user = action.payload;
