@@ -190,15 +190,6 @@ class Respuesta(models.Model):
         return f"{self.usuario} - {self.pregunta}: {self.respuesta}"
 
     def save(self, *args, **kwargs):
-        # Update user information if the question is marked as "actualiza_usuario"
-        if self.pregunta.actualiza_usuario:
-            if self.pregunta.texto == "Nombre":
-                self.usuario.nombre = self.respuesta
-            elif self.pregunta.texto == "Apellido Paterno":
-                self.usuario.apellido_paterno = self.respuesta
-            elif self.pregunta.texto == "Apellido Materno":
-                self.usuario.apellido_materno = self.respuesta
-            self.usuario.save()
         
         # Handle profile field updates for new question types
         if self.pregunta.tipo.startswith('profile_field') and self.pregunta.profile_field_path:
