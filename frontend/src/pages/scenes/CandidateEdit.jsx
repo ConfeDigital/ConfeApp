@@ -234,19 +234,25 @@ const CandidateEdit = () => {
       await axios.put(`/api/candidatos/editar/${uid}/`, fieldsData, {
         headers: { 'Content-Type': 'application/json' }
       });
+    
       // If a new photo exists, update it separately
       if (formData.photo && typeof formData.photo === 'object') {
-         const photoData = new FormData();
-         photoData.append('photo', formData.photo);
-         await axios.put(`/api/candidatos/upload-photo/${uid}/`, photoData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-           });
-      }
+        const photoData = new FormData();
+        // Rename the file to use the uid and .jpeg extension
+        const renamedPhoto = new File([formData.photo], `${uid}.jpeg`, {
+          type: formData.photo.type,
+        });
+        photoData.append("photo", renamedPhoto);
+    
+        await axios.put(`/api/candidatos/upload-photo/${uid}/`, photoData, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
+      } 
       navigate(`/candidatos/${uid}`);
     } catch (err) {
       setError(err);
       console.error(err);
-    }
+    }    
     setLoading(false);
   };
 

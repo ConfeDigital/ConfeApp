@@ -109,7 +109,7 @@ function DashboardCandidato() {
         {/* Cards Section */}
         <Grid container spacing={4}>
           {/* Preentrevista Survey Card */}
-          <Grid item xs={12} md={6}>
+          <Grid item xs={12} md={12}>
             <Card
               elevation={4}
               sx={{

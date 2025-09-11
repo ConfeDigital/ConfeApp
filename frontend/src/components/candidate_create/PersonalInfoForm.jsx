@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Box,
   Grid2 as Grid,
@@ -7,19 +7,18 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  OutlinedInput,
   Chip,
-  Checkbox,
-  FormControlLabel,
   Typography,
   Autocomplete,
-  FormHelperText,
+  Button, 
 } from "@mui/material";
 import { useFormContext, Controller } from "react-hook-form";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import axios from "../../api";
 import MyPhoneField from "../phone_number/MyPhoneField";
 import dayjs from "dayjs";
+import PhotoCropDialog from "../photo_crop/PhotoCropDialog";
+import CloudUploadIcon from "@mui/icons-material/CloudUpload";
 
 const PersonalInfoForm = ({
   editMode = false,
@@ -30,8 +29,16 @@ const PersonalInfoForm = ({
   const [selectedDisabilityGroups, setSelectedDisabilityGroups] = useState([]);
   const [filteredDisabilities, setFilteredDisabilities] = useState([]);
   const [cycles, setCycles] = useState([]);
+
+  const [cropDialogOpen, setCropDialogOpen] = useState(false);
+  const [tempImage, setTempImage] = useState(null);
+  const fileInputRef = useRef(null);
+
   // Watch the current photo value
   const photoValue = watch("photo");
+  const nameValue = watch("first_name");
+  const lastNameValue = watch("last_name");
+  const secondLastNameValue = watch("second_last_name");
   const selectedDisabilities = watch("disability") || [];
 
   useEffect(() => {
@@ -301,9 +308,6 @@ const PersonalInfoForm = ({
               noOptionsText="No se encontraron grupos"
               loadingText="Cargando grupos..."
             />
-            {/* <FormHelperText>
-              Selecciona uno o más grupos para filtrar las discapacidades disponibles
-            </FormHelperText> */}
           </FormControl>
         </Grid>
 
@@ -350,9 +354,6 @@ const PersonalInfoForm = ({
                     noOptionsText="No se encontraron discapacidades"
                     loadingText="Cargando discapacidades..."
                   />
-                  {/* <FormHelperText>
-                    {error?.message || "Puedes seleccionar múltiples discapacidades de diferentes grupos"}
-                  </FormHelperText> */}
                 </FormControl>
               )}
             />
@@ -375,33 +376,55 @@ const PersonalInfoForm = ({
           Imagen de Perfil
         </Typography>
         <Controller
-          name="photo"
-          control={control}
-          defaultValue={null}
-          render={({ field, fieldState: { error } }) => (
-            <Box>
-              {field.value && typeof field.value === "string" && (
-                <Box mb={1}>
-                  <img
-                    src={field.value}
-                    alt="Profile"
-                    style={{ maxWidth: "200px", display: "block" }}
-                  />
-                </Box>
-              )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => {
-                  field.onChange(e.target.files[0]);
-                }}
-              />
-              {error && (
-                <Typography color="error">{error.message}</Typography>
-              )}
-            </Box>
-          )}
-        />
+        name="photo"
+        control={control}
+        defaultValue={null}
+        render={({ field }) => (
+          <Box className="flex flex-col items-start">
+            {field.value && (
+              <Box mb={1} className="self-center">
+                <img
+                  src={typeof field.value === "string" ? field.value : URL.createObjectURL(field.value)}
+                  alt="Profile"
+                  style={{ maxWidth: "200px", display: "block", borderRadius: "50%", objectFit: "cover" }}
+                />
+              </Box>
+            )}
+            <input
+              type="file"
+              accept="image/*"
+              ref={fileInputRef}
+              style={{ display: "none" }}
+              onChange={(e) => {
+                const file = e.target.files[0];
+                if (file) {
+                  setTempImage(URL.createObjectURL(file));
+                  setCropDialogOpen(true);
+                }
+              }}
+            />
+            
+            <Button
+              variant="contained"
+              onClick={() => fileInputRef.current.click()}
+              startIcon={<CloudUploadIcon />}
+              sx={{ mt: 2 }}
+            >
+              Seleccionar Imagen
+            </Button>
+
+            <PhotoCropDialog
+              open={cropDialogOpen}
+              imageSrc={tempImage}
+              onClose={() => setCropDialogOpen(false)}
+              onSave={(croppedFile) => {
+                field.onChange(croppedFile);
+                setCropDialogOpen(false);
+              }}
+            />
+          </Box>
+        )}
+      />
       </Box>
     </Box>
   );

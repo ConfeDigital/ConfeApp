@@ -61,7 +61,7 @@ class Location(models.Model):
         return f"{self.address_road}, {self.address_number}, {self.address_municip}, {self.address_city}, {self.address_state}"
     
 class Job(models.Model):
-    name = models.CharField(max_length=255, unique=True)
+    name = models.CharField(max_length=255)
 
     company = models.ForeignKey(Company, on_delete=models.CASCADE, null=True, blank=True)
     location = models.ForeignKey(Location, on_delete=models.SET_NULL, null=True, blank=True)

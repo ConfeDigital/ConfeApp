@@ -21,7 +21,7 @@ from reportlab.graphics import renderPDF
 from candidatos.models import UserProfile, SISAidCandidateHistory, TAidCandidateHistory
 from collections import defaultdict
 from datetime import datetime
-
+from .report_utils import draw_logo_header
 
 class ModernColors:
     """Modern color palette for the report."""
@@ -42,6 +42,7 @@ class ModernColors:
     TABLE_HEADER_BG = colors.Color(0.067, 0.329, 0.847, alpha=0.95)
     TABLE_ROW_ALT = colors.Color(0.98, 0.99, 1.0)
 
+    SIS = colors.Color(0.157, 0.227, 0.408)
 
 class TinySpacer(Flowable):
     """A very small spacer to use inside KeepTogether if needed."""
@@ -187,24 +188,45 @@ class PlanApoyosReport:
             d.add(rect)
         return d
 
-    def create_status_indicator(self, status, size=8):
-        """Return a Drawing with a small colored circle for status (compact)."""
+    def create_status_indicator(self, status, size=10):
+        """
+        Return a Drawing with a color + shape pattern for status.
+        - 'funciono'    -> filled circle
+        - 'intentando'  -> circle with diagonal line
+        - else          -> hollow circle with X
+        """
         d = Drawing(size, size)
-        circle = Circle(size / 2, size / 2, size / 2)
+        cx, cy, r = size / 2, size / 2, size / 2 - 1  # center + radius
+        circle = Circle(cx, cy, r)
+    
         if status == 'funciono':
             circle.fillColor = self.colors.SUCCESS
+            circle.strokeColor = self.colors.SUCCESS
+    
         elif status == 'intentando':
-            circle.fillColor = self.colors.WARNING
-        else:
-            circle.fillColor = self.colors.ERROR
-        circle.strokeColor = None
+            circle.fillColor = None
+            circle.strokeColor = self.colors.WARNING
+            d.add(circle)
+            # diagonal line
+            d.add(Line(cx - r, cy - r, cx + r, cy + r, strokeColor=self.colors.WARNING, strokeWidth=1.2))
+            return d
+    
+        else:  # no funciono
+            circle.fillColor = None
+            circle.strokeColor = self.colors.ERROR
+            d.add(circle)
+            # X mark
+            d.add(Line(cx - r, cy - r, cx + r, cy + r, strokeColor=self.colors.ERROR, strokeWidth=1.2))
+            d.add(Line(cx - r, cy + r, cx + r, cy - r, strokeColor=self.colors.ERROR, strokeWidth=1.2))
+            return d
+    
         d.add(circle)
         return d
 
     def create_check_indicator(self, true_val):
         """Return a small indicator: green circle with check if True, gray with cross if False."""
         d = Drawing(12, 12)
-        radius = 5
+        radius = 7
         center = 6
 
         circle = Circle(center, center, radius)
@@ -260,7 +282,7 @@ class PlanApoyosReport:
         status_map = {
             'funciono': 'Exitoso',
             'no_funciono': 'No efectivo',
-            'intentando': 'En evaluación'
+            'intentando': 'Por evaluar'
         }
         return status_map.get(status, 'Sin estado')
 
@@ -361,7 +383,7 @@ class PlanApoyosReport:
                         comments = comments[:137] + "..."
 
                     # We'll put a small colored circle drawing in the 'Estado' cell
-                    status_draw = self.create_status_indicator(subitem.is_successful, size=8)
+                    status_draw = self.create_status_indicator(subitem.is_successful, size=14)
                     active_draw = self.create_check_indicator(active_bool)
 
                     table_data.append([
@@ -377,7 +399,7 @@ class PlanApoyosReport:
                     table = Table(table_data, colWidths=[1.6 * inch, 2.1 * inch, 0.9 * inch, 0.6 * inch, 2.0 * inch],
                                   repeatRows=1)
                     table.setStyle(TableStyle([
-                        ('BACKGROUND', (0, 0), (-1, 0), self.colors.TABLE_HEADER_BG),
+                        ('BACKGROUND', (0, 0), (-1, 0), self.colors.SIS),
                         ('TEXTCOLOR', (0, 0), (-1, 0), self.colors.WHITE),
                         ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
                         ('FONTSIZE', (0, 0), (-1, 0), 9),
@@ -431,7 +453,7 @@ class PlanApoyosReport:
             header_text = f"Apoyos Técnicos Activos ({len(active_aids)})"
             header_par = Paragraph(header_text, self.styles['ModernSectionHeader'])
 
-            table_data = [['Apoyo Técnico', 'Grupos', 'Estado', 'Inicio', 'Duración', 'Observaciones']]
+            table_data = [['Apoyo Técnico', 'Grupos', 'Efectividad', 'Inicio', 'Duración', 'Observaciones']]
             for aid in active_aids:
                 aid_name = aid.aid.name if getattr(aid, 'aid', None) else "Apoyo sin especificar"
                 status_text = self.get_status_text(aid.is_successful)
@@ -453,7 +475,7 @@ class PlanApoyosReport:
                 if len(comments) > 140:
                     comments = comments[:137] + "..."
 
-                status_draw = self.create_status_indicator(aid.is_successful, size=8)
+                status_draw = self.create_status_indicator(aid.is_successful, size=14)
                 table_data.append([Paragraph(aid_name, self.styles['Small']), Paragraph(impediments_ist, self.styles['Small']), status_draw, start_date, duration, Paragraph(comments, self.styles['Small'])])
 
             table = Table(table_data, colWidths=[1.6 * inch, 1.6 * inch, 0.6 * inch, 0.9 * inch, 0.9 * inch, 1.7 * inch],
@@ -500,7 +522,7 @@ class PlanApoyosReport:
                                           "No se obtuvieron resultados" if aid.is_successful == 'no_funciono' else "Sin especificar")
                 if len(reason) > 120:
                     reason = reason[:117] + "..."
-                status_draw = self.create_status_indicator(aid.is_successful, size=8)
+                status_draw = self.create_status_indicator(aid.is_successful, size=14)
                 table_data.append([Paragraph(aid_name, self.styles['Small']), Paragraph(impediments_ist, self.styles['Small']), status_draw, period, Paragraph(reason, self.styles['Small'])])
 
             table = Table(table_data, colWidths=[1.6 * inch, 1.6 * inch, 0.8 * inch, 1.5 * inch, 1.8 * inch], repeatRows=1)
@@ -537,16 +559,24 @@ class PlanApoyosReport:
 
         # Status circles
         data.append([
-            self.create_status_indicator('funciono', size=10),
+            self.create_status_indicator('funciono', size=14),
             Paragraph("Exitoso: apoyo demostrado como efectivo", self.styles['Small'])
         ])
         data.append([
-            self.create_status_indicator('intentando', size=10),
-            Paragraph("En evaluación: apoyo en prueba y seguimiento", self.styles['Small'])
+            self.create_status_indicator('intentando', size=14),
+            Paragraph("Por evaluar: apoyo en prueba y seguimiento", self.styles['Small'])
         ])
         data.append([
-            self.create_status_indicator('no_funciono', size=10),
+            self.create_status_indicator('no_funciono', size=14),
             Paragraph("No efectivo: no ha entregado resultados esperados", self.styles['Small'])
+        ])
+        data.append([
+            self.create_check_indicator(True),
+            Paragraph("Apoyo en uso", self.styles['Small'])
+        ])
+        data.append([
+            self.create_check_indicator(False),
+            Paragraph("Apoyo no en uso", self.styles['Small'])
         ])
 
         # Build table
@@ -563,17 +593,6 @@ class PlanApoyosReport:
         story.append(Paragraph("<b>Guía de Interpretación</b>", self.styles['InfoBox']))
         story.append(Spacer(1, 4))
         story.append(table)
-        story.append(Spacer(1, 6))
-
-        # Add other symbols in text bullets (✓, ✗, etc.)
-        symbols_text = """
-        <b>Símbolos:</b><br/>
-        • ✓ Apoyo en uso<br/>
-        • ✗ Apoyo no en uso / discontinuado<br/>
-        • 📋 Información administrativa (texto)<br/>
-        • 🔧 Apoyo técnico (detallado en sección)
-        """
-        story.append(Paragraph(symbols_text, self.styles['InfoBox']))
         story.append(Spacer(1, 6))
 
         return story
@@ -623,7 +642,7 @@ class PlanApoyosReport:
 
         if total_active_in_progress > 0:
             recommendations.append(
-                f"<b>Apoyos en Evaluación:</b> {total_active_in_progress} apoyos ({in_progress_rate:.0f}%). Seguimiento cercano recomendado.<br/><br/>"
+                f"<b>Apoyos por Evaluar:</b> {total_active_in_progress} apoyos ({in_progress_rate:.0f}%). Seguimiento cercano recomendado.<br/><br/>"
             )
 
         if total_active_aids > 10:
@@ -649,7 +668,7 @@ class PlanApoyosReport:
 
         recommendations.extend([
             "<b>Recomendaciones:</b><br/>",
-            "• Seguimiento regular de apoyos en evaluación.<br/>",
+            "• Seguimiento regular de apoyos por evaluar.<br/>",
             "• Documentar cambios y resultados en comentarios.<br/>",
             "• Mantener comunicación con implementadores.<br/>",
             "• Revisar apoyos no efectivos y ajustar.<br/>",
@@ -677,6 +696,7 @@ class PlanApoyosReport:
 
         # Header graphic (compact)
         header_graphic = self.create_header_graphic(width=6.5 * inch, height=0.22 * inch)
+        story.append(draw_logo_header())
         story.append(header_graphic)
         story.append(Spacer(1, 8))
 
@@ -695,17 +715,18 @@ class PlanApoyosReport:
             user_info_content = f"""
             <b>Información del Usuario</b><br/>
             <b>Nombre:</b> {full_name}<br/>
-            <b>Fecha de Generación:</b> {current_date.strftime('%d/%m/%Y %H:%M')}<br/>
+            <b>Edad:</b> {str(datetime.now().year - profile.birth_date.year) + " años" if profile.birth_date else "N/A"}<br/>
             """
         else:
             current_date = datetime.now()
             user_info_content = f"""
             <b>Información del Usuario</b><br/>
-            <b>Fecha de Generación:</b> {current_date.strftime('%d/%m/%Y %H:%M')}<br/>
             """
 
-        story.append(Paragraph(user_info_content, self.styles['InfoBox']))
+        story.append(Paragraph(user_info_content, self.styles['Subtitle']))
         story.append(Spacer(1, 8))
+
+        story.append(Paragraph(f"<b>Fecha de Generación:</b> {current_date.strftime('%d/%m/%Y %H:%M')}<br/>", self.styles['FooterSmall']))
 
         # Executive summary (compact)
         story.append(Paragraph("Resumen Ejecutivo", self.styles['ModernSectionHeader']))
@@ -727,7 +748,7 @@ class PlanApoyosReport:
         # Technical aids on next page if needed
         story.append(PageBreak())
         story.append(Paragraph("Apoyos Técnicos Especializados", self.styles['ModernTitle']))
-        tech_intro = ("Los apoyos técnicos representan intervenciones especializadas basadas en evaluación. "
+        tech_intro = ("Los apoyos técnicos representan intervenciones especializadas basadas en evaluación diagnóstica. "
                       "Incluye apoyos activos y el historial de intervenciones.")
         story.append(Paragraph(tech_intro, self.styles['InfoBox']))
         story.append(Spacer(1, 6))

@@ -438,7 +438,7 @@ const JobsCompaniesPage = () => {
           setJobDialogOpen(false);
           fetchData();
         }}
-        companies={selectedCompany ? [selectedCompany] : companies}
+        companies={selectedCompany ? selectedCompany : companies}
         setJobs={setJobs}
         setAlert={setAlert}
       />
@@ -465,7 +465,7 @@ const JobsCompaniesPage = () => {
           setEmployerDialogOpen(false);
           fetchData();
         }}
-        companies={selectedCompany ? [selectedCompany] : companies}
+        companies={selectedCompany ? selectedCompany : companies}
         setEmployers={setEmployers}
         setAlert={setAlert}
       />

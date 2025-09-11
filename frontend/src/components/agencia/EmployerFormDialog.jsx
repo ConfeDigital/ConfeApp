@@ -51,6 +51,13 @@ export default function EmployerFormDialog({
           password: "",
           company: "",
         });
+
+        if (companies && !Array.isArray(companies)) {
+          setForm((prev) => ({
+            ...prev,
+            company: companies.id, // or companies if backend expects full object
+          }));
+        }        
       }
     }
   }, [open, isEdit, data]);
@@ -144,25 +151,35 @@ export default function EmployerFormDialog({
           />
         )}
 
-        {!!companies &&(
-          <FormControl fullWidth margin="dense">
-            <InputLabel>Empresa</InputLabel>
-            <Select
-              name="company"
-              value={form.company || ""}
+        {!!companies && (
+          Array.isArray(companies) ? (
+            <FormControl fullWidth margin="dense">
+              <InputLabel>Empresa</InputLabel>
+              <Select
+                name="company"
+                value={form.company || ""}
+                label="Empresa"
+                onChange={handleChange}
+              >
+                <MenuItem value="">— Ninguna —</MenuItem>
+                {companies.map((c) => (
+                  <MenuItem key={c.id} value={c.id}>
+                    {c.name}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          ) : (
+            <TextField
+              fullWidth
+              margin="normal"
               label="Empresa"
-              onChange={handleChange}
-            >
-              <MenuItem value="">— Ninguna —</MenuItem>
-              {companies.map((c) => (
-                <MenuItem key={c.id} value={c.id}>
-                  {c.name}
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+              value={companies.name}
+              disabled
+            />
+          )
         )}
-        
+
       </DialogContent>
 
       <DialogActions>

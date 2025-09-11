@@ -7,6 +7,7 @@ from django.contrib.auth.models import Group
 from rest_framework import generics, viewsets, status
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, PermissionDenied
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from api.permissions import CombinedJobAccessPermission, IsInSameCenter, PersonalPermission, GerentePermission
@@ -300,13 +301,27 @@ class TAidCandidateHistoryViewSet(viewsets.ModelViewSet):
     serializer_class = TAidCandidateHistorySerializer
 
     def get_queryset(self):
-        # Expecting a query parameter named 'candidate' with the user's id
+        """
+        Dynamically filters the queryset based on the request.
+        If the action is 'me', it filters by the authenticated user.
+        Otherwise, it filters by the 'candidate' query parameter or returns all.
+        """
+        if self.action == 'me':
+            return TAidCandidateHistory.objects.filter(candidate__user=self.request.user)
+
+        # Handle the existing 'candidate' query parameter logic
         candidate_id = self.request.query_params.get('candidate')
         if candidate_id:
-            # Assuming candidate is a ForeignKey to UserProfile and that UserProfile
-            # is linked to User via a one-to-one relationship, we filter by candidate__user__id.
             return TAidCandidateHistory.objects.filter(candidate__user__id=candidate_id)
+        
         return TAidCandidateHistory.objects.all()
+
+    @action(detail=False, methods=['get'])
+    def me(self, request):
+        """
+        Returns the TAidCandidateHistory for the currently authenticated user.
+        """
+        return self.list(request)
 
 
 class SISAidCandidateHistoryViewSet(viewsets.ModelViewSet):
@@ -686,12 +701,19 @@ class SISAidCandidateHistoryCreateAPIView(APIView):
 
 
 class SISAidCandidateHistoryListAPIView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, PersonalPermission, IsInSameCenter]
     serializer_class = SISAidCandidateHistorySerializer
 
     def get_queryset(self):
         candidate_id = self.kwargs.get('candidate_id')
         return SISAidCandidateHistory.objects.filter(candidate__user__id=candidate_id)
+
+class SISAidCandidateHistoryListAPIViewMe(generics.ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = SISAidCandidateHistorySerializer
+
+    def get_queryset(self):
+        return SISAidCandidateHistory.objects.filter(candidate__user__id=self.request.user.id)
 
 class SISAidCandidateHistoryDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -780,7 +802,7 @@ class TAidCandidateHistoryCreateAPIView(APIView):
 
 
 class TAidCandidateHistoryListAPIView(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, PersonalPermission, IsInSameCenter]
     serializer_class = TAidCandidateHistorySerializer
 
     def get_queryset(self):

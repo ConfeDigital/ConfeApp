@@ -28,6 +28,7 @@ from .views import (
     CandidateCentroAPIView,
     SISAidCandidateHistoryCreateAPIView,
     SISAidCandidateHistoryListAPIView,
+    SISAidCandidateHistoryListAPIViewMe,
     SISAidCandidateHistoryDetailAPIView,
     SISAidCandidateHistoryHistoryAPIView,
 
@@ -84,6 +85,7 @@ urlpatterns = [
 
     path('seguimiento/sis-aid/', SISAidCandidateHistoryCreateAPIView.as_view(), name='sis-aid-create'),
     path('seguimiento/sis-aid/<uuid:candidate_id>/', SISAidCandidateHistoryListAPIView.as_view(), name='sis-aid-list'),
+    path('seguimiento/sis-aid/me/', SISAidCandidateHistoryListAPIViewMe.as_view(), name='sis-aid-list'),
     path('seguimiento/sis-aid/detail/<int:pk>/', SISAidCandidateHistoryDetailAPIView.as_view(), name='sid-aid-detail'),
     path('seguimiento/sis-aid/<uuid:candidate_id>/history/', SISAidCandidateHistoryHistoryAPIView.as_view(), name='sis-aid-history'),
 
