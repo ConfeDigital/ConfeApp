@@ -54,6 +54,7 @@ import {
 import axios from "../../api";
 import useDocumentTitle from '../../hooks/useDocumentTitle';
 import * as Yup from 'yup';
+import dayjs from "dayjs";
 
 // Validation schema
 const habilidadSchema = Yup.object({
@@ -483,7 +484,7 @@ const HabilidadesEmpleo = () => {
                     </TableCell>
                     <TableCell>
                       <Typography variant="body2" color="text.secondary">
-                        {new Date(habilidad.fecha_creacion).toLocaleDateString()}
+                        {dayjs(habilidad.fecha_creacion).format("DD/MM/YYYY")}
                       </Typography>
                     </TableCell>
                     <TableCell align="center">

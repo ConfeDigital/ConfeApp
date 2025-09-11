@@ -62,6 +62,7 @@ import CuestionarioDetail from "./pages/cuestionarios/CuestionarioDetail";
 import Info from "./pages/Info";
 import CandidateDatasheet from "./pages/candidatos/CandidateDatasheet";
 import CandidateDashboard from "./pages/candidatos/CandidateDashboard";
+import CandidateAids from "./pages/candidatos/CandidateAids";
 import Preentrevista from "./pages/cuestionarios/Preentrevista";
 import CargaMasivaCandidatos from "./pages/scenes/cargaMasivaCandidatos";
 import CargaMasivaRespuestas from "./pages/scenes/CargaMasivaRespuestas";
@@ -195,6 +196,7 @@ function App({ instance }) {
                   >
                     <Route path="/candidato/perfil" element={<CandidateDatasheet />} />
                     <Route path="/candidato/dashboard" element={<CandidateDashboard />} />
+                    <Route path="/candidato/apoyos" element={<CandidateAids />} />
                     <Route path="/candidato/preentrevista" element={<Preentrevista />} />
                   </Route>
 

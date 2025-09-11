@@ -20,7 +20,7 @@ import ContrastIcon from "@mui/icons-material/Contrast";
 import MenuIcon from "@mui/icons-material/Menu"; // Hamburger icon for mobile
 import CloseIcon from "@mui/icons-material/Close"; // Close icon for drawer
 import { ColorModeContext, tokens } from "../theme";
-import { NavLink, useNavigate, useLocation } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
 import LogoutConfirmationDialog from "./LogoutConfirmationDialog";
 
@@ -29,7 +29,6 @@ export default function NavBar() {
   const { cycleColorMode, mode } = useContext(ColorModeContext);
   const colors = tokens(theme.palette.mode);
   const navigate = useNavigate();
-  const location = useLocation();
   const { isAuthenticated, user } = useSelector((state) => ({
     isAuthenticated: state.auth.isAuthenticated,
     user: state.auth.user,
@@ -70,7 +69,7 @@ export default function NavBar() {
   };
 
   const handleProfile = () => {
-    navigate(location.pathname === "/candidato/perfil" ? "/candidato/dashboard" : "/candidato/perfil");
+    navigate("/candidato/perfil");
     setDrawerOpen(false); // Close drawer on navigation
   };
 
@@ -110,7 +109,7 @@ export default function NavBar() {
           sx={{ textTransform: "none", mr: 2, display: { xs: "none", sm: "block" } }} // Hide on small screens
           onClick={handleProfile}
         >
-          {location.pathname === "/candidato/perfil" ? "Dashboard" : "Mi Perfil"}
+          Mi Perfil
         </Button>
       )}
       <Button
@@ -163,7 +162,7 @@ export default function NavBar() {
             {showProfile && (
               <ListItem disablePadding>
                 <ListItemButton onClick={handleProfile}>
-                  <ListItemText primary={location.pathname === "/candidato/perfil" ? "Dashboard" : "Mi Perfil"} />
+                  <ListItemText primary="Mi Perfil" />
                 </ListItemButton>
               </ListItem>
             )}
@@ -188,7 +187,7 @@ export default function NavBar() {
     <AppBar position="static" sx={{ backgroundColor: colors.primaryBackground[600] }}>
       <Toolbar sx={{ justifyContent: "space-between", px: { xs: 2, sm: 4 } }}>
         {/* Logo */}
-        <Button component={NavLink} to="/" sx={{ p: 0, '&:hover': { bgcolor: 'transparent' } }}>
+        <Button component={NavLink} to={showProfile ? "/candidato/dashboard" : "/"} sx={{ p: 0, '&:hover': { bgcolor: 'transparent' } }}>
           <img
             alt="CONFE"
             width="50px" // Slightly smaller logo for better fit

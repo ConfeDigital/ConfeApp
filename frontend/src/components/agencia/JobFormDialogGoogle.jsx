@@ -19,6 +19,8 @@ import {
     Chip,
     Autocomplete,
     InputAdornment,
+    List,
+    ListItem,
 } from '@mui/material';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -36,15 +38,15 @@ const jobValidationSchema = yup.object().shape({
         .min(2, 'El nombre debe tener al menos 2 caracteres')
         .max(100, 'El nombre no puede exceder 100 caracteres')
         .trim(),
-    
+
     company: yup
         .string()
-        .when('$isEdit', {
-            is: false,
-            then: (schema) => schema.required('La empresa es obligatoria'),
-            otherwise: (schema) => schema.optional(),
+        .when('$shouldRequireCompany', {
+          is: true, // This condition is true when shouldRequireCompany is true
+          then: (schema) => schema.required('La empresa es obligatoria'),
+          otherwise: (schema) => schema.optional(),
         }),
-    
+
     location: yup
         .string()
         .when('$newLocation', {
@@ -52,13 +54,13 @@ const jobValidationSchema = yup.object().shape({
             then: (schema) => schema.required('La ubicación es obligatoria'),
             otherwise: (schema) => schema.optional(),
         }),
-    
+
     job_description: yup
         .string()
         .required('La descripción del empleo es obligatoria')
         .max(2000, 'La descripción no puede exceder 2000 caracteres')
         .trim(),
-    
+
     vacancies: yup
         .number()
         .typeError('Las vacantes deben ser un número')
@@ -66,24 +68,24 @@ const jobValidationSchema = yup.object().shape({
         .max(999, 'Las vacantes no pueden exceder 999')
         .integer('Las vacantes deben ser un número entero')
         .required('Las vacantes son obligatorias'),
-    
+
     horario: yup
         .string()
         .max(255, 'El horario no puede exceder 255 caracteres')
         .optional(),
-    
+
     sueldo_base: yup
         .number()
         .typeError('El sueldo base debe ser un número')
         .min(0, 'El sueldo base no puede ser negativo')
         .max(999999.99, 'El sueldo base no puede exceder 999,999.99')
         .optional(),
-    
+
     prestaciones: yup
         .string()
         .max(2000, 'Las prestaciones no pueden exceder 2000 caracteres')
         .optional(),
-    
+
     // Conditional location form validation when creating new location
     locationForm: yup
         .object()
@@ -94,18 +96,21 @@ const jobValidationSchema = yup.object().shape({
         }),
 });
 
-const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companies, setJobs, setAlert }) => {
+const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companies = null, setJobs, setAlert }) => {
     const [locations, setLocations] = useState([]);
     const [newLocation, setNewLocation] = useState(false);
     const [autocompleteKey, setAutocompleteKey] = useState(0);
     const [habilidades, setHabilidades] = useState([]);
     const [selectedHabilidades, setSelectedHabilidades] = useState([]);
 
+    const shouldRequireCompany = !isEdit && companies !== null;
+
     const methods = useForm({
         resolver: yupResolver(jobValidationSchema),
-        context: { 
-            isEdit, 
-            newLocation 
+        context: {
+            isEdit,
+            shouldRequireCompany,
+            newLocation
         },
         defaultValues: {
             name: '',
@@ -135,12 +140,12 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
         mode: 'onBlur', // Validate on blur for better UX
     });
 
-    const { 
-        handleSubmit, 
-        control, 
-        setValue, 
-        watch, 
-        reset, 
+    const {
+        handleSubmit,
+        control,
+        setValue,
+        watch,
+        reset,
         formState: { errors, isSubmitting },
         clearErrors,
         setError
@@ -179,7 +184,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                     }
                 });
                 setNewLocation(false);
-                
+
                 // Cargar habilidades del empleo si está editando
                 if (data.habilidades_requeridas) {
                     setSelectedHabilidades(data.habilidades_requeridas.map(h => ({
@@ -218,9 +223,14 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                 });
                 setNewLocation(false);
                 setSelectedHabilidades([]);
+
+                // 👇 NEW: Auto-set company if it's a single object
+                if (companies && !Array.isArray(companies)) {
+                    setValue('company', companies.id);
+                }
             }
         }
-    }, [open, isEdit, data, reset]);
+    }, [open, isEdit, data, reset, setValue, companies]);
 
     // Update validation context when newLocation changes
     useEffect(() => {
@@ -254,7 +264,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
     const handleNewLocationChange = (e) => {
         const checked = e.target.checked;
         setNewLocation(checked);
-        
+
         if (checked) {
             setValue('location', ''); // Clear location selection when creating new
             clearErrors('location');
@@ -282,9 +292,10 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
     const onFormSubmit = async (formData) => {
         try {
             let locationId = formData.location;
-            
+
             if (newLocation) {
                 const newLocationData = formData.locationForm;
+                newLocationData.company = formData.company;
                 const locationRes = await api.post('api/agencia/locations/', newLocationData);
                 locationId = locationRes.data.id;
             } else if (!locationId && isEdit && data && data.location_details) {
@@ -320,16 +331,16 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                 severity: "success",
                 message: isEdit ? "Empleo actualizado correctamente" : "Empleo creado correctamente",
             });
-            
+
             onSubmit(); // callback para cerrar el diálogo y refrescar datos
-            
+
         } catch (error) {
             console.error("Error al enviar el formulario de empleo:", error);
-            
+
             // Handle validation errors from backend
             if (error.response?.data) {
                 const backendErrors = error.response.data;
-                
+
                 // Set field-specific errors
                 Object.keys(backendErrors).forEach(field => {
                     if (typeof backendErrors[field] === 'string') {
@@ -345,14 +356,14 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                     }
                 });
             }
-            
-            const errorMessage = error.response?.data?.non_field_errors?.[0] || 
-                               error.response?.data?.detail || 
-                               'Error al guardar el empleo. Verifique los datos.';
-            
-            setAlert({ 
-                severity: "error", 
-                message: errorMessage 
+
+            const errorMessage = error.response?.data?.non_field_errors?.[0] ||
+                error.response?.data?.detail ||
+                'Error al guardar el empleo. Verifique los datos.';
+
+            setAlert({
+                severity: "error",
+                message: errorMessage
             });
         }
     };
@@ -378,32 +389,44 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                             error={!!errors.name}
                             helperText={errors.name?.message}
                         />
-                        
-                        {(!!companies && !isEdit) && (
-                            <FormControl 
-                                fullWidth 
-                                margin="normal" 
-                                error={!!errors.company}
-                            >
-                                <InputLabel id="company-label">Empresa</InputLabel>
-                                <Select
-                                    labelId="company-label"
-                                    label="Empresa"
-                                    {...methods.register('company')}
-                                    value={watchedValues.company || ''}
+
+                        {(!isEdit && !!companies) && (
+                            Array.isArray(companies) ? (
+                                // Case 1: Multiple companies → dropdown
+                                <FormControl
+                                    fullWidth
+                                    margin="normal"
+                                    error={!!errors.company}
                                 >
-                                    {companies.map((company) => (
-                                        <MenuItem key={company.id} value={company.id}>
-                                            {company.name}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                                {errors.company && (
-                                    <FormHelperText>{errors.company.message}</FormHelperText>
-                                )}
-                            </FormControl>
+                                    <InputLabel id="company-label">Empresa</InputLabel>
+                                    <Select
+                                        labelId="company-label"
+                                        label="Empresa"
+                                        {...methods.register('company')}
+                                        value={watchedValues.company || ''}
+                                    >
+                                        {companies.map((company) => (
+                                            <MenuItem key={company.id} value={company.id}>
+                                                {company.name}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                    {errors.company && (
+                                        <FormHelperText>{errors.company.message}</FormHelperText>
+                                    )}
+                                </FormControl>
+                            ) : (
+                                // Case 2: Single company → auto-select + disabled
+                                <TextField
+                                    fullWidth
+                                    margin="normal"
+                                    label="Empresa"
+                                    value={companies.name}
+                                    disabled
+                                />
+                            )
                         )}
-                        
+
                         <FormControlLabel
                             control={
                                 <Checkbox
@@ -425,9 +448,9 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                                     {...methods.register('locationForm.alias')}
                                     helperText="Un nombre descriptivo para identificar fácilmente esta ubicación"
                                 />
-                                <AddressAutoCompleteForm 
-                                    key={autocompleteKey} 
-                                    prefix="locationForm" 
+                                <AddressAutoCompleteForm
+                                    key={autocompleteKey}
+                                    prefix="locationForm"
                                 />
                             </Box>
                         ) : (
@@ -485,7 +508,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                             label="Vacantes"
                             fullWidth
                             type="number"
-                            {...methods.register('vacancies', { 
+                            {...methods.register('vacancies', {
                                 valueAsNumber: true,
                                 setValueAs: (value) => value === '' ? 0 : parseInt(value, 10)
                             })}
@@ -523,7 +546,7 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                             label="Sueldo Base (Mensual MXN)"
                             type="number"
                             placeholder="Ej: 15000"
-                            {...methods.register('sueldo_base', { 
+                            {...methods.register('sueldo_base', {
                                 valueAsNumber: true,
                                 setValueAs: (value) => value === '' ? null : parseFloat(value)
                             })}
@@ -536,9 +559,9 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                                         step: 1000,
                                     },
                                     startAdornment: (
-                                      <InputAdornment position="start">
-                                        <AttachMoneyIcon />
-                                      </InputAdornment>
+                                        <InputAdornment position="start">
+                                            <AttachMoneyIcon />
+                                        </InputAdornment>
                                     ),
                                 },
                             }}
@@ -589,16 +612,16 @@ const JobFormDialog = ({ open, onClose, onSubmit, data, isEdit = false, companie
                         />
                     </DialogContent>
                     <DialogActions>
-                        <Button 
-                            color="secondary" 
+                        <Button
+                            color="secondary"
                             onClick={onClose}
                             disabled={isSubmitting}
                         >
                             Cancelar
                         </Button>
-                        <Button 
+                        <Button
                             type="submit"
-                            variant="contained" 
+                            variant="contained"
                             color="primary"
                             disabled={isSubmitting}
                         >

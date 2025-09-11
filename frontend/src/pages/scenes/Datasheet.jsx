@@ -999,12 +999,34 @@ const Datasheet = () => {
       >
         <CircularProgress color="inherit" />
       </Backdrop>
-      <Dialog open={openImageDialog} onClose={() => setOpenImageDialog(false)} maxWidth="md">
-        <DialogContent>
+      <Dialog
+        open={openImageDialog}
+        onClose={() => setOpenImageDialog(false)}
+        maxWidth="md"
+      >
+        <DialogContent
+          sx={{
+            // Set a fixed or constrained size for the content area
+            width: '100%',
+            maxWidth: '600px', // Example max width
+            height: '100%',
+            maxHeight: '80vh', // Example max height as a percentage of viewport height
+            p: 2,
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          {/* The image is styled to fit within its parent container */}
           <img
             src={candidateProfile.photo}
             alt="Candidato Full-Scale"
-            style={{ width: 'auto', height: 'auto' }}
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'contain', // This is the key to maintaining aspect ratio
+              borderRadius: '8px',
+            }}
           />
         </DialogContent>
       </Dialog>

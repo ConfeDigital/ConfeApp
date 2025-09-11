@@ -19,7 +19,6 @@ import {
   AccordionDetails,
   Chip,
   Divider,
-  ButtonGroup,
   IconButton,
   Tooltip,
 } from "@mui/material";
@@ -233,22 +232,15 @@ const GeneralAidHistory = ({
         />
       </Box>
 
-      <ButtonGroup sx={{ mb: 3 }} variant="contained">
-        {/* <Button
-          color="primary"
-          onClick={() => navigate(`/seguimiento-candidatos/${uid}`)}
-          startIcon={<EditIcon />}
-        >
-          Editar Seguimiento
-        </Button> */}
-        <Button
-          color="secondary"
-          onClick={() => setManageDialogOpen(true)}
-          startIcon={<AddCircleOutlineIcon />}
-        >
-          Gestionar Todos los Apoyos
-        </Button>
-      </ButtonGroup>
+      <Button
+        color="secondary"
+        onClick={() => setManageDialogOpen(true)}
+        startIcon={<AddCircleOutlineIcon />}
+        variant="contained"
+        sx={{ mb: 2 }}
+      >
+        Gestionar Todos los Apoyos
+      </Button>
 
       {/* Grouped entries view */}
       <Box sx={{ mt: 2 }}>

@@ -89,8 +89,16 @@ class FichaTecnicaReport:
         # Get profile photo if available
         profile_pic = None
         if profile.photo and default_storage.exists(profile.photo.name):
-            img_path = default_storage.path(profile.photo.name)
-            profile_pic = Image(img_path, width=120, height=120, kind='proportional')
+            try:
+                # Download file content to memory - works for both local and cloud storage
+                with default_storage.open(profile.photo.name, 'rb') as image_file:
+                    image_data = image_file.read()
+                    image_buffer = BytesIO(image_data)
+                    profile_pic = Image(image_buffer, width=120, height=120, kind='proportional')
+            except Exception as e:
+                # If there's any issue loading the image, continue without it
+                print(f"Error loading profile image: {e}")
+                profile_pic = None
         
         # Create title content
         title_content = Table([

@@ -140,24 +140,28 @@ const CandidateCreate = () => {
       const response = await axios.post("/api/candidatos/crear/", fieldsData, {
         headers: { "Content-Type": "application/json" },
       });
-
+    
       const { user_id } = response.data; // Extract user_id from response
-
+    
       // Step 2: If a photo exists, upload it using the received user_id
       if (formData.photo && typeof formData.photo === "object") {
         const photoData = new FormData();
-        photoData.append("photo", formData.photo);
-
+        // Rename the file to use the user_id and .jpeg extension
+        const renamedPhoto = new File([formData.photo], `${user_id}.jpeg`, {
+          type: formData.photo.type,
+        });
+        photoData.append("photo", renamedPhoto);
+    
         await axios.put(`/api/candidatos/upload-photo/${user_id}/`, photoData, {
           headers: { "Content-Type": "multipart/form-data" },
         });
       }
-
+    
       navigate(`/candidatos/${user_id}`); // Redirect to candidate profile or list
     } catch (err) {
       setError(err);
       console.error(err);
-    }
+    }    
 
     setLoading(false);
   };
