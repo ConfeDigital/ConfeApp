@@ -98,10 +98,10 @@ const HighlightRow = styled(Paper)(({ theme }) => ({
 
 // Comment type mappings
 const commentTypeDisplayNames = {
-  info: 'Información',
-  success: 'Éxito',
+  success: 'A',
+  info: 'B',
   warning: 'Advertencia',
-  error: 'Error',
+  error: 'R',
 };
 
 // Mapping for skill importance levels
@@ -504,10 +504,10 @@ const EmploymentDashboard = () => {
 
   const getCommentTypeLabel = (type) => {
     const labels = {
-      info: 'Información',
-      success: 'Éxito',
+      success: 'A',
+      info: 'B',
       warning: 'Advertencia',
-      error: 'Error'
+      error: 'R'
     };
     return labels[type] || 'Información';
   };
@@ -1506,7 +1506,7 @@ const EmploymentDashboard = () => {
           {commentErrorMsg && <Alert severity="error" sx={{ mb: 2 }}>{commentErrorMsg}</Alert>}
 
           <TextField
-            label="Comentario"
+            label="Observación"
             name="comment_text"
             value={commentFormData.comment_text}
             onChange={handleCommentFormChange}
@@ -1516,21 +1516,21 @@ const EmploymentDashboard = () => {
             margin="dense"
             required
             error={!!commentErrorMsg && commentErrorMsg.includes('vacío')}
-            helperText={!!commentErrorMsg && commentErrorMsg.includes('vacío') ? "El comentario no puede estar vacío." : ""}
+            helperText={!!commentErrorMsg && commentErrorMsg.includes('vacío') ? "La observación no puede estar vacía." : ""}
           />
           <FormControl fullWidth margin="dense">
-            <InputLabel id="comment-type-label">Tipo de Comentario</InputLabel>
+            <InputLabel id="comment-type-label">Tipo de Observación</InputLabel>
             <Select
               labelId="comment-type-label"
               name="type"
               value={commentFormData.type}
-              label="Tipo de Comentario"
+              label="Tipo de Observación"
               onChange={handleCommentFormChange}
             >
-              <MenuItem value="info">Información</MenuItem>
-              <MenuItem value="success">Éxito</MenuItem>
-              <MenuItem value="warning">Advertencia</MenuItem>
-              <MenuItem value="error">Error</MenuItem>
+              <MenuItem value="success">A - Excelente</MenuItem>
+              <MenuItem value="info">B - Bien</MenuItem>
+              {/* <MenuItem value="warning">Advertencia</MenuItem> */}
+              <MenuItem value="error">R - No cumple</MenuItem>
             </Select>
           </FormControl>
         </DialogContent>

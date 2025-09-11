@@ -64,10 +64,10 @@ dayjs.locale('es');
 
 // Mapping for comment types to their Spanish display names
 const commentTypeDisplayNames = {
-    info: 'Información',
-    success: 'Éxito',
+    success: 'A',
+    info: 'B',
     warning: 'Advertencia',
-    error: 'Error',
+    error: 'R',
 };
 
 // Mapping for skill importance levels
@@ -899,10 +899,10 @@ const JobCandidatesPage = () => {
                             label="Tipo de Observación"
                             onChange={handleCommentFormChange}
                         >
-                            <MenuItem value="info">Información</MenuItem>
-                            <MenuItem value="success">Éxito</MenuItem>
-                            <MenuItem value="warning">Advertencia</MenuItem>
-                            <MenuItem value="error">Error</MenuItem>
+                            <MenuItem value="success">A - Excelente</MenuItem>
+                            <MenuItem value="info">B - Bien</MenuItem>
+                            {/* <MenuItem value="warning">Advertencia</MenuItem> */}
+                            <MenuItem value="error">R - No cumple</MenuItem>
                         </Select>
                     </FormControl>
                 </DialogContent>
