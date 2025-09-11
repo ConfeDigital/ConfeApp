@@ -83,6 +83,7 @@ INSTALLED_APPS = [
     "channels",
     'simple_history',
     'storages',
+    'django_celery_beat',
     "api",
     "mycalendar",
     "notifications",

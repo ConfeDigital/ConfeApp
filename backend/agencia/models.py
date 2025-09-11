@@ -1,5 +1,6 @@
 from django.db import models
 from django.conf import settings
+from simple_history.models import HistoricalRecords # type: ignore
 
 User = settings.AUTH_USER_MODEL
 
@@ -82,6 +83,8 @@ class Job(models.Model):
         related_name='empleos_que_requieren',
         blank=True
     )
+
+    history = HistoricalRecords()
 
     def __str__(self):
         if self.company:

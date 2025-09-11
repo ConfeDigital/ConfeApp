@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import *
+from simple_history.admin import SimpleHistoryAdmin # type: ignore
 
 class LocationAdmin(admin.ModelAdmin):
     list_display = ('address_road', 'address_number', 'address_municip', 'address_state', 'address_city', 'company')
@@ -11,7 +12,7 @@ class JobHabilidadRequeridaInline(admin.TabularInline):
     extra = 1
     autocomplete_fields = ('habilidad',)
 
-class JobAdmin(admin.ModelAdmin):
+class JobAdmin(SimpleHistoryAdmin):
     list_display = ('name', 'company', 'location', 'vacancies', 'sueldo_base', 'horario')
     list_filter = ('company',)
     search_fields = ('name', 'company__name', 'location__address_municip')
