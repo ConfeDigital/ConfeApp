@@ -29,3 +29,4 @@ azure-storage-blob==12.26.0
 fuzzywuzzy==0.18.0
 msal==1.33.0
 django-celery-beat==2.8.1
+celery[redis]==5.5.3
