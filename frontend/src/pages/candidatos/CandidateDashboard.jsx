@@ -416,7 +416,7 @@ function DashboardCandidato() {
                       </Box>
 
                       {/* Overall Stage Status */}
-                      <Box
+                      {/* <Box
                         sx={{
                           display: "flex",
                           justifyContent: "center",
@@ -429,7 +429,7 @@ function DashboardCandidato() {
                           variant="outlined"
                           sx={{ fontWeight: "bold" }}
                         />
-                      </Box>
+                      </Box> */}
                     </CardContent>
                   </Card>
                 </Grid>
