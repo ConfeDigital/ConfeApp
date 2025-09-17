@@ -28,6 +28,8 @@ const SIS_0a4_2 = ({
   disabled,
   onLoading,
   onError,
+  questionSubmitStates,
+  QuestionSubmitIndicator,
 }) => {
   const [tabIndex, setTabIndex] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
@@ -226,7 +228,9 @@ const SIS_0a4_2 = ({
 
                           <TextField
                             value={respuestas[pregunta.id]?.observaciones ?? ""}
-                            onChange={(e) => handleTextChange(pregunta.id, e.target.value)}
+                            onChange={(e) =>
+                              handleTextChange(pregunta.id, e.target.value)
+                            }
                             multiline
                             rows={3}
                             fullWidth
@@ -234,6 +238,9 @@ const SIS_0a4_2 = ({
                             sx={{ mt: 1, width: "100%" }}
                             disabled={disabled || loading}
                           />
+                          {QuestionSubmitIndicator && (
+                            <QuestionSubmitIndicator preguntaId={pregunta.id} />
+                          )}
                         </Box>
                       ) : (
                         <TableRow key={pregunta.id}>
@@ -291,8 +298,12 @@ const SIS_0a4_2 = ({
                           </TableCell>
                           <TableCell>
                             <TextField
-                              value={respuestas[pregunta.id]?.observaciones ?? ""}
-                              onChange={(e) => handleTextChange(pregunta.id, e.target.value)}
+                              value={
+                                respuestas[pregunta.id]?.observaciones ?? ""
+                              }
+                              onChange={(e) =>
+                                handleTextChange(pregunta.id, e.target.value)
+                              }
                               multiline
                               rows={2}
                               fullWidth
@@ -300,6 +311,11 @@ const SIS_0a4_2 = ({
                               sx={{ mt: 1 }}
                               disabled={disabled || loading}
                             />
+                            {QuestionSubmitIndicator && (
+                              <QuestionSubmitIndicator
+                                preguntaId={pregunta.id}
+                              />
+                            )}
                           </TableCell>
                         </TableRow>
                       )

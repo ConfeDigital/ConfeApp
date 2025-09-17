@@ -10,11 +10,14 @@ import {
   Divider,
   Tabs,
   Tab,
+  CircularProgress,
 } from "@mui/material";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import ErrorIcon from "@mui/icons-material/Error";
 import TiposDePregunta from "./TiposDePregunta";
 import ControlSIS from "./ControlSIS"; // Importar el nuevo componente
 import ControlCuestionariosEspeciales from "./ControlCuestionariosEspeciales";
@@ -51,6 +54,8 @@ const Preguntas = ({
   const [preguntasNoRespondidas, setPreguntasNoRespondidas] = useState(
     new Set()
   );
+  // Estado para rastrear el estado de envío de cada pregunta
+  const [questionSubmitStates, setQuestionSubmitStates] = useState({});
   const accordionRefs = useRef({});
   const topRef = useRef(null);
 
@@ -60,6 +65,53 @@ const Preguntas = ({
     mensaje: null,
     tipo: null,
   });
+
+  // Componente para mostrar el indicador de estado de envío
+  const QuestionSubmitIndicator = ({ preguntaId }) => {
+    const submitState = questionSubmitStates[preguntaId];
+
+    if (!submitState) return null;
+
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          mt: 1,
+          py: 0.5,
+        }}
+      >
+        {submitState === "loading" && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <CircularProgress size={16} />
+            <Typography variant="caption" color="text.secondary">
+              Guardando...
+            </Typography>
+          </Box>
+        )}
+        {submitState === "success" && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <CheckCircleIcon sx={{ color: "success.main", fontSize: 20 }} />
+            <Typography variant="caption" color="success.main">
+              Guardado
+            </Typography>
+          </Box>
+        )}
+        {submitState === "error" && (
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            <ErrorIcon sx={{ color: "error.main", fontSize: 20 }} />
+            <Typography variant="caption" color="error.main">
+              Error al guardar
+            </Typography>
+          </Box>
+        )}
+      </Box>
+    );
+  };
+
+  // Los estados ahora persisten hasta que se haga una nueva acción
+  // No hay limpieza automática de estados
 
   // Efecto para agrupar preguntas por sección
   useEffect(() => {
@@ -318,7 +370,8 @@ const Preguntas = ({
 
         if (response.data.success && response.data.value !== null) {
           let displayValue = response.data.value;
-          const fieldMetadata = pregunta.profile_field_metadata || pregunta.profile_field_config;
+          const fieldMetadata =
+            pregunta.profile_field_metadata || pregunta.profile_field_config;
 
           // Convert actual profile values to option indices for display (same logic as ProfileField)
           if (fieldMetadata?.type === "choice" && pregunta.opciones) {
@@ -357,7 +410,10 @@ const Preguntas = ({
           }
         }
       } catch (error) {
-        console.error(`Error loading profile field value for question ${pregunta.id}:`, error);
+        console.error(
+          `Error loading profile field value for question ${pregunta.id}:`,
+          error
+        );
       }
     }
 
@@ -489,148 +545,153 @@ const Preguntas = ({
   );
 
   // Función para validar si una respuesta es válida
-  const isRespuestaValida = useCallback((respuesta, tipoPregunta, pregunta = null) => {
-    // Special handling for profile field questions
-    if (pregunta && pregunta.profile_field_path) {
-      // For profile field questions, any non-null, non-undefined value is valid
-      // This includes 0, false (which are valid for choice and boolean fields)
-      // Only exclude null, undefined, and empty strings
-      if (respuesta === null || respuesta === undefined) {
-        return false;
-      }
-      // For choice and boolean fields, 0 is a valid value
-      if (typeof respuesta === "number" || typeof respuesta === "boolean") {
+  const isRespuestaValida = useCallback(
+    (respuesta, tipoPregunta, pregunta = null) => {
+      // Special handling for profile field questions
+      if (pregunta && pregunta.profile_field_path) {
+        // For profile field questions, any non-null, non-undefined value is valid
+        // This includes 0, false (which are valid for choice and boolean fields)
+        // Only exclude null, undefined, and empty strings
+        if (respuesta === null || respuesta === undefined) {
+          return false;
+        }
+        // For choice and boolean fields, 0 is a valid value
+        if (typeof respuesta === "number" || typeof respuesta === "boolean") {
+          return true;
+        }
+        // For string values, check if not empty
+        if (typeof respuesta === "string") {
+          return respuesta.trim() !== "";
+        }
+        // For other types, consider valid if not null/undefined
         return true;
       }
-      // For string values, check if not empty
-      if (typeof respuesta === "string") {
-        return respuesta.trim() !== "";
+
+      // Validación base para respuestas nulas o indefinidas
+      if (respuesta === undefined || respuesta === null) {
+        return false;
       }
-      // For other types, consider valid if not null/undefined
-      return true;
-    }
 
-    // Validación base para respuestas nulas o indefinidas
-    if (respuesta === undefined || respuesta === null) {
-      return false;
-    }
+      // Si es una respuesta procesada (nuevo formato), extraer el valor_original
+      let respuestaParaValidar = respuesta;
+      if (
+        respuesta &&
+        typeof respuesta === "object" &&
+        respuesta.valor_original !== undefined
+      ) {
+        respuestaParaValidar = respuesta.valor_original;
+      }
 
-    // Si es una respuesta procesada (nuevo formato), extraer el valor_original
-    let respuestaParaValidar = respuesta;
-    if (
-      respuesta &&
-      typeof respuesta === "object" &&
-      respuesta.valor_original !== undefined
-    ) {
-      respuestaParaValidar = respuesta.valor_original;
-    }
-
-    // Validaciones específicas por tipo de pregunta
-    switch (tipoPregunta) {
-      case "abierta":
-        // Para preguntas abiertas, el texto no puede estar vacío y debe tener al menos un carácter
-        return (
-          typeof respuestaParaValidar === "string" &&
-          respuestaParaValidar.trim().length > 0
-        );
-
-      case "numero":
-        // Para preguntas numéricas, debe ser un número válido y no estar vacío
-        return (
-          !isNaN(Number(respuestaParaValidar)) &&
-          respuestaParaValidar !== "" &&
-          respuestaParaValidar !== null
-        );
-
-      case "multiple":
-      case "dropdown":
-        // Para opciones múltiples y dropdown, debe tener un valor seleccionado
-        return (
-          respuestaParaValidar !== "" &&
-          respuestaParaValidar !== null &&
-          respuestaParaValidar !== undefined
-        );
-
-      case "checkbox":
-        // Para checkbox, debe tener al menos una opción seleccionada
-        if (Array.isArray(respuestaParaValidar)) {
-          return respuestaParaValidar.length > 0;
-        }
-        // Si es un string (JSON), intentar parsearlo
-        if (typeof respuestaParaValidar === "string") {
-          try {
-            const parsed = JSON.parse(respuestaParaValidar);
-            return Array.isArray(parsed) && parsed.length > 0;
-          } catch {
-            return false;
-          }
-        }
-        // Si es un objeto, verificar que tenga al menos una propiedad
-        if (typeof respuestaParaValidar === "object") {
-          return Object.keys(respuestaParaValidar).length > 0;
-        }
-        return false;
-
-      case "fecha":
-      case "fecha_hora":
-        // Para fechas, debe ser una fecha válida
-        if (respuestaParaValidar instanceof Date) {
-          return !isNaN(respuestaParaValidar.getTime());
-        }
-        // Si es un string, intentar convertirlo a fecha
-        if (typeof respuestaParaValidar === "string") {
-          const date = new Date(respuestaParaValidar);
-          return !isNaN(date.getTime());
-        }
-        return false;
-
-      case "sis":
-      case "sis2":
-        // Para preguntas SIS, debe tener al menos un valor seleccionado
-        return (
-          typeof respuestaParaValidar === "object" &&
-          respuestaParaValidar !== null &&
-          Object.keys(respuestaParaValidar).length > 0
-        );
-
-      case "ed":
-      case "ch":
-        // Para preguntas especiales, debe tener al menos un valor seleccionado
-        return (
-          typeof respuestaParaValidar === "object" &&
-          respuestaParaValidar !== null &&
-          Object.keys(respuestaParaValidar).length > 0
-        );
-
-      case "binaria":
-        // Para preguntas binarias, debe tener un valor seleccionado
-        return respuestaParaValidar === true || respuestaParaValidar === false;
-
-      case "imagen":
-        // Para preguntas de imagen (slider), debe ser un número válido
-        return (
-          !isNaN(Number(respuestaParaValidar)) &&
-          respuestaParaValidar !== null &&
-          respuestaParaValidar !== undefined
-        );
-
-      default:
-        // Para otros tipos, validación genérica
-        if (typeof respuestaParaValidar === "string") {
-          return respuestaParaValidar.trim().length > 0;
-        }
-        if (Array.isArray(respuestaParaValidar)) {
-          return respuestaParaValidar.length > 0;
-        }
-        if (typeof respuestaParaValidar === "object") {
+      // Validaciones específicas por tipo de pregunta
+      switch (tipoPregunta) {
+        case "abierta":
+          // Para preguntas abiertas, el texto no puede estar vacío y debe tener al menos un carácter
           return (
+            typeof respuestaParaValidar === "string" &&
+            respuestaParaValidar.trim().length > 0
+          );
+
+        case "numero":
+          // Para preguntas numéricas, debe ser un número válido y no estar vacío
+          return (
+            !isNaN(Number(respuestaParaValidar)) &&
+            respuestaParaValidar !== "" &&
+            respuestaParaValidar !== null
+          );
+
+        case "multiple":
+        case "dropdown":
+          // Para opciones múltiples y dropdown, debe tener un valor seleccionado
+          return (
+            respuestaParaValidar !== "" &&
+            respuestaParaValidar !== null &&
+            respuestaParaValidar !== undefined
+          );
+
+        case "checkbox":
+          // Para checkbox, debe tener al menos una opción seleccionada
+          if (Array.isArray(respuestaParaValidar)) {
+            return respuestaParaValidar.length > 0;
+          }
+          // Si es un string (JSON), intentar parsearlo
+          if (typeof respuestaParaValidar === "string") {
+            try {
+              const parsed = JSON.parse(respuestaParaValidar);
+              return Array.isArray(parsed) && parsed.length > 0;
+            } catch {
+              return false;
+            }
+          }
+          // Si es un objeto, verificar que tenga al menos una propiedad
+          if (typeof respuestaParaValidar === "object") {
+            return Object.keys(respuestaParaValidar).length > 0;
+          }
+          return false;
+
+        case "fecha":
+        case "fecha_hora":
+          // Para fechas, debe ser una fecha válida
+          if (respuestaParaValidar instanceof Date) {
+            return !isNaN(respuestaParaValidar.getTime());
+          }
+          // Si es un string, intentar convertirlo a fecha
+          if (typeof respuestaParaValidar === "string") {
+            const date = new Date(respuestaParaValidar);
+            return !isNaN(date.getTime());
+          }
+          return false;
+
+        case "sis":
+        case "sis2":
+          // Para preguntas SIS, debe tener al menos un valor seleccionado
+          return (
+            typeof respuestaParaValidar === "object" &&
             respuestaParaValidar !== null &&
             Object.keys(respuestaParaValidar).length > 0
           );
-        }
-        return false;
-    }
-  }, []);
+
+        case "ed":
+        case "ch":
+          // Para preguntas especiales, debe tener al menos un valor seleccionado
+          return (
+            typeof respuestaParaValidar === "object" &&
+            respuestaParaValidar !== null &&
+            Object.keys(respuestaParaValidar).length > 0
+          );
+
+        case "binaria":
+          // Para preguntas binarias, debe tener un valor seleccionado
+          return (
+            respuestaParaValidar === true || respuestaParaValidar === false
+          );
+
+        case "imagen":
+          // Para preguntas de imagen (slider), debe ser un número válido
+          return (
+            !isNaN(Number(respuestaParaValidar)) &&
+            respuestaParaValidar !== null &&
+            respuestaParaValidar !== undefined
+          );
+
+        default:
+          // Para otros tipos, validación genérica
+          if (typeof respuestaParaValidar === "string") {
+            return respuestaParaValidar.trim().length > 0;
+          }
+          if (Array.isArray(respuestaParaValidar)) {
+            return respuestaParaValidar.length > 0;
+          }
+          if (typeof respuestaParaValidar === "object") {
+            return (
+              respuestaParaValidar !== null &&
+              Object.keys(respuestaParaValidar).length > 0
+            );
+          }
+          return false;
+      }
+    },
+    []
+  );
 
   // Efecto para actualizar el contador cuando cambian las respuestas o las preguntas desbloqueadas
   useEffect(() => {
@@ -818,7 +879,9 @@ const Preguntas = ({
           }));
 
           // Remove from unanswered questions if the response is valid
-          if (isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)) {
+          if (
+            isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)
+          ) {
             setPreguntasNoRespondidas((prev) => {
               const newSet = new Set(prev);
               newSet.delete(preguntaId);
@@ -841,7 +904,9 @@ const Preguntas = ({
           return;
         }
 
-        if (!isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)) {
+        if (
+          !isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)
+        ) {
           setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
           setNotificacion({
             mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, completa la respuesta antes de continuar.`,
@@ -856,6 +921,12 @@ const Preguntas = ({
           newSet.delete(preguntaId);
           return newSet;
         });
+
+        // Limpiar estado anterior y establecer estado de carga para esta pregunta
+        setQuestionSubmitStates((prev) => ({
+          ...prev,
+          [preguntaId]: "loading",
+        }));
 
         // Para ciertos tipos de preguntas, enviar el valor simple al backend
         let respuestaParaEnviar = respuesta;
@@ -899,6 +970,12 @@ const Preguntas = ({
           pregunta: preguntaId,
           respuesta: respuestaParaEnviar,
         });
+
+        // Establecer estado de éxito para esta pregunta
+        setQuestionSubmitStates((prev) => ({
+          ...prev,
+          [preguntaId]: "success",
+        }));
 
         // Actualizar respuestas locales (mantener la respuesta original para el frontend)
         setRespuestas((prev) => ({
@@ -1075,6 +1152,13 @@ const Preguntas = ({
         });
       } catch (error) {
         console.error("Error updating respuesta:", error);
+
+        // Establecer estado de error para esta pregunta
+        setQuestionSubmitStates((prev) => ({
+          ...prev,
+          [preguntaId]: "error",
+        }));
+
         setNotificacion({
           mensaje: "Error al guardar la respuesta",
           tipo: "error",
@@ -1578,6 +1662,8 @@ const Preguntas = ({
                 subitems={subitems}
                 cuestionarioFinalizado={cuestionarioFinalizado}
                 esEditable={esEditable}
+                questionSubmitStates={questionSubmitStates}
+                QuestionSubmitIndicator={QuestionSubmitIndicator}
               />
             )}
             {specialQuestions.length > 0 && (
@@ -1592,6 +1678,8 @@ const Preguntas = ({
                     chAids={chAids}
                     cuestionarioFinalizado={cuestionarioFinalizado}
                     esEditable={esEditable}
+                    questionSubmitStates={questionSubmitStates}
+                    QuestionSubmitIndicator={QuestionSubmitIndicator}
                   />
                 )}
                 {specialQuestions.some((p) => p.tipo === "ch") && (
@@ -1604,6 +1692,8 @@ const Preguntas = ({
                     chAids={chAids}
                     cuestionarioFinalizado={cuestionarioFinalizado}
                     esEditable={esEditable}
+                    questionSubmitStates={questionSubmitStates}
+                    QuestionSubmitIndicator={QuestionSubmitIndicator}
                   />
                 )}
               </>
@@ -1683,6 +1773,7 @@ const Preguntas = ({
                               esEditable={esEditable}
                               onGuardarCambios={handleGuardarCambios}
                             />
+                            <QuestionSubmitIndicator preguntaId={pregunta.id} />
                           </Box>
                         </Paper>
                       </Box>

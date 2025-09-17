@@ -30,6 +30,8 @@ const SIS_0a4 = ({
   onLoading,
   onError,
   subitems,
+  questionSubmitStates,
+  QuestionSubmitIndicator,
 }) => {
   const [tabIndex, setTabIndex] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
@@ -204,48 +206,220 @@ const SIS_0a4 = ({
       )}
       {secciones.map((seccion, index) => (
         <TabPanel key={index} value={tabIndex} index={index}>
-            <TableContainer component={Paper} sx={{ maxHeight: '90vh' }}>
-              <Table stickyHeader aria-label="sticky table">
-                {!isMobile && (
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Pregunta</TableCell>
-                      <TableCell>Frecuencia</TableCell>
-                      <TableCell>Tiempo diario de apoyo</TableCell>
-                      <TableCell>Tipo de apoyo</TableCell>
-                      <TableCell>¿Necesita apoyo?</TableCell>
-                      <TableCell>Observaciones</TableCell>
-                    </TableRow>
-                  </TableHead>
-                )}
-                <TableBody>
-                  {preguntas
-                    .filter((pregunta) => pregunta.seccion_sis === seccion)
-                    .map((pregunta) =>
-                      isMobile ? (
-                        <Box
-                          key={pregunta.id}
-                          sx={{
-                            mb: 1,
-                            p: "1%",
-                            pt: 5,
-                            pb: 5,
-                            borderColor: "primary.main",
-                            borderBottom: "1px solid",
-                            borderTop: "1px solid",
-                            borderTopColor: "primary.main",
-                            borderRadius: 2,
-                            backgroundColor: "background",
-                            width: "100%",
-                            boxSizing: "border-box",
-                          }}
+          <TableContainer component={Paper} sx={{ maxHeight: "90vh" }}>
+            <Table stickyHeader aria-label="sticky table">
+              {!isMobile && (
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Pregunta</TableCell>
+                    <TableCell>Frecuencia</TableCell>
+                    <TableCell>Tiempo diario de apoyo</TableCell>
+                    <TableCell>Tipo de apoyo</TableCell>
+                    <TableCell>¿Necesita apoyo?</TableCell>
+                    <TableCell>Observaciones</TableCell>
+                  </TableRow>
+                </TableHead>
+              )}
+              <TableBody>
+                {preguntas
+                  .filter((pregunta) => pregunta.seccion_sis === seccion)
+                  .map((pregunta) =>
+                    isMobile ? (
+                      <Box
+                        key={pregunta.id}
+                        sx={{
+                          mb: 1,
+                          p: "1%",
+                          pt: 5,
+                          pb: 5,
+                          borderColor: "primary.main",
+                          borderBottom: "1px solid",
+                          borderTop: "1px solid",
+                          borderTopColor: "primary.main",
+                          borderRadius: 2,
+                          backgroundColor: "background",
+                          width: "100%",
+                          boxSizing: "border-box",
+                        }}
+                      >
+                        <Typography variant="subtitle1" sx={{ mb: 1 }}>
+                          {pregunta.texto}
+                        </Typography>
+                        <Typography variant="body2">Frecuencia:</Typography>
+                        <RadioGroup
+                          row
+                          value={
+                            String(respuestas[pregunta.id]?.frecuencia) || ""
+                          }
+                          onChange={(e) =>
+                            handleFieldChange(
+                              pregunta.id,
+                              "frecuencia",
+                              e.target.value
+                            )
+                          }
                         >
-                          <Typography variant="subtitle1" sx={{ mb: 1 }}>
-                            {pregunta.texto}
-                          </Typography>
-                          <Typography variant="body2">Frecuencia:</Typography>
+                          {[0, 1, 2, 3, 4].map((value) => (
+                            <FormControlLabel
+                              key={value}
+                              value={String(value)}
+                              control={
+                                <Radio
+                                  size="small"
+                                  sx={{
+                                    color: `hsl(${120 - value * 30}, 70%, 40%)`,
+                                    "&.Mui-checked": {
+                                      color: `hsl(${
+                                        120 - value * 30
+                                      }, 70%, 40%)`,
+                                    },
+                                  }}
+                                  disabled={disabled || loading}
+                                />
+                              }
+                              label={value.toString()}
+                              labelPlacement="end"
+                            />
+                          ))}
+                        </RadioGroup>
+
+                        <Typography variant="body2">
+                          Tiempo diario de apoyo:
+                        </Typography>
+                        <RadioGroup
+                          row
+                          value={
+                            String(respuestas[pregunta.id]?.tiempo_apoyo) || ""
+                          }
+                          onChange={(e) =>
+                            handleFieldChange(
+                              pregunta.id,
+                              "tiempo_apoyo",
+                              e.target.value
+                            )
+                          }
+                        >
+                          {[0, 1, 2, 3, 4].map((value) => (
+                            <FormControlLabel
+                              key={value}
+                              value={String(value)}
+                              control={
+                                <Radio
+                                  size="small"
+                                  sx={{
+                                    color: `hsl(${120 - value * 30}, 70%, 40%)`,
+                                    "&.Mui-checked": {
+                                      color: `hsl(${
+                                        120 - value * 30
+                                      }, 70%, 40%)`,
+                                    },
+                                  }}
+                                  disabled={disabled || loading}
+                                />
+                              }
+                              label={value.toString()}
+                              labelPlacement="end"
+                            />
+                          ))}
+                        </RadioGroup>
+
+                        <Typography variant="body2">Tipo de apoyo:</Typography>
+                        <RadioGroup
+                          row
+                          value={
+                            String(respuestas[pregunta.id]?.tipo_apoyo) || ""
+                          }
+                          onChange={(e) =>
+                            handleFieldChange(
+                              pregunta.id,
+                              "tipo_apoyo",
+                              e.target.value
+                            )
+                          }
+                        >
+                          {[0, 1, 2, 3, 4].map((value) => (
+                            <FormControlLabel
+                              key={value}
+                              value={String(value)}
+                              control={
+                                <Radio
+                                  size="small"
+                                  sx={{
+                                    color: `hsl(${120 - value * 30}, 70%, 40%)`,
+                                    "&.Mui-checked": {
+                                      color: `hsl(${
+                                        120 - value * 30
+                                      }, 70%, 40%)`,
+                                    },
+                                  }}
+                                  disabled={disabled || loading}
+                                />
+                              }
+                              label={value.toString()}
+                              labelPlacement="end"
+                            />
+                          ))}
+                        </RadioGroup>
+
+                        <Typography variant="body2">
+                          ¿Necesita apoyo?
+                        </Typography>
+                        {(subitems?.[pregunta.texto] || []).map((subitem) => (
+                          <FormControlLabel
+                            key={subitem.id}
+                            sx={{ whiteSpace: "nowrap" }}
+                            control={
+                              <Checkbox
+                                checked={
+                                  Array.isArray(
+                                    respuestas[pregunta.id]?.subitems
+                                  ) &&
+                                  respuestas[pregunta.id]?.subitems.some(
+                                    (sel) =>
+                                      (typeof sel === "object"
+                                        ? sel.id
+                                        : sel) === subitem.id
+                                  )
+                                }
+                                onChange={(e) =>
+                                  handleSubitemChange(
+                                    pregunta.id,
+                                    subitem.id,
+                                    e.target.checked
+                                  )
+                                }
+                                disabled={disabled || loading}
+                                size="small"
+                              />
+                            }
+                            label={subitem.sub_item}
+                          />
+                        ))}
+
+                        <TextField
+                          value={respuestas[pregunta.id]?.observaciones || ""}
+                          onChange={(e) =>
+                            debouncedHandleTextChange(
+                              pregunta.id,
+                              e.target.value
+                            )
+                          }
+                          multiline
+                          fullWidth
+                          rows={4}
+                          sx={{ mt: 1, width: "100%" }}
+                          disabled={disabled || loading}
+                          size="small"
+                        />
+                        {QuestionSubmitIndicator && (
+                          <QuestionSubmitIndicator preguntaId={pregunta.id} />
+                        )}
+                      </Box>
+                    ) : (
+                      <TableRow key={pregunta.id}>
+                        <TableCell>{pregunta.texto}</TableCell>
+                        <TableCell>
                           <RadioGroup
-                            row
                             value={
                               String(respuestas[pregunta.id]?.frecuencia) || ""
                             }
@@ -265,11 +439,13 @@ const SIS_0a4 = ({
                                   <Radio
                                     size="small"
                                     sx={{
-                                      color: `hsl(${120 - value * 30
-                                        }, 70%, 40%)`,
+                                      color: `hsl(${
+                                        120 - value * 30
+                                      }, 70%, 40%)`,
                                       "&.Mui-checked": {
-                                        color: `hsl(${120 - value * 30
-                                          }, 70%, 40%)`,
+                                        color: `hsl(${
+                                          120 - value * 30
+                                        }, 70%, 40%)`,
                                       },
                                     }}
                                     disabled={disabled || loading}
@@ -280,12 +456,9 @@ const SIS_0a4 = ({
                               />
                             ))}
                           </RadioGroup>
-
-                          <Typography variant="body2">
-                            Tiempo diario de apoyo:
-                          </Typography>
+                        </TableCell>
+                        <TableCell>
                           <RadioGroup
-                            row
                             value={
                               String(respuestas[pregunta.id]?.tiempo_apoyo) ||
                               ""
@@ -306,11 +479,13 @@ const SIS_0a4 = ({
                                   <Radio
                                     size="small"
                                     sx={{
-                                      color: `hsl(${120 - value * 30
-                                        }, 70%, 40%)`,
+                                      color: `hsl(${
+                                        120 - value * 30
+                                      }, 70%, 40%)`,
                                       "&.Mui-checked": {
-                                        color: `hsl(${120 - value * 30
-                                          }, 70%, 40%)`,
+                                        color: `hsl(${
+                                          120 - value * 30
+                                        }, 70%, 40%)`,
                                       },
                                     }}
                                     disabled={disabled || loading}
@@ -321,12 +496,9 @@ const SIS_0a4 = ({
                               />
                             ))}
                           </RadioGroup>
-
-                          <Typography variant="body2">
-                            Tipo de apoyo:
-                          </Typography>
+                        </TableCell>
+                        <TableCell>
                           <RadioGroup
-                            row
                             value={
                               String(respuestas[pregunta.id]?.tipo_apoyo) || ""
                             }
@@ -346,11 +518,13 @@ const SIS_0a4 = ({
                                   <Radio
                                     size="small"
                                     sx={{
-                                      color: `hsl(${120 - value * 30
-                                        }, 70%, 40%)`,
+                                      color: `hsl(${
+                                        120 - value * 30
+                                      }, 70%, 40%)`,
                                       "&.Mui-checked": {
-                                        color: `hsl(${120 - value * 30
-                                          }, 70%, 40%)`,
+                                        color: `hsl(${
+                                          120 - value * 30
+                                        }, 70%, 40%)`,
                                       },
                                     }}
                                     disabled={disabled || loading}
@@ -361,42 +535,51 @@ const SIS_0a4 = ({
                               />
                             ))}
                           </RadioGroup>
-
-                          <Typography variant="body2">
-                            ¿Necesita apoyo?
-                          </Typography>
-                          {(subitems?.[pregunta.texto] || []).map((subitem) => (
-                            <FormControlLabel
-                              key={subitem.id}
-                              sx={{ whiteSpace: "nowrap" }}
-                              control={
-                                <Checkbox
-                                  checked={
-                                    Array.isArray(
-                                      respuestas[pregunta.id]?.subitems
-                                    ) &&
-                                    respuestas[pregunta.id]?.subitems.some(
-                                      (sel) =>
-                                        (typeof sel === "object"
-                                          ? sel.id
-                                          : sel) === subitem.id
-                                    )
+                        </TableCell>
+                        <TableCell sx={{ width: "220px" }}>
+                          <Box
+                            sx={{ display: "flex", flexDirection: "column" }}
+                          >
+                            {(subitems?.[pregunta.texto] || []).map(
+                              (subitem) => (
+                                <FormControlLabel
+                                  key={subitem.id}
+                                  control={
+                                    <Checkbox
+                                      checked={
+                                        Array.isArray(
+                                          respuestas[pregunta.id]?.subitems
+                                        ) &&
+                                        respuestas[pregunta.id]?.subitems.some(
+                                          (sel) =>
+                                            (typeof sel === "object"
+                                              ? sel.id
+                                              : sel) === subitem.id
+                                        )
+                                      }
+                                      onChange={(e) =>
+                                        handleSubitemChange(
+                                          pregunta.id,
+                                          subitem.id,
+                                          e.target.checked
+                                        )
+                                      }
+                                      disabled={disabled || loading}
+                                      size="small"
+                                    />
                                   }
-                                  onChange={(e) =>
-                                    handleSubitemChange(
-                                      pregunta.id,
-                                      subitem.id,
-                                      e.target.checked
-                                    )
-                                  }
-                                  disabled={disabled || loading}
-                                  size="small"
+                                  label={subitem.sub_item}
+                                  sx={{
+                                    border: "1px solid #ccc", // Adjust color and thickness as needed
+                                    borderRadius: "2px", // Optional: adds rounded corners
+                                    margin: "2px 0", // Optional: adds some spacing between items
+                                  }}
                                 />
-                              }
-                              label={subitem.sub_item}
-                            />
-                          ))}
-
+                              )
+                            )}
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ width: "25%", m: 1 }}>
                           <TextField
                             value={respuestas[pregunta.id]?.observaciones || ""}
                             onChange={(e) =>
@@ -407,186 +590,21 @@ const SIS_0a4 = ({
                             }
                             multiline
                             fullWidth
-                            rows={4}
-                            sx={{ mt: 1, width: "100%" }}
+                            rows={isMobile ? 4 : 10}
+                            sx={{ mt: 1 }}
                             disabled={disabled || loading}
                             size="small"
                           />
-                        </Box>
-                      ) : (
-                        <TableRow key={pregunta.id}>
-                          <TableCell>{pregunta.texto}</TableCell>
-                          <TableCell>
-                            <RadioGroup
-                              value={
-                                String(respuestas[pregunta.id]?.frecuencia) ||
-                                ""
-                              }
-                              onChange={(e) =>
-                                handleFieldChange(
-                                  pregunta.id,
-                                  "frecuencia",
-                                  e.target.value
-                                )
-                              }
-                            >
-                              {[0, 1, 2, 3, 4].map((value) => (
-                                <FormControlLabel
-                                  key={value}
-                                  value={String(value)}
-                                  control={
-                                    <Radio
-                                      size="small"
-                                      sx={{
-                                        color: `hsl(${120 - value * 30
-                                          }, 70%, 40%)`,
-                                        "&.Mui-checked": {
-                                          color: `hsl(${120 - value * 30
-                                            }, 70%, 40%)`,
-                                        },
-                                      }}
-                                      disabled={disabled || loading}
-                                    />
-                                  }
-                                  label={value.toString()}
-                                  labelPlacement="end"
-                                />
-                              ))}
-                            </RadioGroup>
-                          </TableCell>
-                          <TableCell>
-                            <RadioGroup
-                              value={
-                                String(respuestas[pregunta.id]?.tiempo_apoyo) ||
-                                ""
-                              }
-                              onChange={(e) =>
-                                handleFieldChange(
-                                  pregunta.id,
-                                  "tiempo_apoyo",
-                                  e.target.value
-                                )
-                              }
-                            >
-                              {[0, 1, 2, 3, 4].map((value) => (
-                                <FormControlLabel
-                                  key={value}
-                                  value={String(value)}
-                                  control={
-                                    <Radio
-                                      size="small"
-                                      sx={{
-                                        color: `hsl(${120 - value * 30
-                                          }, 70%, 40%)`,
-                                        "&.Mui-checked": {
-                                          color: `hsl(${120 - value * 30
-                                            }, 70%, 40%)`,
-                                        },
-                                      }}
-                                      disabled={disabled || loading}
-                                    />
-                                  }
-                                  label={value.toString()}
-                                  labelPlacement="end"
-                                />
-                              ))}
-                            </RadioGroup>
-                          </TableCell>
-                          <TableCell>
-                            <RadioGroup
-                              value={
-                                String(respuestas[pregunta.id]?.tipo_apoyo) ||
-                                ""
-                              }
-                              onChange={(e) =>
-                                handleFieldChange(
-                                  pregunta.id,
-                                  "tipo_apoyo",
-                                  e.target.value
-                                )
-                              }
-                            >
-                              {[0, 1, 2, 3, 4].map((value) => (
-                                <FormControlLabel
-                                  key={value}
-                                  value={String(value)}
-                                  control={
-                                    <Radio
-                                      size="small"
-                                      sx={{
-                                        color: `hsl(${120 - value * 30
-                                          }, 70%, 40%)`,
-                                        "&.Mui-checked": {
-                                          color: `hsl(${120 - value * 30
-                                            }, 70%, 40%)`,
-                                        },
-                                      }}
-                                      disabled={disabled || loading}
-                                    />
-                                  }
-                                  label={value.toString()}
-                                  labelPlacement="end"
-                                />
-                              ))}
-                            </RadioGroup>
-                          </TableCell>
-                          <TableCell sx={{ width: "220px" }}>
-                            <Box sx={{ display: "flex", flexDirection: "column" }}>
-                              {(subitems?.[pregunta.texto] || []).map((subitem) => (
-                                <FormControlLabel
-                                  key={subitem.id}
-                                  control={
-                                    <Checkbox
-                                      checked={
-                                        Array.isArray(respuestas[pregunta.id]?.subitems) &&
-                                        respuestas[pregunta.id]?.subitems.some(
-                                          (sel) =>
-                                            (typeof sel === "object" ? sel.id : sel) === subitem.id
-                                        )
-                                      }
-                                      onChange={(e) =>
-                                        handleSubitemChange(pregunta.id, subitem.id, e.target.checked)
-                                      }
-                                      disabled={disabled || loading}
-                                      size="small"
-                                    />
-                                  }
-                                  label={subitem.sub_item}
-                                  sx={{
-                                    border: '1px solid #ccc', // Adjust color and thickness as needed
-                                    borderRadius: '2px', // Optional: adds rounded corners
-                                    margin: '2px 0', // Optional: adds some spacing between items
-                                  }}
-
-                                />
-                              ))}
-                            </Box>
-                          </TableCell>
-                          <TableCell sx={{ width: "25%", m: 1 }}>
-                            <TextField
-                              value={
-                                respuestas[pregunta.id]?.observaciones || ""
-                              }
-                              onChange={(e) =>
-                                debouncedHandleTextChange(
-                                  pregunta.id,
-                                  e.target.value
-                                )
-                              }
-                              multiline
-                              fullWidth
-                              rows={isMobile ? 4 : 10}
-                              sx={{ mt: 1 }}
-                              disabled={disabled || loading}
-                              size="small"
-                            />
-                          </TableCell>
-                        </TableRow>
-                      )
-                    )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                          {QuestionSubmitIndicator && (
+                            <QuestionSubmitIndicator preguntaId={pregunta.id} />
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    )
+                  )}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </TabPanel>
       ))}
     </>

@@ -21,6 +21,8 @@ const ControlSIS = ({
   subitems,
   cuestionarioFinalizado,
   esEditable,
+  questionSubmitStates,
+  QuestionSubmitIndicator,
 }) => {
   const [tabValue, setTabValue] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
@@ -198,6 +200,8 @@ const ControlSIS = ({
                       onLoading={(isLoading) => setLoading(isLoading)}
                       onError={(errorMessage) => setError(errorMessage)}
                       subitems={subitems} // <-- Filtrar subitems relacionados con las preguntas
+                      questionSubmitStates={questionSubmitStates}
+                      QuestionSubmitIndicator={QuestionSubmitIndicator}
                     />
                   </Box>
                 )}
@@ -215,6 +219,8 @@ const ControlSIS = ({
                       disabled={!habilitada || loading}
                       onLoading={(isLoading) => setLoading(isLoading)}
                       onError={(errorMessage) => setError(errorMessage)}
+                      questionSubmitStates={questionSubmitStates}
+                      QuestionSubmitIndicator={QuestionSubmitIndicator}
                     />
                   </Box>
                 )}

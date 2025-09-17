@@ -27,6 +27,8 @@ const CH = ({
   handleRespuestaChange,
   chAids,
   disabled = false,
+  questionSubmitStates,
+  QuestionSubmitIndicator,
 }) => {
   const isMobile = useMediaQuery("(max-width:600px)");
 
@@ -210,6 +212,9 @@ const CH = ({
                 )}
               </Box>
             </CardContent>
+            {QuestionSubmitIndicator && (
+              <QuestionSubmitIndicator preguntaId={pregunta.id} />
+            )}
           </Card>
         );
       })}
