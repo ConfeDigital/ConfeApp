@@ -55,10 +55,11 @@ jobs:
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
-          name: python-app
+          name: python-app-${{ github.run_number }}
           path: |
             backend/release.zip
             !venv/
+          retention-days: 7  # Keep artifacts for only 7 days
 
   deploy:
     runs-on: ubuntu-latest
@@ -71,7 +72,7 @@ jobs:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
         with:
-          name: python-app
+          name: python-app-${{ github.run_number }}
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
