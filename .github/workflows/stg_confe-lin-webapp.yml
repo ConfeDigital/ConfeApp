@@ -52,14 +52,15 @@ jobs:
           chmod +x startup.sh
           zip release.zip ./* -r
 
-      - name: Upload artifact for deployment jobs
-        uses: actions/upload-artifact@v4
-        with:
-          name: python-app-${{ github.run_number }}
-          path: |
-            backend/release.zip
-            !venv/
-          retention-days: 7  # Keep artifacts for only 7 days
+      # Temporarily disabled due to storage quota - will re-enable after quota resets
+      # - name: Upload artifact for deployment jobs
+      #   uses: actions/upload-artifact@v4
+      #   with:
+      #     name: python-app-${{ github.run_number }}
+      #     path: |
+      #       backend/release.zip
+      #       !venv/
+      #     retention-days: 7  # Keep artifacts for only 7 days
 
   deploy:
     runs-on: ubuntu-latest
@@ -69,13 +70,21 @@ jobs:
       url: ${{ steps.deploy-to-webapp.outputs.webapp-url }}
     
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
-        with:
-          name: python-app-${{ github.run_number }}
+      # Temporarily disabled due to storage quota - will re-enable after quota resets
+      # - name: Download artifact from build job
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: python-app-${{ github.run_number }}
 
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
+      # - name: Unzip artifact for deployment
+      #   run: unzip release.zip
+      
+      # Temporary workaround: Recreate the zip file in deploy job
+      - name: Recreate deployment package
+        run: |
+          cd backend
+          chmod +x startup.sh
+          zip release.zip ./* -r
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
