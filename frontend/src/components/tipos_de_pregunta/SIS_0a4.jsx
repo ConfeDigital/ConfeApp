@@ -20,12 +20,14 @@ import {
   Alert,
 } from "@mui/material";
 import useMediaQuery from "@mui/material/useMediaQuery";
+import SISObservacionesField from "./SISObservacionesField";
 
 const SIS_0a4 = ({
   preguntas,
   respuestas,
   setRespuestas,
   handleRespuestaChange,
+  handleSISTextChange,
   disabled,
   onLoading,
   onError,
@@ -83,18 +85,14 @@ const SIS_0a4 = ({
         return;
       }
 
-      setLoading(true);
-      onLoading(true);
-
+      // Don't show loading for individual field changes to avoid UI blocking
       const sanitizedData = sanitizeResponse(preguntaId, updatedRespuesta);
 
+      // Call handleRespuestaChange directly - it has its own debouncing
       await handleRespuestaChange(preguntaId, sanitizedData);
     } catch (error) {
       setError("Error al guardar la respuesta");
       onError("Error al guardar la respuesta");
-    } finally {
-      setLoading(false);
-      onLoading(false);
     }
   };
 
@@ -143,43 +141,44 @@ const SIS_0a4 = ({
         return;
       }
 
-      setLoading(true);
-      onLoading(true);
-
+      // Don't show loading for subitem changes to avoid UI blocking
       await handleRespuestaChange(preguntaId, updatedRespuesta);
     } catch (error) {
       setError("Error al guardar la respuesta");
       onError("Error al guardar la respuesta");
-    } finally {
-      setLoading(false);
-      onLoading(false);
     }
   };
 
-  const typingTimeoutRef = React.useRef({});
+  const textSaveTimeoutRef = React.useRef({});
 
-  const debouncedHandleTextChange = (preguntaId, value) => {
-    if (typingTimeoutRef.current[preguntaId]) {
-      clearTimeout(typingTimeoutRef.current[preguntaId]);
+  const handleTextChange = React.useCallback((preguntaId, value) => {
+    // Use the fast handler from Preguntas.jsx - no validation, no API calls during typing
+    if (handleSISTextChange) {
+      handleSISTextChange(preguntaId, value);
+    } else {
+      // Fallback to local state update
+      setRespuestas((prev) => ({
+        ...prev,
+        [preguntaId]: {
+          ...prev[preguntaId],
+          observaciones: value,
+        },
+      }));
     }
 
-    const updatedRespuesta = {
-      ...respuestas[preguntaId],
-      observaciones: value,
-    };
+    // Clear previous save timeout
+    if (textSaveTimeoutRef.current[preguntaId]) {
+      clearTimeout(textSaveTimeoutRef.current[preguntaId]);
+    }
 
-    setRespuestas((prev) => ({
-      ...prev,
-      [preguntaId]: updatedRespuesta,
-    }));
-
-    typingTimeoutRef.current[preguntaId] = setTimeout(() => {
-      if (!areRequiredFieldsFilled(updatedRespuesta)) {
-        return;
+    // Save after user stops typing for 1 second
+    textSaveTimeoutRef.current[preguntaId] = setTimeout(() => {
+      const currentRespuesta = respuestas[preguntaId];
+      if (currentRespuesta && areRequiredFieldsFilled(currentRespuesta)) {
+        handleRespuestaChange(preguntaId, currentRespuesta);
       }
-      handleFieldChange(preguntaId, "observaciones", value);
-    }, 500);
-  };
+    }, 1000);
+  }, [handleSISTextChange, respuestas, handleRespuestaChange]);
 
   const secciones = React.useMemo(() => {
     return [...new Set(preguntas.map((pregunta) => pregunta.seccion_sis))];
@@ -396,23 +395,12 @@ const SIS_0a4 = ({
                           />
                         ))}
 
-                        <Typography variant="subtitle2">
-                          Observaciones:
-                        </Typography>
-                        <TextField
+                        <SISObservacionesField
+                          preguntaId={pregunta.id}
                           value={respuestas[pregunta.id]?.observaciones || ""}
-                          onChange={(e) =>
-                            debouncedHandleTextChange(
-                              pregunta.id,
-                              e.target.value
-                            )
-                          }
-                          multiline
-                          fullWidth
-                          rows={4}
-                          sx={{ mt: 1, width: "100%" }}
+                          onChange={handleSISTextChange || handleTextChange}
                           disabled={disabled || loading}
-                          size="small"
+                          label="Observaciones"
                         />
                         {QuestionSubmitIndicator && (
                           <QuestionSubmitIndicator preguntaId={pregunta.id} />
@@ -583,20 +571,12 @@ const SIS_0a4 = ({
                           </Box>
                         </TableCell>
                         <TableCell sx={{ width: "25%" }}>
-                          <TextField
+                          <SISObservacionesField
+                            preguntaId={pregunta.id}
                             value={respuestas[pregunta.id]?.observaciones || ""}
-                            onChange={(e) =>
-                              debouncedHandleTextChange(
-                                pregunta.id,
-                                e.target.value
-                              )
-                            }
-                            multiline
-                            fullWidth
-                            rows={isMobile ? 4 : 10}
-                            sx={{ mt: 1 }}
+                            onChange={handleSISTextChange || handleTextChange}
                             disabled={disabled || loading}
-                            size="small"
+                            label="Observaciones"
                           />
                           {QuestionSubmitIndicator && (
                             <QuestionSubmitIndicator preguntaId={pregunta.id} />

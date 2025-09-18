@@ -19,12 +19,14 @@ import {
   Alert,
   useMediaQuery,
 } from "@mui/material";
+import SISObservacionesField from "./SISObservacionesField";
 
 const SIS_0a4_2 = ({
   preguntas,
   respuestas,
   setRespuestas,
   handleRespuestaChange,
+  handleSISTextChange,
   disabled,
   onLoading,
   onError,
@@ -226,17 +228,12 @@ const SIS_0a4_2 = ({
                             ))}
                           </RadioGroup>
 
-                          <TextField
+                          <SISObservacionesField
+                            preguntaId={pregunta.id}
                             value={respuestas[pregunta.id]?.observaciones ?? ""}
-                            onChange={(e) =>
-                              handleTextChange(pregunta.id, e.target.value)
-                            }
-                            multiline
-                            rows={3}
-                            fullWidth
-                            size="small"
-                            sx={{ mt: 1, width: "100%" }}
+                            onChange={handleSISTextChange || handleTextChange}
                             disabled={disabled || loading}
+                            label="Comentarios"
                           />
                           {QuestionSubmitIndicator && (
                             <QuestionSubmitIndicator preguntaId={pregunta.id} />
@@ -297,19 +294,12 @@ const SIS_0a4_2 = ({
                             </RadioGroup>
                           </TableCell>
                           <TableCell>
-                            <TextField
-                              value={
-                                respuestas[pregunta.id]?.observaciones ?? ""
-                              }
-                              onChange={(e) =>
-                                handleTextChange(pregunta.id, e.target.value)
-                              }
-                              multiline
-                              rows={2}
-                              fullWidth
-                              size="small"
-                              sx={{ mt: 1 }}
+                            <SISObservacionesField
+                              preguntaId={pregunta.id}
+                              value={respuestas[pregunta.id]?.observaciones ?? ""}
+                              onChange={handleSISTextChange || handleTextChange}
                               disabled={disabled || loading}
+                              label="Comentarios"
                             />
                             {QuestionSubmitIndicator && (
                               <QuestionSubmitIndicator

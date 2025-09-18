@@ -17,6 +17,7 @@ const ControlSIS = ({
   respuestas,
   setRespuestas,
   handleRespuestaChange,
+  handleSISTextChange,
   disabled,
   subitems,
   cuestionarioFinalizado,
@@ -196,6 +197,7 @@ const ControlSIS = ({
                       respuestas={respuestas}
                       setRespuestas={setRespuestas}
                       handleRespuestaChange={handleRespuestaChange}
+                      handleSISTextChange={handleSISTextChange}
                       disabled={!habilitada || loading}
                       onLoading={(isLoading) => setLoading(isLoading)}
                       onError={(errorMessage) => setError(errorMessage)}
@@ -216,6 +218,7 @@ const ControlSIS = ({
                       respuestas={respuestas}
                       setRespuestas={setRespuestas}
                       handleRespuestaChange={handleRespuestaChange}
+                      handleSISTextChange={handleSISTextChange}
                       disabled={!habilitada || loading}
                       onLoading={(isLoading) => setLoading(isLoading)}
                       onError={(errorMessage) => setError(errorMessage)}

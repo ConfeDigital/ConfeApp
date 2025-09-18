@@ -795,11 +795,12 @@ function debounce(fn, delay) {
   };
 }
 
-// Create debounced function outside of useCallback to prevent recreation
-const debouncedSaveRef = useRef();
+// Create individual debounced functions for each question
+const debouncedSavesRef = useRef({});
 
-if (!debouncedSaveRef.current) {
-  debouncedSaveRef.current = debounce(async (preguntaId, respuesta, context) => {
+const getDebouncedSave = (preguntaId) => {
+  if (!debouncedSavesRef.current[preguntaId]) {
+    debouncedSavesRef.current[preguntaId] = debounce(async (preguntaId, respuesta, context) => {
     const { 
       usuario, 
       cuestionario, 
@@ -1009,7 +1010,46 @@ if (!debouncedSaveRef.current) {
       });
     }
   }, 1500);
-}
+  }
+  return debouncedSavesRef.current[preguntaId];
+};
+
+// Fast handler specifically for SIS text fields (observaciones)
+const handleSISTextChange = useCallback((preguntaId, value) => {
+  // Update local state immediately - no validation, no API calls
+  setRespuestas((prev) => ({
+    ...prev,
+    [preguntaId]: {
+      ...prev[preguntaId],
+      observaciones: value,
+    },
+  }));
+
+  // Save to API after a delay (separate from typing)
+  setTimeout(() => {
+    const currentRespuesta = respuestas[preguntaId];
+    if (currentRespuesta) {
+      const updatedRespuesta = {
+        ...currentRespuesta,
+        observaciones: value,
+      };
+      
+      // Use the debounced save for API call
+      const context = {
+        usuario,
+        cuestionario,
+        isRespuestaValida,
+        procesarRespuesta,
+        setQuestionSubmitStates,
+        setNotificacion,
+        setUnlockedQuestions,
+        setPreguntasNoRespondidas
+      };
+      
+      getDebouncedSave(preguntaId)(preguntaId, updatedRespuesta, context);
+    }
+  }, 1000);
+}, [respuestas, usuario, cuestionario, isRespuestaValida, procesarRespuesta]);
 
 // Handler para cambios en respuestas
 const handleRespuestaChange = useCallback((preguntaId, respuesta) => {
@@ -1052,7 +1092,7 @@ const handleRespuestaChange = useCallback((preguntaId, respuesta) => {
       setPreguntasNoRespondidas
     };
 
-    debouncedSaveRef.current(preguntaId, respuesta, context);
+    getDebouncedSave(preguntaId)(preguntaId, respuesta, context);
     
   } catch (error) {
     console.error("Error in handleRespuestaChange:", error);
@@ -1544,6 +1584,7 @@ useEffect(() => {
               respuestas={respuestas}
               setRespuestas={setRespuestas}
               handleRespuestaChange={handleRespuestaChange}
+              handleSISTextChange={handleSISTextChange}
               subitems={subitems}
               cuestionarioFinalizado={cuestionarioFinalizado}
               esEditable={esEditable}
