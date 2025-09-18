@@ -55,6 +55,7 @@ import axios from "../../api";
 import useDocumentTitle from '../../hooks/useDocumentTitle';
 import * as Yup from 'yup';
 import dayjs from "dayjs";
+import { DeleteConfirmDialog } from '../../components/DeleteConfirmDialog';
 
 // Validation schema
 const habilidadSchema = Yup.object({
@@ -330,9 +331,6 @@ const HabilidadesEmpleo = () => {
           <Box display="flex" alignItems="center" gap={2}>
             <SkillIcon sx={{ fontSize: 40, color: theme.palette.primary.main }} />
             <Box>
-              <Typography variant="h4" gutterBottom>
-                Gestión de Habilidades
-              </Typography>
               <Typography variant="body1" color="text.secondary">
                 Administra las habilidades disponibles en el sistema para empleos y candidatos
               </Typography>
@@ -645,35 +643,13 @@ const HabilidadesEmpleo = () => {
       </Snackbar>
 
       {/* Delete Confirmation Dialog */}
-      <Dialog
+      <DeleteConfirmDialog
         open={deleteDialog.open}
         onClose={() => setDeleteDialog({ open: false, habilidad: null })}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Confirmar Eliminación</DialogTitle>
-        <DialogContent>
-          <Typography>
-            ¿Está seguro de que desea eliminar la habilidad "{deleteDialog.habilidad?.nombre}"?
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-            Esta acción no se puede deshacer. Si la habilidad está siendo utilizada por empleos o candidatos, no podrá ser eliminada.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteDialog({ open: false, habilidad: null })}>
-            Cancelar
-          </Button>
-          <Button 
-            variant="contained" 
-            color="error" 
-            onClick={handleDeleteConfirm}
-            startIcon={<DeleteIcon />}
-          >
-            Eliminar
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onConfirm={handleDeleteConfirm}
+        message={deleteDialog.habilidad ? `¿Estás seguro de que deseas eliminar la habilidad "${deleteDialog.habilidad.nombre}"?` : ''}
+        caption="Esta acción no se puede deshacer. Si la habilidad está siendo utilizada por empleos o candidatos, dejará de estar disponible para ellos."
+      />
 
       {/* Floating Action Button for mobile */}
       <Fab

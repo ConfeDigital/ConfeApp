@@ -241,6 +241,7 @@ export default function MyModal({
         open={openDeleteConfirmation}
         onClose={handleDeleteConfirmationClose}
         onConfirm={handleDelete}
+        message='¿Estás seguro de que deseas eliminar este evento?'
       />
     </Dialog>
   );

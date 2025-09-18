@@ -34,6 +34,7 @@ import {
 import { useSelector } from 'react-redux';
 import axios from '../../api';
 import useDocumentTitle from '../../hooks/useDocumentTitle';
+import { DeleteConfirmDialog } from '../../components/DeleteConfirmDialog';
 
 function stringToColor(string) {
     let hash = 0;
@@ -695,6 +696,10 @@ const CenterForum = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const [sortBy, setSortBy] = useState("none");
 
+    // Delete confirmation dialog state
+    const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
+    const [replyToDelete, setReplyToDelete] = useState(null);
+
     const currentUser = useSelector((state) => state.auth.user);
     const fileInputRef = useRef();
     const replyFileInputRef = useRef();
@@ -819,11 +824,18 @@ const CenterForum = () => {
     };
 
     const handleDeleteReply = async (reply) => {
-        if (!window.confirm('¿Estás seguro de que quieres eliminar esta respuesta?')) return;
+        setReplyToDelete(reply);
+        setOpenDeleteDialog(true);
+    };
 
+    const confirmDeleteReply = async () => {
+        if (!replyToDelete) return;
+        
         try {
-            await axios.delete(`api/communications/forum/replies/${reply.id}/`);
+            await axios.delete(`api/communications/forum/replies/${replyToDelete.id}/`);
             fetchTopicDetail(selectedTopic.id);
+            setOpenDeleteDialog(false);
+            setReplyToDelete(null);
         } catch (error) {
             console.error('Error deleting reply:', error);
         }
@@ -1220,6 +1232,14 @@ const filteredTopics = topics.filter((topic) =>
                     </Fab>
                 </Tooltip>
             )}
+
+            {/* Delete Confirmation Dialog */}
+            <DeleteConfirmDialog
+                open={openDeleteDialog}
+                onClose={() => setOpenDeleteDialog(false)}
+                onConfirm={confirmDeleteReply}
+                message={replyToDelete ? `¿Estás seguro de que deseas eliminar tu respuesta?` : ''}
+            />
         </Box>
     );
 };

@@ -21,6 +21,7 @@ const Disabilities = () => {
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
   const [selectedEntry, setSelectedEntry] = useState(null);
   const { data, fetchData, handleCreateOrUpdate, handleDelete, isLoading } = useDisabilitiesData();
+  const [deleteDialogMessage, setDeleteDialogMessage] = useState('');
 
   const [formData, setFormData] = useState({
     id: null,
@@ -79,6 +80,19 @@ const Disabilities = () => {
 
   const handleDeleteRequest = (id) => {
     setSelectedEntry(id);
+    let message = '';
+    if (tabIndex === 0) {
+      const group = data.groups.find(
+        (g) => g.id === id
+      );
+      message = `¿Estás seguro de que deseas eliminar el grupo "${group?.name}"?`;
+    } else {
+      const disability = data.disabilities.find(
+        (d) => d.id === id
+      );
+      message = `¿Estás seguro de que deseas eliminar la discapacidad "${disability?.name}"?`;
+    }
+    setDeleteDialogMessage(message);
     setOpenConfirmDialog(true);
   };
 
@@ -134,6 +148,8 @@ const Disabilities = () => {
           setSelectedEntry(null);
         }}
         onConfirm={handleDeleteClick}
+        message={deleteDialogMessage}
+        caption="Esta acción no se puede deshacer. Si la discapacidad está siendo utilizada por candidatos, dejará de estar disponible para ellos."
       />
     </Box>
   );
