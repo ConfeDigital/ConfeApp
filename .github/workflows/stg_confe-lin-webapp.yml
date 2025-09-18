@@ -52,14 +52,14 @@ jobs:
           chmod +x startup.sh
           zip release.zip ./* -r
 
-      # - name: Upload artifact for deployment jobs
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: python-app-${{ github.run_number }}
-      #     path: |
-      #       backend/release.zip
-      #       !venv/
-      #     retention-days: 7  # Keep artifacts for only 7 days
+      - name: Upload artifact for deployment jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-app-${{ github.run_number }}
+          path: |
+            backend/release.zip
+            !venv/
+          retention-days: 7  # Keep artifacts for only 7 days
 
   deploy:
     runs-on: ubuntu-latest
