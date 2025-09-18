@@ -162,12 +162,21 @@ export default function Dashboard() {
         const userPks = statsData.user_pks?.[userPksKey] || [];
         if (userPks.length > 0) {
             try {
-                const params = new URLSearchParams();
-                userPks.forEach(id => {
-                    params.append('ids', id);
-                });
-                const response = await api.get(`/api/candidatos/dashboard-list/?${params.toString()}`);
-                setUserList(response.data);
+                // Use POST for large lists to avoid URL length limits and CORS issues
+                // Threshold: if more than 50 IDs, use POST, otherwise use GET
+                if (userPks.length > 10) {
+                    const response = await api.post('/api/candidatos/dashboard-list/', {
+                        ids: userPks
+                    });
+                    setUserList(response.data);
+                } else {
+                    const params = new URLSearchParams();
+                    userPks.forEach(id => {
+                        params.append('ids', id);
+                    });
+                    const response = await api.get(`/api/candidatos/dashboard-list/?${params.toString()}`);
+                    setUserList(response.data);
+                }
                 setIsUserListDialogOpen(true);
             } catch (error) {
                 console.error("Error fetching user list:", error);
