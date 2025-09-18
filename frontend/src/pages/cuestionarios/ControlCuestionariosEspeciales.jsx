@@ -21,6 +21,8 @@ export const ControlCuestionariosEspeciales = ({
   chAids,
   cuestionarioFinalizado,
   esEditable,
+  questionSubmitStates,
+  QuestionSubmitIndicator,
 }) => {
   const [tabValue, setTabValue] = React.useState(0);
   const [loading, setLoading] = React.useState(false);
@@ -151,6 +153,8 @@ export const ControlCuestionariosEspeciales = ({
                   chAids={chAids}
                   onLoading={setLoading}
                   onError={setError}
+                  questionSubmitStates={questionSubmitStates}
+                  QuestionSubmitIndicator={QuestionSubmitIndicator}
                 />
               )}
             </Box>

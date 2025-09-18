@@ -1878,7 +1878,8 @@ class CuestionariosConRespuestasView(APIView):
     Devuelve los base_cuestionarios disponibles para el usuario,
     opcionalmente filtrados por 'estado_desbloqueo'.
     """
-    permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.AllowAny]
 
     def get(self, request, usuario_id):
         # print(f"🔍 Consultando cuestionarios para usuario ID: {usuario_id}")
@@ -1970,6 +1971,7 @@ class CargaMasivaRespuestasView(APIView):
     Vista para carga masiva de respuestas a cuestionarios
     """
     permission_classes = [permissions.IsAuthenticated]
+    # permission_classes = [permissions.AllowAny]
     
     def post(self, request):
         """

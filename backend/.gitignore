@@ -11,3 +11,5 @@ dump.rdb
 exports/
 *.sqlite3
 dbLUKEN.sqlite3
+
+*.db

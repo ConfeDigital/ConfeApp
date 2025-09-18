@@ -265,13 +265,26 @@ class CuadroHabilidadesReport:
         elements.append(Spacer(1, 20))
         elements.append(self.create_skills_table(conducta_adaptativa, "CONDUCTA ADAPTATIVA", responses_data))
         
-        # Signature section
-        elements.append(Spacer(1, 40))
-        elements.append(Paragraph("______________________________", self.signature_style))
-        elements.append(Paragraph("Responsable 1", self.signature_style))
-        elements.append(Spacer(1, 15))
-        elements.append(Paragraph("______________________________", self.signature_style))
-        elements.append(Paragraph("Responsable 2", self.signature_style))
+        # ------------------------------
+        # Observaciones section
+        # ------------------------------
+        elements.append(Spacer(1, 30))
+
+        observaciones_key = "Anote sus observaciones sobre el candidato"
+        observaciones_text = ""
+        if observaciones_key in responses_data:
+            obs_data = responses_data[observaciones_key]
+            if isinstance(obs_data, dict) and "resultado" in obs_data:
+                observaciones_text = obs_data.get("resultado", "")
+            elif isinstance(obs_data, str):
+                observaciones_text = obs_data
+            else:
+                observaciones_text = str(obs_data)
+
+        if observaciones_text:
+            elements.append(Paragraph("<b>Observaciones:</b>", self.left_align_style))
+            elements.append(Paragraph(observaciones_text, self.normal_style))
+            elements.append(Spacer(1, 20))
         
         # Build document
         doc.build(elements)

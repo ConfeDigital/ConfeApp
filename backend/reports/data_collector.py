@@ -270,31 +270,50 @@ class ReportDataCollector:
         }
     
     def get_cuadro_habilidades_data(self):
-        """Get skills chart data."""
-        responses = Respuesta.objects.filter(
-            usuario_id=self.user_id,
-            cuestionario__nombre__iexact="Cuadro de Habilidades",
-            cuestionario__activo=True
-        ).select_related('pregunta')
-        
+        """Get skills chart data only for CH-type questions."""
+        responses = (
+            Respuesta.objects.filter(
+                usuario_id=self.user_id,
+                cuestionario__nombre__iexact="Cuadro de Habilidades",
+                cuestionario__activo=True,
+                # pregunta__tipo="ch"  # ✅ Only include CH questions
+            )
+            .select_related("pregunta")
+        )
+
         responses_data = {}
         for response in responses:
             question_text = response.pregunta.texto.strip() if response.pregunta.texto else ""
             if not question_text:
                 continue
-                
-            try:
-                if response.respuesta and isinstance(response.respuesta, str):
-                    parsed_content = json.loads(response.respuesta)
-                elif response.respuesta:
-                    parsed_content = response.respuesta
-                else:
-                    parsed_content = {"resultado": "", "aid_id": None, "aid_text": "Sin respuesta."}
-            except json.JSONDecodeError:
-                parsed_content = {"resultado": "", "aid_id": None, "aid_text": "Error al procesar apoyo."}
-            
-            responses_data[question_text] = parsed_content
-        
+
+            # Only for CH questions, parse JSON-like data
+            if response.pregunta.tipo == "ch":
+                try:
+                    if response.respuesta and isinstance(response.respuesta, str):
+                        parsed_content = json.loads(response.respuesta)
+                    elif response.respuesta:
+                        parsed_content = response.respuesta
+                    else:
+                        parsed_content = {
+                            "resultado": "",
+                            "aid_id": None,
+                            "aid_text": "Sin respuesta.",
+                        }
+                except json.JSONDecodeError:
+                    parsed_content = {
+                        "resultado": "",
+                        "aid_id": None,
+                        "aid_text": "Error al procesar apoyo.",
+                    }
+
+                responses_data[question_text] = parsed_content
+
+            else:
+                # For non-CH questions, you can either skip them
+                # or just store raw values depending on your needs
+                responses_data[question_text] = {"resultado": response.respuesta}
+
         return responses_data
     
     def get_comprehensive_data(self):

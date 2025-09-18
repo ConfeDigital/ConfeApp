@@ -7,8 +7,6 @@ import {
   Card,
   CardContent,
   useMediaQuery,
-  Chip,
-  TextField,
 } from "@mui/material";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import HourglassBottomIcon from "@mui/icons-material/HourglassBottom";
@@ -18,7 +16,6 @@ import AccessibleForwardIcon from "@mui/icons-material/AccessibleForward";
 import Dialog from "@mui/material/Dialog";
 import DialogTitle from "@mui/material/DialogTitle";
 import DialogContent from "@mui/material/DialogContent";
-import { chain } from "lodash";
 
 const CH = ({
   preguntas,
@@ -27,6 +24,8 @@ const CH = ({
   handleRespuestaChange,
   chAids,
   disabled = false,
+  questionSubmitStates,
+  QuestionSubmitIndicator,
 }) => {
   const isMobile = useMediaQuery("(max-width:600px)");
 
@@ -210,6 +209,9 @@ const CH = ({
                 )}
               </Box>
             </CardContent>
+            {QuestionSubmitIndicator && (
+              <QuestionSubmitIndicator preguntaId={pregunta.id} />
+            )}
           </Card>
         );
       })}

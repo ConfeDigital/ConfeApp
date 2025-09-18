@@ -449,27 +449,6 @@ const TiposDePregunta = ({
             </Box>
           )}
         </Box>
-
-        {/* Botón de edición posicionado absolutamente */}
-        {cuestionarioFinalizado && !esEditable && !modoEdicion && (
-          <Box
-            sx={{
-              position: "absolute",
-              top: 8,
-              right: 8,
-              zIndex: 1,
-            }}
-          >
-            {/* <Button
-              startIcon={<EditIcon />}
-              variant="outlined"
-              color="secondary"
-              onClick={() => setModoEdicion(true)}
-            >
-              Editar
-            </Button> */}
-          </Box>
-        )}
       </Box>
     </>
   );

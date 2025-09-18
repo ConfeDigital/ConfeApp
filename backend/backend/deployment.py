@@ -198,6 +198,13 @@ else:
         },
     }
 
+CELERY_BROKER_URL = REDIS_URL.replace("/1", "/0")  # Use DB 0 for broker
+CELERY_RESULT_BACKEND = REDIS_URL.replace("/1", "/1")  # Keep DB 1 for results
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
 # --- Configuración de Logging ---
 LOGGING = {
     'version': 1,
