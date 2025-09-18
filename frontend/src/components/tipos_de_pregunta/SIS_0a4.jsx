@@ -151,34 +151,37 @@ const SIS_0a4 = ({
 
   const textSaveTimeoutRef = React.useRef({});
 
-  const handleTextChange = React.useCallback((preguntaId, value) => {
-    // Use the fast handler from Preguntas.jsx - no validation, no API calls during typing
-    if (handleSISTextChange) {
-      handleSISTextChange(preguntaId, value);
-    } else {
-      // Fallback to local state update
-      setRespuestas((prev) => ({
-        ...prev,
-        [preguntaId]: {
-          ...prev[preguntaId],
-          observaciones: value,
-        },
-      }));
-    }
-
-    // Clear previous save timeout
-    if (textSaveTimeoutRef.current[preguntaId]) {
-      clearTimeout(textSaveTimeoutRef.current[preguntaId]);
-    }
-
-    // Save after user stops typing for 1 second
-    textSaveTimeoutRef.current[preguntaId] = setTimeout(() => {
-      const currentRespuesta = respuestas[preguntaId];
-      if (currentRespuesta && areRequiredFieldsFilled(currentRespuesta)) {
-        handleRespuestaChange(preguntaId, currentRespuesta);
+  const handleTextChange = React.useCallback(
+    (preguntaId, value) => {
+      // Use the fast handler from Preguntas.jsx - no validation, no API calls during typing
+      if (handleSISTextChange) {
+        handleSISTextChange(preguntaId, value);
+      } else {
+        // Fallback to local state update
+        setRespuestas((prev) => ({
+          ...prev,
+          [preguntaId]: {
+            ...prev[preguntaId],
+            observaciones: value,
+          },
+        }));
       }
-    }, 1000);
-  }, [handleSISTextChange, respuestas, handleRespuestaChange]);
+
+      // Clear previous save timeout
+      if (textSaveTimeoutRef.current[preguntaId]) {
+        clearTimeout(textSaveTimeoutRef.current[preguntaId]);
+      }
+
+      // Save after user stops typing for 1 second
+      textSaveTimeoutRef.current[preguntaId] = setTimeout(() => {
+        const currentRespuesta = respuestas[preguntaId];
+        if (currentRespuesta && areRequiredFieldsFilled(currentRespuesta)) {
+          handleRespuestaChange(preguntaId, currentRespuesta);
+        }
+      }, 1000);
+    },
+    [handleSISTextChange, respuestas, handleRespuestaChange]
+  );
 
   const secciones = React.useMemo(() => {
     return [...new Set(preguntas.map((pregunta) => pregunta.seccion_sis))];
@@ -322,7 +325,9 @@ const SIS_0a4 = ({
                           ))}
                         </RadioGroup>
 
-                        <Typography variant="subtitle2">Tipo de apoyo:</Typography>
+                        <Typography variant="subtitle2">
+                          Tipo de apoyo:
+                        </Typography>
                         <RadioGroup
                           row
                           value={
@@ -403,12 +408,18 @@ const SIS_0a4 = ({
                           label="Observaciones"
                         />
                         {QuestionSubmitIndicator && (
-                          <QuestionSubmitIndicator preguntaId={pregunta.id} />
+                          <QuestionSubmitIndicator
+                            preguntaId={pregunta.id}
+                            responseState={questionSubmitStates[pregunta.id]}
+                            queuePosition={0}
+                          />
                         )}
                       </Box>
                     ) : (
                       <TableRow key={pregunta.id}>
-                        <TableCell sx={{ maxWidth: "250px" }}>{pregunta.texto}</TableCell>
+                        <TableCell sx={{ maxWidth: "250px" }}>
+                          {pregunta.texto}
+                        </TableCell>
                         <TableCell sx={{ width: "100px" }}>
                           <RadioGroup
                             value={
@@ -529,7 +540,13 @@ const SIS_0a4 = ({
                         </TableCell>
                         <TableCell sx={{ width: "25%" }}>
                           <Box
-                            sx={{ display: "flex", flexDirection: "column", maxHeight: "210px", overflowY: "auto", pr: 1}}
+                            sx={{
+                              display: "flex",
+                              flexDirection: "column",
+                              maxHeight: "210px",
+                              overflowY: "auto",
+                              pr: 1,
+                            }}
                           >
                             {(subitems?.[pregunta.texto] || []).map(
                               (subitem) => (
@@ -579,7 +596,11 @@ const SIS_0a4 = ({
                             label="Observaciones"
                           />
                           {QuestionSubmitIndicator && (
-                            <QuestionSubmitIndicator preguntaId={pregunta.id} />
+                            <QuestionSubmitIndicator
+                              preguntaId={pregunta.id}
+                              responseState={questionSubmitStates[pregunta.id]}
+                              queuePosition={0}
+                            />
                           )}
                         </TableCell>
                       </TableRow>

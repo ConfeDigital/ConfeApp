@@ -210,7 +210,11 @@ const CH = ({
               </Box>
             </CardContent>
             {QuestionSubmitIndicator && (
-              <QuestionSubmitIndicator preguntaId={pregunta.id} />
+              <QuestionSubmitIndicator
+                preguntaId={pregunta.id}
+                responseState={questionSubmitStates[pregunta.id]}
+                queuePosition={0}
+              />
             )}
           </Card>
         );

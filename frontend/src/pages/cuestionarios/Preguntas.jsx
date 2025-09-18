@@ -1,4 +1,11 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo, startTransition } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+  startTransition,
+} from "react";
 import {
   Box,
   Typography,
@@ -17,6 +24,9 @@ import api from "../../api";
 import NotificacionCuestionarios from "./NotificacionCuestionarios";
 import BotonFinCuestionario from "./BotonFinCuestionario";
 import { useNavigate } from "react-router-dom";
+import useResponseQueue from "../../hooks/useResponseQueue";
+import QuestionSubmitIndicator from "../../components/QuestionSubmitIndicator";
+import QueueStatus from "../../components/QueueStatus";
 
 const MemoizedTiposDePregunta = React.memo(TiposDePregunta);
 
@@ -48,9 +58,18 @@ const Preguntas = ({
   const [preguntasNoRespondidas, setPreguntasNoRespondidas] = useState(
     new Set()
   );
-  // Estado para rastrear el estado de envío de cada pregunta
-  const [questionSubmitStates, setQuestionSubmitStates] = useState({});
   const topRef = useRef(null);
+
+  // Sistema de cola de respuestas
+  const {
+    enqueueResponse,
+    responseStates,
+    queueLength,
+    isProcessing,
+    getQueueStats,
+    clearOldLogs,
+    exportLogs,
+  } = useResponseQueue();
 
   const navigate = useNavigate();
   // Notificaciones
@@ -59,49 +78,12 @@ const Preguntas = ({
     tipo: null,
   });
 
-  // Componente para mostrar el indicador de estado de envío
-  const QuestionSubmitIndicator = ({ preguntaId }) => {
-    const submitState = questionSubmitStates[preguntaId];
-
-    if (!submitState) return null;
-
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          mt: 1,
-          py: 0.5,
-        }}
-      >
-        {submitState === "loading" && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <CircularProgress size={16} />
-            <Typography variant="caption" color="text.secondary">
-              Guardando...
-            </Typography>
-          </Box>
-        )}
-        {submitState === "success" && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <CheckCircleIcon sx={{ color: "success.main", fontSize: 20 }} />
-            <Typography variant="caption" color="success.main">
-              Guardado
-            </Typography>
-          </Box>
-        )}
-        {submitState === "error" && (
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <ErrorIcon sx={{ color: "error.main", fontSize: 20 }} />
-            <Typography variant="caption" color="error.main">
-              Error al guardar
-            </Typography>
-          </Box>
-        )}
-      </Box>
-    );
-  };
+  // Función para obtener la posición en la cola de una pregunta
+  const getQueuePosition = useCallback((preguntaId) => {
+    // Esta función se implementará cuando tengamos acceso a la cola interna
+    // Por ahora retornamos 0 para indicar que no está en cola
+    return 0;
+  }, []);
 
   // Los estados ahora persisten hasta que se haga una nueva acción
   // No hay limpieza automática de estados
@@ -122,7 +104,7 @@ const Preguntas = ({
     const specialQuestions = Object.values(groupedQuestions)
       .flat()
       .filter((pregunta) => pregunta.tipo === "ed" || pregunta.tipo === "ch");
-    
+
     const specialSections = specialQuestions.reduce((acc, pregunta) => {
       const section = pregunta.nombre_seccion || "Sin sección";
       if (!acc[section]) acc[section] = [];
@@ -130,24 +112,35 @@ const Preguntas = ({
       return acc;
     }, {});
 
-    const regularSections = Object.entries(groupedQuestions).reduce((acc, [section, preguntas]) => {
-      const regularPreguntas = preguntas.filter(
-        (pregunta) =>
-          pregunta.tipo !== "sis" &&
-          pregunta.tipo !== "sis2" &&
-          pregunta.tipo !== "ed" &&
-          pregunta.tipo !== "ch"
-      );
-      if (regularPreguntas.length > 0) {
-        acc[section] = regularPreguntas;
-      }
-      return acc;
-    }, {});
+    const regularSections = Object.entries(groupedQuestions).reduce(
+      (acc, [section, preguntas]) => {
+        const regularPreguntas = preguntas.filter(
+          (pregunta) =>
+            pregunta.tipo !== "sis" &&
+            pregunta.tipo !== "sis2" &&
+            pregunta.tipo !== "ed" &&
+            pregunta.tipo !== "ch"
+        );
+        if (regularPreguntas.length > 0) {
+          acc[section] = regularPreguntas;
+        }
+        return acc;
+      },
+      {}
+    );
 
     // Combine sections: special sections first, then regular sections
     const unified = [
-      ...Object.keys(specialSections).map(section => ({ name: section, type: 'special', questions: specialSections[section] })),
-      ...Object.keys(regularSections).map(section => ({ name: section, type: 'regular', questions: regularSections[section] }))
+      ...Object.keys(specialSections).map((section) => ({
+        name: section,
+        type: "special",
+        questions: specialSections[section],
+      })),
+      ...Object.keys(regularSections).map((section) => ({
+        name: section,
+        type: "regular",
+        questions: regularSections[section],
+      })),
     ];
 
     setUnifiedSections(unified);
@@ -168,7 +161,6 @@ const Preguntas = ({
   // Calcular preguntas desbloqueadas
   const calculateUnlockedQuestions = useCallback(
     (respuestas) => {
-
       const unlocked = new Set();
       Object.entries(respuestas).forEach(([preguntaId, respuesta]) => {
         const pregunta = cuestionario.preguntas.find(
@@ -176,7 +168,6 @@ const Preguntas = ({
         );
 
         if (pregunta?.opciones) {
-
           if (pregunta.tipo === "checkbox") {
             // Para checkbox, la respuesta es un array de IDs de opciones
             let opcionesSeleccionadas = [];
@@ -228,7 +219,6 @@ const Preguntas = ({
               pregunta.opciones.some((op) => op.texto === "Sí") &&
               pregunta.opciones.some((op) => op.texto === "No"))
           ) {
-
             // Para preguntas binarias, buscar por texto de la opción
             const opcionSeleccionada = pregunta.opciones.find(
               (op) => op.texto === respuesta
@@ -775,357 +765,331 @@ const Preguntas = ({
     }
   };
 
-// Enhanced debounce function with request cancellation
-function debounce(fn, delay) {
-  let timer;
-  let controller;
-  
-  return (...args) => {
-    // Cancel previous request if still pending
-    if (controller) {
-      controller.abort();
-    }
-    
-    clearTimeout(timer);
-    controller = new AbortController();
-    
-    timer = setTimeout(() => {
-      fn(...args);
-    }, delay);
-  };
-}
-
-// Create individual debounced functions for each question
-const debouncedSavesRef = useRef({});
-
-const getDebouncedSave = (preguntaId) => {
-  if (!debouncedSavesRef.current[preguntaId]) {
-    debouncedSavesRef.current[preguntaId] = debounce(async (preguntaId, respuesta, context) => {
-    const { 
-      usuario, 
-      cuestionario, 
-      isRespuestaValida, 
-      procesarRespuesta,
-      setQuestionSubmitStates,
-      setNotificacion,
-      setUnlockedQuestions,
-      setPreguntasNoRespondidas 
-    } = context;
-    
-    try {
-      const preguntaActual = cuestionario.preguntas.find(
-        (p) => p.id === preguntaId
-      );
-
-      // For profile field questions, no API save needed
-      if (preguntaActual.profile_field_path) {
-        return;
-      }
-
-      // Validación específica para preguntas abiertas
-      if (
-        preguntaActual.tipo === "abierta" &&
-        (!respuesta || respuesta.trim() === "")
-      ) {
-        setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
-        setNotificacion({
-          mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, ingresa un texto.`,
-          tipo: "error",
-        });
-        return;
-      }
-
-      if (
-        !isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)
-      ) {
-        setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
-        setNotificacion({
-          mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, completa la respuesta antes de continuar.`,
-          tipo: "error",
-        });
-        return;
-      }
-
-      // Si la respuesta es válida, remover de preguntas no respondidas
-      setPreguntasNoRespondidas((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(preguntaId);
-        return newSet;
-      });
-
-      // Establecer estado de carga para esta pregunta
-      setQuestionSubmitStates((prev) => ({
+  // Fast handler specifically for SIS text fields (observaciones)
+  const handleSISTextChange = useCallback(
+    (preguntaId, value) => {
+      // Update local state immediately - no validation, no API calls
+      setRespuestas((prev) => ({
         ...prev,
-        [preguntaId]: "loading",
+        [preguntaId]: {
+          ...prev[preguntaId],
+          observaciones: value,
+        },
       }));
 
-      // Para ciertos tipos de preguntas, enviar el valor simple al backend
-      let respuestaParaEnviar = respuesta;
+      // Save to API after a delay (separate from typing)
+      setTimeout(() => {
+        const currentRespuesta = respuestas[preguntaId];
+        if (currentRespuesta) {
+          const updatedRespuesta = {
+            ...currentRespuesta,
+            observaciones: value,
+          };
 
-      if (preguntaActual.tipo === "numero") {
-        // Para números, enviar solo el valor numérico
-        respuestaParaEnviar = parseFloat(respuesta) || 0;
-      } else if (
-        preguntaActual.tipo === "multiple" ||
-        preguntaActual.tipo === "dropdown"
-      ) {
-        // Para dropdowns, enviar solo el valor/índice
-        respuestaParaEnviar = respuesta;
-      } else if (preguntaActual.tipo === "binaria") {
-        // Para binarias, enviar la opción seleccionada directamente
-        if (
-          respuesta === true ||
-          respuesta === "true" ||
-          respuesta === "1" ||
-          respuesta === "sí" ||
-          respuesta === "si"
-        ) {
-          respuestaParaEnviar = "Sí";
-        } else {
-          respuestaParaEnviar = "No";
+          // Use the queue system for API call
+          const metadata = {
+            usuario,
+            cuestionario,
+            preguntaActual: cuestionario.preguntas.find(
+              (p) => p.id === preguntaId
+            ),
+            isRespuestaValida,
+            procesarRespuesta,
+            setNotificacion,
+            setUnlockedQuestions,
+            setPreguntasNoRespondidas,
+          };
+
+          enqueueResponse(preguntaId, updatedRespuesta, metadata);
         }
-      } else if (preguntaActual.tipo === "checkbox") {
-        // Para checkbox, enviar el array de IDs
-        respuestaParaEnviar = Array.isArray(respuesta) ? respuesta : [];
-      } else if (preguntaActual.tipo === "imagen") {
-        // Para preguntas de imagen (slider), enviar el valor numérico
-        respuestaParaEnviar = parseFloat(respuesta) || 0;
-      } else {
-        // Para otros tipos, procesar la respuesta
-        respuestaParaEnviar = procesarRespuesta(respuesta, preguntaActual);
-      }
+      }, 2000); // Aumentado a 2 segundos para evitar spam
+    },
+    [
+      respuestas,
+      usuario,
+      cuestionario,
+      isRespuestaValida,
+      procesarRespuesta,
+      enqueueResponse,
+    ]
+  );
 
-      await api.post("/api/cuestionarios/respuestas/", {
-        usuario: usuario,
-        cuestionario: cuestionario.id,
-        pregunta: preguntaId,
-        respuesta: respuestaParaEnviar,
-      });
+  // Sistema de debounce para preguntas de texto
+  const textDebounceRefs = useRef({});
+  const lastSentResponses = useRef({});
+  const lastEnqueueTime = useRef({});
+  const pendingResponses = useRef({}); // Para trackear respuestas pendientes
 
-      // Establecer estado de éxito para esta pregunta
-      setQuestionSubmitStates((prev) => ({
-        ...prev,
-        [preguntaId]: "success",
-      }));
-
-      // Actualizar preguntas desbloqueadas
-      setUnlockedQuestions((prev) => {
-        const nuevos = new Set(prev);
-        const pregunta = cuestionario.preguntas.find(
+  // Handler para cambios en respuestas usando el sistema de cola
+  const handleRespuestaChange = useCallback(
+    (preguntaId, respuesta) => {
+      try {
+        // Validar la respuesta antes de guardar
+        const preguntaActual = cuestionario.preguntas.find(
           (p) => p.id === preguntaId
         );
 
-        // Eliminar posibles desbloqueos antiguos de esta pregunta
-        pregunta?.opciones?.forEach((op) => {
-          op.desbloqueos?.forEach((d) => {
-            nuevos.delete(d.pregunta_desbloqueada);
-          });
-        });
+        // Always update local state immediately for responsive UI
+        setRespuestas((prev) => ({
+          ...prev,
+          [preguntaId]: respuesta,
+        }));
 
-        // Agregar desbloqueos de las opciones seleccionadas
-        if (pregunta?.tipo === "checkbox") {
-          // Para checkbox, respuesta es un array de opciones seleccionadas
-          if (Array.isArray(respuesta)) {
-            respuesta.forEach((opcionSeleccionada) => {
-              const opcion = pregunta.opciones?.find(
-                (op) => op.id === opcionSeleccionada
-              );
-
-              if (opcion?.desbloqueos) {
-                opcion.desbloqueos.forEach((d) => {
-                  nuevos.add(d.pregunta_desbloqueada);
-                });
-              }
-            });
-          }
-        } else if (
-          pregunta?.tipo === "multiple" ||
-          pregunta?.tipo === "dropdown"
-        ) {
-          // Para preguntas tipo multiple y dropdown
-          const opcionSeleccionada = pregunta?.opciones?.find(
-            (op) => op.valor === parseInt(respuesta, 10)
-          );
-
-          if (opcionSeleccionada?.desbloqueos) {
-            opcionSeleccionada.desbloqueos.forEach((d) => {
-              nuevos.add(d.pregunta_desbloqueada);
-            });
-          }
-        } else if (
-          pregunta?.tipo === "binaria" ||
-          (pregunta?.tipo === "multiple" &&
-            pregunta?.opciones?.length === 2 &&
-            pregunta?.opciones?.some((op) => op.texto === "Sí") &&
-            pregunta?.opciones?.some((op) => op.texto === "No"))
-        ) {
-          // Para preguntas binarias, convertir la respuesta al texto correcto
-          let respuestaTexto;
+        // For profile field questions, just update local state for validation purposes
+        if (preguntaActual.profile_field_path) {
+          // Remove from unanswered questions if the response is valid
           if (
-            respuesta === true ||
-            respuesta === "true" ||
-            respuesta === "1" ||
-            respuesta === "sí" ||
-            respuesta === "si"
+            isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)
           ) {
-            respuestaTexto = "Sí";
-          } else {
-            respuestaTexto = "No";
-          }
-
-          const opcionSeleccionada = pregunta?.opciones?.find(
-            (op) => op.texto === respuestaTexto
-          );
-
-          if (opcionSeleccionada?.desbloqueos) {
-            opcionSeleccionada.desbloqueos.forEach((d) => {
-              nuevos.add(d.pregunta_desbloqueada);
+            setPreguntasNoRespondidas((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(preguntaId);
+              return newSet;
             });
           }
-        } else {
-          const opcionSeleccionada = pregunta?.opciones?.find(
-            (op) => op.valor === respuesta
-          );
-
-          if (opcionSeleccionada?.desbloqueos) {
-            opcionSeleccionada.desbloqueos.forEach((d) => {
-              nuevos.add(d.pregunta_desbloqueada);
-            });
-          }
+          return;
         }
-        return nuevos;
-      });
-    } catch (error) {
-      console.error("Error updating respuesta:", error);
 
-      // Establecer estado de error para esta pregunta
-      setQuestionSubmitStates((prev) => ({
-        ...prev,
-        [preguntaId]: "error",
-      }));
+        // Validación específica para preguntas abiertas
+        if (
+          preguntaActual.tipo === "abierta" &&
+          (!respuesta || respuesta.trim() === "")
+        ) {
+          setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
+          setNotificacion({
+            mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, ingresa un texto.`,
+            tipo: "error",
+          });
+          return;
+        }
 
-      setNotificacion({
-        mensaje: "Error al guardar la respuesta",
-        tipo: "error",
-      });
-    }
-  }, 1500);
-  }
-  return debouncedSavesRef.current[preguntaId];
-};
+        if (
+          !isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)
+        ) {
+          setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
+          setNotificacion({
+            mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, completa la respuesta antes de continuar.`,
+            tipo: "error",
+          });
+          return;
+        }
 
-// Fast handler specifically for SIS text fields (observaciones)
-const handleSISTextChange = useCallback((preguntaId, value) => {
-  // Update local state immediately - no validation, no API calls
-  setRespuestas((prev) => ({
-    ...prev,
-    [preguntaId]: {
-      ...prev[preguntaId],
-      observaciones: value,
-    },
-  }));
-
-  // Save to API after a delay (separate from typing)
-  setTimeout(() => {
-    const currentRespuesta = respuestas[preguntaId];
-    if (currentRespuesta) {
-      const updatedRespuesta = {
-        ...currentRespuesta,
-        observaciones: value,
-      };
-      
-      // Use the debounced save for API call
-      const context = {
-        usuario,
-        cuestionario,
-        isRespuestaValida,
-        procesarRespuesta,
-        setQuestionSubmitStates,
-        setNotificacion,
-        setUnlockedQuestions,
-        setPreguntasNoRespondidas
-      };
-      
-      getDebouncedSave(preguntaId)(preguntaId, updatedRespuesta, context);
-    }
-  }, 1000);
-}, [respuestas, usuario, cuestionario, isRespuestaValida, procesarRespuesta]);
-
-// Handler para cambios en respuestas
-const handleRespuestaChange = useCallback((preguntaId, respuesta) => {
-  try {
-    // Validar la respuesta antes de guardar
-    const preguntaActual = cuestionario.preguntas.find(
-      (p) => p.id === preguntaId
-    );
-
-    // Always update local state immediately for responsive UI
-    setRespuestas((prev) => ({
-      ...prev,
-      [preguntaId]: respuesta,
-    }));
-
-    // For profile field questions, just update local state for validation purposes
-    if (preguntaActual.profile_field_path) {
-      // Remove from unanswered questions if the response is valid
-      if (
-        isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)
-      ) {
+        // Si la respuesta es válida, remover de preguntas no respondidas
         setPreguntasNoRespondidas((prev) => {
           const newSet = new Set(prev);
           newSet.delete(preguntaId);
           return newSet;
         });
-      }
-      return;
-    }
 
-    // For regular questions, use the debounced API save
-    const context = {
+        // Sistema de debounce inteligente para preguntas de texto
+        if (preguntaActual.tipo === "abierta") {
+          // Para preguntas de texto, usar debounce
+          const now = Date.now();
+
+          // Limpiar timeout anterior si existe
+          if (textDebounceRefs.current[preguntaId]) {
+            clearTimeout(textDebounceRefs.current[preguntaId]);
+          }
+
+          // Marcar que hay una respuesta pendiente
+          pendingResponses.current[preguntaId] = {
+            respuesta,
+            timestamp: now,
+            metadata: {
+              usuario,
+              cuestionario,
+              preguntaActual,
+              isRespuestaValida,
+              procesarRespuesta,
+              setNotificacion,
+              setUnlockedQuestions,
+              setPreguntasNoRespondidas,
+            },
+          };
+
+          console.log(
+            `[DEBOUNCE] Respuesta pendiente para pregunta ${preguntaId}:`,
+            typeof respuesta === "string"
+              ? respuesta.substring(0, 50) + "..."
+              : respuesta
+          );
+
+          // Crear nuevo timeout con delay para texto
+          textDebounceRefs.current[preguntaId] = setTimeout(() => {
+            const pending = pendingResponses.current[preguntaId];
+            if (!pending) return;
+
+            // Verificar si la respuesta es diferente a la última enviada
+            const lastSent = lastSentResponses.current[preguntaId];
+            if (lastSent === pending.respuesta) {
+              console.log(
+                `[DEBOUNCE] Respuesta duplicada ignorada para pregunta ${preguntaId}:`,
+                typeof pending.respuesta === "string"
+                  ? pending.respuesta.substring(0, 50) + "..."
+                  : pending.respuesta
+              );
+              delete pendingResponses.current[preguntaId];
+              return;
+            }
+
+            // Agregar a la cola
+            const success = enqueueResponse(
+              preguntaId,
+              pending.respuesta,
+              pending.metadata
+            );
+
+            if (success) {
+              // Marcar esta respuesta como enviada
+              lastSentResponses.current[preguntaId] = pending.respuesta;
+              lastEnqueueTime.current[preguntaId] = now;
+              console.log(
+                `[DEBOUNCE] Respuesta enviada para pregunta ${preguntaId}:`,
+                typeof pending.respuesta === "string"
+                  ? pending.respuesta.substring(0, 50) + "..."
+                  : pending.respuesta
+              );
+            } else {
+              setNotificacion({
+                mensaje:
+                  "La cola de respuestas está llena. Intenta de nuevo en un momento.",
+                tipo: "warning",
+              });
+            }
+
+            // Limpiar referencias
+            delete pendingResponses.current[preguntaId];
+            delete textDebounceRefs.current[preguntaId];
+          }, 2000); // 2 segundos de delay para preguntas de texto
+        } else {
+          // Para otros tipos de preguntas, usar throttling
+          const now = Date.now();
+          const lastTime = lastEnqueueTime.current[preguntaId];
+          const timeSinceLastEnqueue = now - (lastTime || 0);
+
+          // Throttling: solo permitir envío cada 1 segundo por pregunta
+          if (lastTime && timeSinceLastEnqueue < 1000) {
+            console.log(
+              `[THROTTLE] Respuesta ignorada por throttling para pregunta ${preguntaId}. Tiempo desde último envío: ${timeSinceLastEnqueue}ms`
+            );
+            return;
+          }
+
+          // Verificar si la respuesta es diferente a la última enviada
+          const lastSent = lastSentResponses.current[preguntaId];
+          if (lastSent === respuesta) {
+            console.log(
+              `[THROTTLE] Respuesta duplicada ignorada para pregunta ${preguntaId}:`,
+              typeof respuesta === "string"
+                ? respuesta.substring(0, 50) + "..."
+                : respuesta
+            );
+            return;
+          }
+
+          // Agregar a la cola
+          const metadata = {
+            usuario,
+            cuestionario,
+            preguntaActual,
+            isRespuestaValida,
+            procesarRespuesta,
+            setNotificacion,
+            setUnlockedQuestions,
+            setPreguntasNoRespondidas,
+          };
+
+          const success = enqueueResponse(preguntaId, respuesta, metadata);
+
+          if (success) {
+            // Marcar esta respuesta como enviada y actualizar timestamp
+            lastSentResponses.current[preguntaId] = respuesta;
+            lastEnqueueTime.current[preguntaId] = now;
+            console.log(
+              `[COLA] Respuesta agregada para pregunta ${preguntaId}:`,
+              typeof respuesta === "string"
+                ? respuesta.substring(0, 50) + "..."
+                : respuesta
+            );
+          }
+
+          if (!success) {
+            setNotificacion({
+              mensaje:
+                "La cola de respuestas está llena. Intenta de nuevo en un momento.",
+              tipo: "warning",
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error in handleRespuestaChange:", error);
+        setNotificacion({
+          mensaje: "Error al procesar la respuesta",
+          tipo: "error",
+        });
+      }
+    },
+    [
       usuario,
       cuestionario,
       isRespuestaValida,
       procesarRespuesta,
-      setQuestionSubmitStates,
-      setNotificacion,
-      setUnlockedQuestions,
-      setPreguntasNoRespondidas
-    };
-
-    getDebouncedSave(preguntaId)(preguntaId, respuesta, context);
-    
-  } catch (error) {
-    console.error("Error in handleRespuestaChange:", error);
-  }
-}, [usuario, cuestionario, isRespuestaValida, procesarRespuesta]);
-
-// Memoized calculations to prevent unnecessary recalculations
-const memoizedCalculations = useMemo(() => {
-  const todasLasPreguntas = Object.values(groupedQuestions).flat();
-  
-  const preguntasNoVisibles = todasLasPreguntas.filter(
-    (p) => p.desbloqueos_recibidos.length > 0 && !unlockedQuestions.has(p.id)
+      enqueueResponse,
+      respuestas,
+    ]
   );
-  
-  const totalPreguntas = todasLasPreguntas.length - preguntasNoVisibles.length + unlockedQuestions.size;
-  
-  const respondidas = Object.entries(respuestas).filter(([preguntaId, respuesta]) => {
-    const pregunta = todasLasPreguntas.find((p) => p.id === parseInt(preguntaId));
-    return pregunta && isRespuestaValida(respuesta, pregunta.tipo, pregunta);
-  }).length;
-  
-  return { totalPreguntas, respondidas, todasLasPreguntas };
-}, [groupedQuestions, unlockedQuestions, respuestas, isRespuestaValida]);
 
-// Optimized effect for question counter updates
-useEffect(() => {
-  if (onQuestionUnlock) {
-    onQuestionUnlock("counter", {
-      total: memoizedCalculations.totalPreguntas,
-      answered: memoizedCalculations.respondidas,
-    });
-  }
-}, [memoizedCalculations, onQuestionUnlock]);
+  // Cleanup effect para limpiar timeouts
+  useEffect(() => {
+    return () => {
+      // Limpiar todos los timeouts pendientes al desmontar
+      Object.values(textDebounceRefs.current).forEach((timeoutId) => {
+        if (timeoutId) {
+          clearTimeout(timeoutId);
+        }
+      });
+
+      // Limpiar respuestas pendientes
+      pendingResponses.current = {};
+    };
+  }, []);
+
+  // Memoized calculations to prevent unnecessary recalculations
+  const memoizedCalculations = useMemo(() => {
+    const todasLasPreguntas = Object.values(groupedQuestions).flat();
+
+    const preguntasNoVisibles = todasLasPreguntas.filter(
+      (p) => p.desbloqueos_recibidos.length > 0 && !unlockedQuestions.has(p.id)
+    );
+
+    const totalPreguntas =
+      todasLasPreguntas.length -
+      preguntasNoVisibles.length +
+      unlockedQuestions.size;
+
+    const respondidas = Object.entries(respuestas).filter(
+      ([preguntaId, respuesta]) => {
+        const pregunta = todasLasPreguntas.find(
+          (p) => p.id === parseInt(preguntaId)
+        );
+        return (
+          pregunta && isRespuestaValida(respuesta, pregunta.tipo, pregunta)
+        );
+      }
+    ).length;
+
+    return { totalPreguntas, respondidas, todasLasPreguntas };
+  }, [groupedQuestions, unlockedQuestions, respuestas, isRespuestaValida]);
+
+  // Optimized effect for question counter updates
+  useEffect(() => {
+    if (onQuestionUnlock) {
+      onQuestionUnlock("counter", {
+        total: memoizedCalculations.totalPreguntas,
+        answered: memoizedCalculations.respondidas,
+      });
+    }
+  }, [memoizedCalculations, onQuestionUnlock]);
 
   // Función para obtener preguntas visibles que no tienen respuesta
   const getUnansweredQuestions = () => {
@@ -1461,112 +1425,118 @@ useEffect(() => {
       >
         {/* Navegación unificada de secciones */}
         {unifiedSections.length > 0 && (
-            <>
-              <Box
+          <>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                px: 2,
+                mb: 1,
+              }}
+            >
+              <Typography variant="body1">
+                Sección{" "}
+                {unifiedSections.findIndex((s) => s.name === expandedSection) +
+                  1}{" "}
+                de {unifiedSections.length}
+              </Typography>
+              <Typography variant="body1">
+                Respondidas: {getAnsweredUnlockedQuestions()} /{" "}
+                {getTotalUnlockedQuestions()}
+              </Typography>
+            </Box>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 2,
+                px: 2,
+              }}
+            >
+              <IconButton
+                disabled={
+                  unifiedSections.findIndex(
+                    (s) => s.name === expandedSection
+                  ) === 0
+                }
+                onClick={() => {
+                  const index = unifiedSections.findIndex(
+                    (s) => s.name === expandedSection
+                  );
+                  if (index > 0) {
+                    const nuevaSeccion = unifiedSections[index - 1].name;
+                    setExpandedSection(nuevaSeccion);
+                    setTimeout(() => {
+                      if (topRef.current) {
+                        topRef.current.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                      }
+                    }, 100);
+                  }
+                }}
                 sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  px: 2,
-                  mb: 1,
+                  fontSize: "1.25rem",
+                  color: "primary.main",
+                  border: "1px solid",
+                  borderColor: "primary.main",
+                  borderRadius: 2,
+                  px: 1.5,
+                  py: 0.5,
                 }}
               >
-                <Typography variant="body1">
-                  Sección{" "}
-                  {unifiedSections.findIndex(s => s.name === expandedSection) + 1} de{" "}
-                  {unifiedSections.length}
-                </Typography>
-                <Typography variant="body1">
-                  Respondidas: {getAnsweredUnlockedQuestions()} /{" "}
-                  {getTotalUnlockedQuestions()}
-                </Typography>
-              </Box>
-              <Box
+                <ArrowBackIcon />
+              </IconButton>
+
+              <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                Sección{" "}
+                {unifiedSections.findIndex((s) => s.name === expandedSection) +
+                  1}{" "}
+                de {unifiedSections.length}
+              </Typography>
+
+              <IconButton
+                disabled={
+                  unifiedSections.findIndex(
+                    (s) => s.name === expandedSection
+                  ) ===
+                  unifiedSections.length - 1
+                }
+                onClick={() => {
+                  const index = unifiedSections.findIndex(
+                    (s) => s.name === expandedSection
+                  );
+                  if (index < unifiedSections.length - 1) {
+                    const nuevaSeccion = unifiedSections[index + 1].name;
+                    setExpandedSection(nuevaSeccion);
+                    setTimeout(() => {
+                      if (topRef.current) {
+                        topRef.current.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                      }
+                    }, 100);
+                  }
+                }}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  mb: 2,
-                  px: 2,
+                  fontSize: "1.25rem",
+                  color: "primary.main",
+                  border: "1px solid",
+                  borderColor: "primary.main",
+                  borderRadius: 2,
+                  px: 1.5,
+                  py: 0.5,
                 }}
               >
-                <IconButton
-                  disabled={
-                    unifiedSections.findIndex(s => s.name === expandedSection) === 0
-                  }
-                  onClick={() => {
-                    const index =
-                      unifiedSections.findIndex(s => s.name === expandedSection);
-                    if (index > 0) {
-                      const nuevaSeccion =
-                        unifiedSections[index - 1].name;
-                      setExpandedSection(nuevaSeccion);
-                      setTimeout(() => {
-                        if (topRef.current) {
-                          topRef.current.scrollIntoView({
-                            behavior: "smooth",
-                            block: "start",
-                          });
-                        }
-                      }, 100);
-                    }
-                  }}
-                  sx={{
-                    fontSize: "1.25rem",
-                    color: "primary.main",
-                    border: "1px solid",
-                    borderColor: "primary.main",
-                    borderRadius: 2,
-                    px: 1.5,
-                    py: 0.5,
-                  }}
-                >
-                  <ArrowBackIcon />
-                </IconButton>
-
-                <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
-                  Sección{" "}
-                  {unifiedSections.findIndex(s => s.name === expandedSection) + 1} de{" "}
-                  {unifiedSections.length}
-                </Typography>
-
-                <IconButton
-                  disabled={
-                    unifiedSections.findIndex(s => s.name === expandedSection) ===
-                    unifiedSections.length - 1
-                  }
-                  onClick={() => {
-                    const index =
-                      unifiedSections.findIndex(s => s.name === expandedSection);
-                    if (index < unifiedSections.length - 1) {
-                      const nuevaSeccion =
-                        unifiedSections[index + 1].name;
-                      setExpandedSection(nuevaSeccion);
-                      setTimeout(() => {
-                        if (topRef.current) {
-                          topRef.current.scrollIntoView({
-                            behavior: "smooth",
-                            block: "start",
-                          });
-                        }
-                      }, 100);
-                    }
-                  }}
-                  sx={{
-                    fontSize: "1.25rem",
-                    color: "primary.main",
-                    border: "1px solid",
-                    borderColor: "primary.main",
-                    borderRadius: 2,
-                    px: 1.5,
-                    py: 0.5,
-                  }}
-                >
-                  <ArrowForwardIcon />
-                </IconButton>
-              </Box>
-            </>
-          )}
+                <ArrowForwardIcon />
+              </IconButton>
+            </Box>
+          </>
+        )}
         {/* Notificación */}
         {notificacion.mensaje && (
           <NotificacionCuestionarios
@@ -1588,7 +1558,7 @@ useEffect(() => {
               subitems={subitems}
               cuestionarioFinalizado={cuestionarioFinalizado}
               esEditable={esEditable}
-              questionSubmitStates={questionSubmitStates}
+              questionSubmitStates={responseStates}
               QuestionSubmitIndicator={QuestionSubmitIndicator}
             />
           </Box>
@@ -1603,31 +1573,36 @@ useEffect(() => {
             {unifiedSections.map((sectionData) =>
               expandedSection === sectionData.name ? (
                 <Box key={sectionData.name}>
-                  {sectionData.type === 'special' ? (
+                  {sectionData.type === "special" ? (
                     // Render special questions directly
                     <Box sx={{ width: "100%" }}>
-                      {sectionData.questions.some(p => p.tipo === "ed") && (
+                      {sectionData.questions.some((p) => p.tipo === "ed") && (
                         <Box sx={{ mb: 2 }}>
                           {sectionData.questions
-                            .filter(p => p.tipo === "ed")
+                            .filter((p) => p.tipo === "ed")
                             .map((pregunta) => (
                               <Box key={pregunta.id} sx={{ mb: 2 }}>
-                                <Typography variant="subtitle1" fontWeight="bold">
+                                <Typography
+                                  variant="subtitle1"
+                                  fontWeight="bold"
+                                >
                                   Pregunta ED: {pregunta.texto}
                                 </Typography>
                               </Box>
                             ))}
                         </Box>
                       )}
-                      {sectionData.questions.some(p => p.tipo === "ch") && (
+                      {sectionData.questions.some((p) => p.tipo === "ch") && (
                         <CH_0a4
-                          preguntas={sectionData.questions.filter(p => p.tipo === "ch")}
+                          preguntas={sectionData.questions.filter(
+                            (p) => p.tipo === "ch"
+                          )}
                           respuestas={respuestas}
                           setRespuestas={setRespuestas}
                           handleRespuestaChange={handleRespuestaChange}
                           disabled={cuestionarioFinalizado && !esEditable}
                           chAids={chAids}
-                          questionSubmitStates={questionSubmitStates}
+                          questionSubmitStates={responseStates}
                           QuestionSubmitIndicator={QuestionSubmitIndicator}
                         />
                       )}
@@ -1637,65 +1612,71 @@ useEffect(() => {
                     sectionData.questions
                       .filter((pregunta) => isQuestionVisible(pregunta))
                       .map((pregunta) => (
-                      <Box
-                        key={pregunta.id}
-                        id={`pregunta-${pregunta.id}`}
-                        sx={{
-                          width: "100%",
-                          my: 3,
-                          overflow: "visible",
-                          position: "relative",
-                        }}
-                      >
-                        <Paper
-                          elevation={2}
+                        <Box
+                          key={pregunta.id}
+                          id={`pregunta-${pregunta.id}`}
                           sx={{
-                            p: 2,
-                            borderRadius: 2,
-                            border: preguntasNoRespondidas.has(pregunta.id)
-                              ? "2px solid #ff1744"
-                              : "2px solid transparent",
-                            backgroundColor: preguntasNoRespondidas.has(
-                              pregunta.id
-                            )
-                              ? "rgba(255, 23, 68, 0.05)"
-                              : "background.paper",
-                            transition: "all 0.3s ease",
-                            "&:hover": {
-                              boxShadow: preguntasNoRespondidas.has(pregunta.id)
-                                ? "0 0 0 2px rgba(255, 23, 68, 0.2)"
-                                : "0 2px 8px rgba(0,0,0,0.1)",
-                            },
+                            width: "100%",
+                            my: 3,
+                            overflow: "visible",
+                            position: "relative",
                           }}
                         >
-                          <Box sx={{ width: "100%" }}>
-                            <MemoizedTiposDePregunta
-                              pregunta={pregunta}
-                              respuesta={respuestas[pregunta.id]}
-                              onRespuestaChange={(resp) => {
-                                setRespuestas((prev) => ({
-                                  ...prev,
-                                  [pregunta.id]: resp,
-                                }));
-                                handleRespuestaChange(pregunta.id, resp);
-                                validarPregunta(
-                                  pregunta.id,
-                                  resp,
-                                  pregunta.tipo
-                                );
-                              }}
-                              unlockedQuestions={unlockedQuestions}
-                              cuestionarioFinalizado={cuestionarioFinalizado}
-                              usuario={usuario}
-                              cuestionario={cuestionario}
-                              esEditable={esEditable}
-                              onGuardarCambios={handleGuardarCambios}
-                            />
-                            <QuestionSubmitIndicator preguntaId={pregunta.id} />
-                          </Box>
-                        </Paper>
-                      </Box>
-                    ))
+                          <Paper
+                            elevation={2}
+                            sx={{
+                              p: 2,
+                              borderRadius: 2,
+                              border: preguntasNoRespondidas.has(pregunta.id)
+                                ? "2px solid #ff1744"
+                                : "2px solid transparent",
+                              backgroundColor: preguntasNoRespondidas.has(
+                                pregunta.id
+                              )
+                                ? "rgba(255, 23, 68, 0.05)"
+                                : "background.paper",
+                              transition: "all 0.3s ease",
+                              "&:hover": {
+                                boxShadow: preguntasNoRespondidas.has(
+                                  pregunta.id
+                                )
+                                  ? "0 0 0 2px rgba(255, 23, 68, 0.2)"
+                                  : "0 2px 8px rgba(0,0,0,0.1)",
+                              },
+                            }}
+                          >
+                            <Box sx={{ width: "100%" }}>
+                              <MemoizedTiposDePregunta
+                                pregunta={pregunta}
+                                respuesta={respuestas[pregunta.id]}
+                                onRespuestaChange={(resp) => {
+                                  setRespuestas((prev) => ({
+                                    ...prev,
+                                    [pregunta.id]: resp,
+                                  }));
+                                  handleRespuestaChange(pregunta.id, resp);
+                                  validarPregunta(
+                                    pregunta.id,
+                                    resp,
+                                    pregunta.tipo
+                                  );
+                                }}
+                                unlockedQuestions={unlockedQuestions}
+                                cuestionarioFinalizado={cuestionarioFinalizado}
+                                usuario={usuario}
+                                cuestionario={cuestionario}
+                                esEditable={esEditable}
+                                onGuardarCambios={handleGuardarCambios}
+                              />
+                              <QuestionSubmitIndicator
+                                preguntaId={pregunta.id}
+                                responseState={responseStates[pregunta.id]}
+                                queuePosition={getQueuePosition(pregunta.id)}
+                              />
+                            </Box>
+                          </Paper>
+                        </Box>
+                      ))
                   )}
                 </Box>
               ) : null
@@ -1705,112 +1686,118 @@ useEffect(() => {
 
         {/* Bloque de navegación y resumen inferior */}
         {unifiedSections.length > 0 && (
-            <>
-              <Box
+          <>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 2,
+                px: 2,
+              }}
+            >
+              <IconButton
+                disabled={
+                  unifiedSections.findIndex(
+                    (s) => s.name === expandedSection
+                  ) === 0
+                }
+                onClick={() => {
+                  const index = unifiedSections.findIndex(
+                    (s) => s.name === expandedSection
+                  );
+                  if (index > 0) {
+                    const nuevaSeccion = unifiedSections[index - 1].name;
+                    setExpandedSection(nuevaSeccion);
+                    setTimeout(() => {
+                      if (topRef.current) {
+                        topRef.current.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                      }
+                    }, 100);
+                  }
+                }}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  mb: 2,
-                  px: 2,
+                  fontSize: "1.25rem",
+                  color: "primary.main",
+                  border: "1px solid",
+                  borderColor: "primary.main",
+                  borderRadius: 2,
+                  px: 1.5,
+                  py: 0.5,
                 }}
               >
-                <IconButton
-                  disabled={
-                    unifiedSections.findIndex(s => s.name === expandedSection) === 0
-                  }
-                  onClick={() => {
-                    const index =
-                      unifiedSections.findIndex(s => s.name === expandedSection);
-                    if (index > 0) {
-                      const nuevaSeccion =
-                        unifiedSections[index - 1].name;
-                      setExpandedSection(nuevaSeccion);
-                      setTimeout(() => {
-                        if (topRef.current) {
-                          topRef.current.scrollIntoView({
-                            behavior: "smooth",
-                            block: "start",
-                          });
-                        }
-                      }, 100);
-                    }
-                  }}
-                  sx={{
-                    fontSize: "1.25rem",
-                    color: "primary.main",
-                    border: "1px solid",
-                    borderColor: "primary.main",
-                    borderRadius: 2,
-                    px: 1.5,
-                    py: 0.5,
-                  }}
-                >
-                  <ArrowBackIcon />
-                </IconButton>
+                <ArrowBackIcon />
+              </IconButton>
 
-                <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
-                  Sección{" "}
-                  {unifiedSections.findIndex(s => s.name === expandedSection) + 1} de{" "}
-                  {unifiedSections.length}
-                </Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
+                Sección{" "}
+                {unifiedSections.findIndex((s) => s.name === expandedSection) +
+                  1}{" "}
+                de {unifiedSections.length}
+              </Typography>
 
-                <IconButton
-                  disabled={
-                    unifiedSections.findIndex(s => s.name === expandedSection) ===
-                    unifiedSections.length - 1
+              <IconButton
+                disabled={
+                  unifiedSections.findIndex(
+                    (s) => s.name === expandedSection
+                  ) ===
+                  unifiedSections.length - 1
+                }
+                onClick={() => {
+                  const index = unifiedSections.findIndex(
+                    (s) => s.name === expandedSection
+                  );
+                  if (index < unifiedSections.length - 1) {
+                    const nuevaSeccion = unifiedSections[index + 1].name;
+                    setExpandedSection(nuevaSeccion);
+                    setTimeout(() => {
+                      if (topRef.current) {
+                        topRef.current.scrollIntoView({
+                          behavior: "smooth",
+                          block: "start",
+                        });
+                      }
+                    }, 100);
                   }
-                  onClick={() => {
-                    const index =
-                      unifiedSections.findIndex(s => s.name === expandedSection);
-                    if (index < unifiedSections.length - 1) {
-                      const nuevaSeccion =
-                        unifiedSections[index + 1].name;
-                      setExpandedSection(nuevaSeccion);
-                      setTimeout(() => {
-                        if (topRef.current) {
-                          topRef.current.scrollIntoView({
-                            behavior: "smooth",
-                            block: "start",
-                          });
-                        }
-                      }, 100);
-                    }
-                  }}
-                  sx={{
-                    fontSize: "1.25rem",
-                    color: "primary.main",
-                    border: "1px solid",
-                    borderColor: "primary.main",
-                    borderRadius: 2,
-                    px: 1.5,
-                    py: 0.5,
-                  }}
-                >
-                  <ArrowForwardIcon />
-                </IconButton>
-              </Box>
-              <Box
+                }}
                 sx={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  px: 2,
-                  mb: 1,
+                  fontSize: "1.25rem",
+                  color: "primary.main",
+                  border: "1px solid",
+                  borderColor: "primary.main",
+                  borderRadius: 2,
+                  px: 1.5,
+                  py: 0.5,
                 }}
               >
-                <Typography variant="body1">
-                  Sección{" "}
-                  {unifiedSections.findIndex(s => s.name === expandedSection) + 1} de{" "}
-                  {unifiedSections.length}
-                </Typography>
-                <Typography variant="body1">
-                  Respondidas: {getAnsweredUnlockedQuestions()} /{" "}
-                  {getTotalUnlockedQuestions()}
-                </Typography>
-              </Box>
-            </>
-          )}
+                <ArrowForwardIcon />
+              </IconButton>
+            </Box>
+            <Box
+              sx={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                px: 2,
+                mb: 1,
+              }}
+            >
+              <Typography variant="body1">
+                Sección{" "}
+                {unifiedSections.findIndex((s) => s.name === expandedSection) +
+                  1}{" "}
+                de {unifiedSections.length}
+              </Typography>
+              <Typography variant="body1">
+                Respondidas: {getAnsweredUnlockedQuestions()} /{" "}
+                {getTotalUnlockedQuestions()}
+              </Typography>
+            </Box>
+          </>
+        )}
 
         <Box sx={{ mt: 2, display: "flex", justifyContent: "center" }}>
           <BotonFinCuestionario
@@ -1819,6 +1806,15 @@ useEffect(() => {
           />
         </Box>
       </Box>
+
+      {/* Componente de estado de la cola */}
+      <QueueStatus
+        queueLength={queueLength}
+        isProcessing={isProcessing}
+        onClearLogs={clearOldLogs}
+        onExportLogs={exportLogs}
+        getQueueStats={getQueueStats}
+      />
     </div>
   );
 };
