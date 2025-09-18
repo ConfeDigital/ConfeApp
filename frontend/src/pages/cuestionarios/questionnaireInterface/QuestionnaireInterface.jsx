@@ -61,7 +61,7 @@ const tiposPorCuestionario = {
       !["sis", "sis2", "ch", "canalizacion", "canalizacion_centro"].includes(t)
   ),
   SIS: ["sis", "sis2"],
-  "Cuadro de Habilidades": ["ch"],
+  "Cuadro de Habilidades": ["ch", "abierta"],
   Canalizacion: ["canalizacion", "canalizacion_centro", "binaria"],
 };
 

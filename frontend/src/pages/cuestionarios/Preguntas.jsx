@@ -1,31 +1,24 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo, startTransition } from "react";
 import {
   Box,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Typography,
   IconButton,
   Paper,
-  Divider,
-  Tabs,
-  Tab,
   CircularProgress,
 } from "@mui/material";
-import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
-import EditIcon from "@mui/icons-material/Edit";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import ErrorIcon from "@mui/icons-material/Error";
 import TiposDePregunta from "./TiposDePregunta";
 import ControlSIS from "./ControlSIS"; // Importar el nuevo componente
-import ControlCuestionariosEspeciales from "./ControlCuestionariosEspeciales";
+import CH_0a4 from "../../components/tipos_de_pregunta/CH";
 import api from "../../api";
-import debounce from "lodash/debounce";
 import NotificacionCuestionarios from "./NotificacionCuestionarios";
 import BotonFinCuestionario from "./BotonFinCuestionario";
 import { useNavigate } from "react-router-dom";
+
+const MemoizedTiposDePregunta = React.memo(TiposDePregunta);
 
 const Preguntas = ({
   cuestionario,
@@ -51,12 +44,12 @@ const Preguntas = ({
   const [preguntasEditables, setPreguntasEditables] = useState([]);
   const [groupedQuestions, setGroupedQuestions] = useState({});
   const [expandedSection, setExpandedSection] = useState(null);
+  const [unifiedSections, setUnifiedSections] = useState([]);
   const [preguntasNoRespondidas, setPreguntasNoRespondidas] = useState(
     new Set()
   );
   // Estado para rastrear el estado de envío de cada pregunta
   const [questionSubmitStates, setQuestionSubmitStates] = useState({});
-  const accordionRefs = useRef({});
   const topRef = useRef(null);
 
   const navigate = useNavigate();
@@ -124,17 +117,48 @@ const Preguntas = ({
     setGroupedQuestions(grouped);
   }, [cuestionario]);
 
+  // Efecto para crear secciones unificadas
+  useEffect(() => {
+    const specialQuestions = Object.values(groupedQuestions)
+      .flat()
+      .filter((pregunta) => pregunta.tipo === "ed" || pregunta.tipo === "ch");
+    
+    const specialSections = specialQuestions.reduce((acc, pregunta) => {
+      const section = pregunta.nombre_seccion || "Sin sección";
+      if (!acc[section]) acc[section] = [];
+      acc[section].push(pregunta);
+      return acc;
+    }, {});
+
+    const regularSections = Object.entries(groupedQuestions).reduce((acc, [section, preguntas]) => {
+      const regularPreguntas = preguntas.filter(
+        (pregunta) =>
+          pregunta.tipo !== "sis" &&
+          pregunta.tipo !== "sis2" &&
+          pregunta.tipo !== "ed" &&
+          pregunta.tipo !== "ch"
+      );
+      if (regularPreguntas.length > 0) {
+        acc[section] = regularPreguntas;
+      }
+      return acc;
+    }, {});
+
+    // Combine sections: special sections first, then regular sections
+    const unified = [
+      ...Object.keys(specialSections).map(section => ({ name: section, type: 'special', questions: specialSections[section] })),
+      ...Object.keys(regularSections).map(section => ({ name: section, type: 'regular', questions: regularSections[section] }))
+    ];
+
+    setUnifiedSections(unified);
+  }, [groupedQuestions]);
+
   // Efecto para seleccionar automáticamente el primer tab de sección
   useEffect(() => {
-    const secciones = Object.keys(groupedQuestions).filter((section) =>
-      groupedQuestions[section].some(
-        (pregunta) => pregunta.tipo !== "sis" && pregunta.tipo !== "sis2"
-      )
-    );
-    if (secciones.length > 0 && !expandedSection) {
-      setExpandedSection(secciones[0]);
+    if (unifiedSections.length > 0 && !expandedSection) {
+      setExpandedSection(unifiedSections[0].name);
     }
-  }, [groupedQuestions, expandedSection]);
+  }, [unifiedSections, expandedSection]);
 
   // Efecto para hacer scroll al tope de la ventana cuando cambia expandedSection
   useEffect(() => {
@@ -144,8 +168,6 @@ const Preguntas = ({
   // Calcular preguntas desbloqueadas
   const calculateUnlockedQuestions = useCallback(
     (respuestas) => {
-      // console.log("🔍 === INICIO CALCULO DESBLOQUEOS ===");
-      // console.log("📊 Respuestas recibidas:", respuestas);
 
       const unlocked = new Set();
       Object.entries(respuestas).forEach(([preguntaId, respuesta]) => {
@@ -153,69 +175,32 @@ const Preguntas = ({
           (p) => p.id === parseInt(preguntaId, 10)
         );
 
-        // console.log(`\n📝 Procesando pregunta ID: ${preguntaId}`);
-        // console.log(`📝 Texto de la pregunta: ${pregunta?.texto}`);
-        // console.log(`📝 Tipo de pregunta: ${pregunta?.tipo}`);
-        // console.log(`📝 Respuesta: ${respuesta} (tipo: ${typeof respuesta})`);
-
         if (pregunta?.opciones) {
-          // console.log(
-          //   `📝 Opciones disponibles:`,
-          //   pregunta.opciones.map((op) => ({
-          //     id: op.id,
-          //     valor: op.valor,
-          //     texto: op.texto,
-          //   }))
-          // );
 
           if (pregunta.tipo === "checkbox") {
-            // console.log("🔘 Procesando CHECKBOX");
             // Para checkbox, la respuesta es un array de IDs de opciones
             let opcionesSeleccionadas = [];
             // Manejar tanto strings JSON como arrays nativos (para compatibilidad)
             if (typeof respuesta === "string") {
               try {
                 opcionesSeleccionadas = JSON.parse(respuesta);
-                // console.log(
-                //   "🔘 Opciones seleccionadas (JSON parseado):",
-                //   opcionesSeleccionadas
-                // );
               } catch (error) {
                 // console.error("❌ Error parsing checkbox response:", error);
               }
             } else if (Array.isArray(respuesta)) {
               opcionesSeleccionadas = respuesta;
-              // console.log(
-              //   "🔘 Opciones seleccionadas (array):",
-              //   opcionesSeleccionadas
-              // );
             } else if (respuesta && typeof respuesta === "object") {
               // Si es un objeto, intentar extraer el array de opciones
               opcionesSeleccionadas =
                 respuesta.opciones || respuesta.valor_original || [];
-              // console.log(
-              //   "🔘 Opciones seleccionadas (objeto):",
-              //   opcionesSeleccionadas
-              // );
             }
 
             // Buscar cada opción por ID y procesar sus desbloqueos
             opcionesSeleccionadas.forEach((opcionId) => {
               const opcion = pregunta.opciones.find((op) => op.id === opcionId);
-              // console.log(
-              //   `🔘 Opción seleccionada ID ${opcionId}:`,
-              //   opcion?.texto
-              // );
-              // console.log(
-              //   `🔘 Desbloqueos de esta opción:`,
-              //   opcion?.desbloqueos
-              // );
 
               if (opcion?.desbloqueos) {
                 opcion.desbloqueos.forEach((desbloqueo) => {
-                  // console.log(
-                  //   `🔓 Desbloqueando pregunta: ${desbloqueo.pregunta_desbloqueada}`
-                  // );
                   unlocked.add(desbloqueo.pregunta_desbloqueada);
                 });
               }
@@ -224,34 +209,15 @@ const Preguntas = ({
             pregunta.tipo === "multiple" ||
             pregunta.tipo === "dropdown"
           ) {
-            // console.log("🔘 Procesando MULTIPLE/DROPDOWN");
-            // console.log("🔘 Respuesta original:", respuesta);
-            // console.log("🔘 Respuesta parseada:", parseInt(respuesta, 10));
-            // console.log("🔘 Todas las opciones:", pregunta.opciones);
-
             // Para preguntas tipo multiple y dropdown
             const opcionSeleccionada = pregunta.opciones.find(
               (op) => op.valor === parseInt(respuesta, 10)
             );
 
-            // console.log(
-            //   `🔘 Opción seleccionada (valor ${respuesta}):`,
-            //   opcionSeleccionada?.texto
-            // );
-            // console.log(
-            //   `🔘 Desbloqueos de esta opción:`,
-            //   opcionSeleccionada?.desbloqueos
-            // );
-
             if (opcionSeleccionada?.desbloqueos) {
               opcionSeleccionada.desbloqueos.forEach((desbloqueo) => {
-                // console.log(
-                //   `🔓 Desbloqueando pregunta: ${desbloqueo.pregunta_desbloqueada}`
-                // );
                 unlocked.add(desbloqueo.pregunta_desbloqueada);
               });
-            } else {
-              // console.log("❌ No se encontró la opción o no tiene desbloqueos");
             }
           } else if (
             pregunta.tipo === "binaria" ||
@@ -262,93 +228,45 @@ const Preguntas = ({
               pregunta.opciones.some((op) => op.texto === "Sí") &&
               pregunta.opciones.some((op) => op.texto === "No"))
           ) {
-            // console.log("🔘 Procesando BINARIA");
-            // console.log("🔘 Respuesta original:", respuesta);
-            // console.log("🔘 Todas las opciones:", pregunta.opciones);
 
             // Para preguntas binarias, buscar por texto de la opción
             const opcionSeleccionada = pregunta.opciones.find(
               (op) => op.texto === respuesta
             );
 
-            // console.log(
-            //   `🔘 Opción seleccionada (texto ${respuesta}):`,
-            //   opcionSeleccionada?.texto
-            // );
-            // console.log(
-            //   `🔘 Desbloqueos de esta opción:`,
-            //   opcionSeleccionada?.desbloqueos
-            // );
-
             if (opcionSeleccionada?.desbloqueos) {
               opcionSeleccionada.desbloqueos.forEach((desbloqueo) => {
-                // console.log(
-                //   `🔓 Desbloqueando pregunta: ${desbloqueo.pregunta_desbloqueada}`
-                // );
                 unlocked.add(desbloqueo.pregunta_desbloqueada);
               });
-            } else {
-              // console.log("❌ No se encontró la opción o no tiene desbloqueos");
             }
           } else if (
             pregunta.tipo === "profile_field_choice" ||
             (pregunta.profile_field_path &&
               pregunta.profile_field_metadata?.type === "choice")
           ) {
-            // console.log("🔘 Procesando PROFILE_FIELD_CHOICE");
             // Para preguntas de campo de perfil tipo choice, usar valor numérico
             const opcionSeleccionada = pregunta.opciones.find(
               (op) => op.valor === parseInt(respuesta, 10)
             );
 
-            // console.log(
-            //   `🔘 Opción seleccionada (valor ${respuesta}):`,
-            //   opcionSeleccionada?.texto
-            // );
-            // console.log(
-            //   `🔘 Desbloqueos de esta opción:`,
-            //   opcionSeleccionada?.desbloqueos
-            // );
-
             if (opcionSeleccionada?.desbloqueos) {
               opcionSeleccionada.desbloqueos.forEach((desbloqueo) => {
-                // console.log(
-                //   `🔓 Desbloqueando pregunta: ${desbloqueo.pregunta_desbloqueada}`
-                // );
                 unlocked.add(desbloqueo.pregunta_desbloqueada);
               });
-            } else {
-              // console.log("❌ No se encontró la opción o no tiene desbloqueos");
             }
           } else {
-            // console.log("🔘 Procesando OTRO TIPO");
             // Para otros tipos de preguntas, usar la lógica original
             const opcionSeleccionada = pregunta.opciones.find(
               (op) => op.valor === parseInt(respuesta, 10)
             );
-            // console.log(
-            //   `🔘 Opción seleccionada (valor ${respuesta}):`,
-            //   opcionSeleccionada?.texto
-            // );
-            // console.log(
-            //   `🔘 Desbloqueos de esta opción:`,
-            //   opcionSeleccionada?.desbloqueos
-            // );
 
             opcionSeleccionada?.desbloqueos?.forEach((desbloqueo) => {
-              // console.log(
-              //   `🔓 Desbloqueando pregunta: ${desbloqueo.pregunta_desbloqueada}`
-              // );
               unlocked.add(desbloqueo.pregunta_desbloqueada);
             });
           }
-        } else {
-          // console.log("❌ Pregunta sin opciones");
         }
       });
 
-      // console.log("🔓 Preguntas desbloqueadas finales:", Array.from(unlocked));
-      // console.log("🔍 === FIN CALCULO DESBLOQUEOS ===\n");
       return unlocked;
     },
     [cuestionario]
@@ -519,10 +437,6 @@ const Preguntas = ({
       // Load profile field values and merge them with regular responses
       const profileFieldValues = await loadProfileFieldValues();
       const mergedRespuestas = { ...respuestasMap, ...profileFieldValues };
-
-      // console.log("Regular responses:", respuestasMap);
-      // console.log("Profile field values:", profileFieldValues);
-      // console.log("Merged responses:", mergedRespuestas);
 
       setRespuestas(mergedRespuestas);
     } catch (error) {
@@ -861,87 +775,191 @@ const Preguntas = ({
     }
   };
 
-  // Handler para cambios en respuestas
-  const handleRespuestaChange = useCallback(
-    debounce(async (preguntaId, respuesta) => {
-      try {
-        // Validar la respuesta antes de guardar
-        const preguntaActual = cuestionario.preguntas.find(
+// Enhanced debounce function with request cancellation
+function debounce(fn, delay) {
+  let timer;
+  let controller;
+  
+  return (...args) => {
+    // Cancel previous request if still pending
+    if (controller) {
+      controller.abort();
+    }
+    
+    clearTimeout(timer);
+    controller = new AbortController();
+    
+    timer = setTimeout(() => {
+      fn(...args);
+    }, delay);
+  };
+}
+
+// Create debounced function outside of useCallback to prevent recreation
+const debouncedSaveRef = useRef();
+
+if (!debouncedSaveRef.current) {
+  debouncedSaveRef.current = debounce(async (preguntaId, respuesta, context) => {
+    const { 
+      usuario, 
+      cuestionario, 
+      isRespuestaValida, 
+      procesarRespuesta,
+      setQuestionSubmitStates,
+      setNotificacion,
+      setUnlockedQuestions,
+      setPreguntasNoRespondidas 
+    } = context;
+    
+    try {
+      const preguntaActual = cuestionario.preguntas.find(
+        (p) => p.id === preguntaId
+      );
+
+      // For profile field questions, no API save needed
+      if (preguntaActual.profile_field_path) {
+        return;
+      }
+
+      // Validación específica para preguntas abiertas
+      if (
+        preguntaActual.tipo === "abierta" &&
+        (!respuesta || respuesta.trim() === "")
+      ) {
+        setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
+        setNotificacion({
+          mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, ingresa un texto.`,
+          tipo: "error",
+        });
+        return;
+      }
+
+      if (
+        !isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)
+      ) {
+        setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
+        setNotificacion({
+          mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, completa la respuesta antes de continuar.`,
+          tipo: "error",
+        });
+        return;
+      }
+
+      // Si la respuesta es válida, remover de preguntas no respondidas
+      setPreguntasNoRespondidas((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(preguntaId);
+        return newSet;
+      });
+
+      // Establecer estado de carga para esta pregunta
+      setQuestionSubmitStates((prev) => ({
+        ...prev,
+        [preguntaId]: "loading",
+      }));
+
+      // Para ciertos tipos de preguntas, enviar el valor simple al backend
+      let respuestaParaEnviar = respuesta;
+
+      if (preguntaActual.tipo === "numero") {
+        // Para números, enviar solo el valor numérico
+        respuestaParaEnviar = parseFloat(respuesta) || 0;
+      } else if (
+        preguntaActual.tipo === "multiple" ||
+        preguntaActual.tipo === "dropdown"
+      ) {
+        // Para dropdowns, enviar solo el valor/índice
+        respuestaParaEnviar = respuesta;
+      } else if (preguntaActual.tipo === "binaria") {
+        // Para binarias, enviar la opción seleccionada directamente
+        if (
+          respuesta === true ||
+          respuesta === "true" ||
+          respuesta === "1" ||
+          respuesta === "sí" ||
+          respuesta === "si"
+        ) {
+          respuestaParaEnviar = "Sí";
+        } else {
+          respuestaParaEnviar = "No";
+        }
+      } else if (preguntaActual.tipo === "checkbox") {
+        // Para checkbox, enviar el array de IDs
+        respuestaParaEnviar = Array.isArray(respuesta) ? respuesta : [];
+      } else if (preguntaActual.tipo === "imagen") {
+        // Para preguntas de imagen (slider), enviar el valor numérico
+        respuestaParaEnviar = parseFloat(respuesta) || 0;
+      } else {
+        // Para otros tipos, procesar la respuesta
+        respuestaParaEnviar = procesarRespuesta(respuesta, preguntaActual);
+      }
+
+      await api.post("/api/cuestionarios/respuestas/", {
+        usuario: usuario,
+        cuestionario: cuestionario.id,
+        pregunta: preguntaId,
+        respuesta: respuestaParaEnviar,
+      });
+
+      // Establecer estado de éxito para esta pregunta
+      setQuestionSubmitStates((prev) => ({
+        ...prev,
+        [preguntaId]: "success",
+      }));
+
+      // Actualizar preguntas desbloqueadas
+      setUnlockedQuestions((prev) => {
+        const nuevos = new Set(prev);
+        const pregunta = cuestionario.preguntas.find(
           (p) => p.id === preguntaId
         );
 
-        // For profile field questions, just update local state for validation purposes
-        if (preguntaActual.profile_field_path) {
-          // console.log("Updating local state for profile field question:", preguntaActual.texto);
-          setRespuestas((prev) => ({
-            ...prev,
-            [preguntaId]: respuesta,
-          }));
-
-          // Remove from unanswered questions if the response is valid
-          if (
-            isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)
-          ) {
-            setPreguntasNoRespondidas((prev) => {
-              const newSet = new Set(prev);
-              newSet.delete(preguntaId);
-              return newSet;
-            });
-          }
-          return;
-        }
-
-        // Validación específica para preguntas abiertas
-        if (
-          preguntaActual.tipo === "abierta" &&
-          (!respuesta || respuesta.trim() === "")
-        ) {
-          setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
-          setNotificacion({
-            mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, ingresa un texto.`,
-            tipo: "error",
+        // Eliminar posibles desbloqueos antiguos de esta pregunta
+        pregunta?.opciones?.forEach((op) => {
+          op.desbloqueos?.forEach((d) => {
+            nuevos.delete(d.pregunta_desbloqueada);
           });
-          return;
-        }
-
-        if (
-          !isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)
-        ) {
-          setPreguntasNoRespondidas((prev) => new Set([...prev, preguntaId]));
-          setNotificacion({
-            mensaje: `La pregunta "${preguntaActual.texto}" no puede quedar sin respuesta. Por favor, completa la respuesta antes de continuar.`,
-            tipo: "error",
-          });
-          return;
-        }
-
-        // Si la respuesta es válida, remover de preguntas no respondidas
-        setPreguntasNoRespondidas((prev) => {
-          const newSet = new Set(prev);
-          newSet.delete(preguntaId);
-          return newSet;
         });
 
-        // Limpiar estado anterior y establecer estado de carga para esta pregunta
-        setQuestionSubmitStates((prev) => ({
-          ...prev,
-          [preguntaId]: "loading",
-        }));
+        // Agregar desbloqueos de las opciones seleccionadas
+        if (pregunta?.tipo === "checkbox") {
+          // Para checkbox, respuesta es un array de opciones seleccionadas
+          if (Array.isArray(respuesta)) {
+            respuesta.forEach((opcionSeleccionada) => {
+              const opcion = pregunta.opciones?.find(
+                (op) => op.id === opcionSeleccionada
+              );
 
-        // Para ciertos tipos de preguntas, enviar el valor simple al backend
-        let respuestaParaEnviar = respuesta;
-
-        if (preguntaActual.tipo === "numero") {
-          // Para números, enviar solo el valor numérico
-          respuestaParaEnviar = parseFloat(respuesta) || 0;
+              if (opcion?.desbloqueos) {
+                opcion.desbloqueos.forEach((d) => {
+                  nuevos.add(d.pregunta_desbloqueada);
+                });
+              }
+            });
+          }
         } else if (
-          preguntaActual.tipo === "multiple" ||
-          preguntaActual.tipo === "dropdown"
+          pregunta?.tipo === "multiple" ||
+          pregunta?.tipo === "dropdown"
         ) {
-          // Para dropdowns, enviar solo el valor/índice
-          respuestaParaEnviar = respuesta;
-        } else if (preguntaActual.tipo === "binaria") {
-          // Para binarias, enviar la opción seleccionada directamente
+          // Para preguntas tipo multiple y dropdown
+          const opcionSeleccionada = pregunta?.opciones?.find(
+            (op) => op.valor === parseInt(respuesta, 10)
+          );
+
+          if (opcionSeleccionada?.desbloqueos) {
+            opcionSeleccionada.desbloqueos.forEach((d) => {
+              nuevos.add(d.pregunta_desbloqueada);
+            });
+          }
+        } else if (
+          pregunta?.tipo === "binaria" ||
+          (pregunta?.tipo === "multiple" &&
+            pregunta?.opciones?.length === 2 &&
+            pregunta?.opciones?.some((op) => op.texto === "Sí") &&
+            pregunta?.opciones?.some((op) => op.texto === "No"))
+        ) {
+          // Para preguntas binarias, convertir la respuesta al texto correcto
+          let respuestaTexto;
           if (
             respuesta === true ||
             respuesta === "true" ||
@@ -949,224 +967,125 @@ const Preguntas = ({
             respuesta === "sí" ||
             respuesta === "si"
           ) {
-            respuestaParaEnviar = "Sí";
+            respuestaTexto = "Sí";
           } else {
-            respuestaParaEnviar = "No";
+            respuestaTexto = "No";
           }
-        } else if (preguntaActual.tipo === "checkbox") {
-          // Para checkbox, enviar el array de IDs
-          respuestaParaEnviar = Array.isArray(respuesta) ? respuesta : [];
-        } else if (preguntaActual.tipo === "imagen") {
-          // Para preguntas de imagen (slider), enviar el valor numérico
-          respuestaParaEnviar = parseFloat(respuesta) || 0;
-        } else {
-          // Para otros tipos, procesar la respuesta
-          respuestaParaEnviar = procesarRespuesta(respuesta, preguntaActual);
-        }
 
-        await api.post("/api/cuestionarios/respuestas/", {
-          usuario: usuario,
-          cuestionario: cuestionario.id,
-          pregunta: preguntaId,
-          respuesta: respuestaParaEnviar,
-        });
-
-        // Establecer estado de éxito para esta pregunta
-        setQuestionSubmitStates((prev) => ({
-          ...prev,
-          [preguntaId]: "success",
-        }));
-
-        // Actualizar respuestas locales (mantener la respuesta original para el frontend)
-        setRespuestas((prev) => ({
-          ...prev,
-          [preguntaId]: respuesta,
-        }));
-
-        // Actualizar preguntas desbloqueadas
-        setUnlockedQuestions((prev) => {
-          // console.log("🔄 === ACTUALIZANDO DESBLOQUEOS ===");
-          // console.log("🔄 Pregunta ID:", preguntaId);
-
-          const nuevos = new Set(prev);
-          const pregunta = cuestionario.preguntas.find(
-            (p) => p.id === preguntaId
+          const opcionSeleccionada = pregunta?.opciones?.find(
+            (op) => op.texto === respuestaTexto
           );
 
-          // console.log("🔄 Tipo de pregunta:", pregunta?.tipo);
-          // console.log("🔄 Nueva respuesta:", respuesta);
-          // console.log("🔄 Desbloqueos anteriores:", Array.from(prev));
-
-          // Eliminar posibles desbloqueos antiguos de esta pregunta
-          // console.log("🗑️ Eliminando desbloqueos antiguos de esta pregunta...");
-          pregunta?.opciones?.forEach((op) => {
-            op.desbloqueos?.forEach((d) => {
-              // console.log(
-              //   `🗑️ Eliminando desbloqueo: ${d.pregunta_desbloqueada}`
-              // );
-              nuevos.delete(d.pregunta_desbloqueada);
+          if (opcionSeleccionada?.desbloqueos) {
+            opcionSeleccionada.desbloqueos.forEach((d) => {
+              nuevos.add(d.pregunta_desbloqueada);
             });
-          });
-
-          // Agregar desbloqueos de las opciones seleccionadas
-          if (pregunta?.tipo === "checkbox") {
-            // console.log("🔘 Procesando CHECKBOX para desbloqueos");
-            // Para checkbox, respuesta es un array de opciones seleccionadas
-            if (Array.isArray(respuesta)) {
-              // console.log("🔘 Respuesta es un array:", respuesta);
-              respuesta.forEach((opcionSeleccionada) => {
-                const opcion = pregunta.opciones?.find(
-                  (op) => op.id === opcionSeleccionada
-                );
-                // console.log(
-                //   `🔘 Opción seleccionada ID ${opcionSeleccionada}:`,
-                //   opcion?.texto
-                // );
-                // console.log(
-                //   `🔘 Desbloqueos de esta opción:`,
-                //   opcion?.desbloqueos
-                // );
-
-                if (opcion?.desbloqueos) {
-                  opcion.desbloqueos.forEach((d) => {
-                    // console.log(
-                    //   `🔓 Agregando desbloqueo: ${d.pregunta_desbloqueada}`
-                    // );
-                    nuevos.add(d.pregunta_desbloqueada);
-                  });
-                }
-              });
-            }
-          } else if (
-            pregunta?.tipo === "multiple" ||
-            pregunta?.tipo === "dropdown"
-          ) {
-            // console.log("🔘 Procesando MULTIPLE/DROPDOWN para desbloqueos");
-            // console.log("🔘 Respuesta original:", respuesta);
-            // console.log("🔘 Respuesta parseada:", parseInt(respuesta, 10));
-            // console.log("🔘 Todas las opciones:", pregunta?.opciones);
-
-            // Para preguntas tipo multiple y dropdown
-            const opcionSeleccionada = pregunta?.opciones?.find(
-              (op) => op.valor === parseInt(respuesta, 10)
-            );
-
-            // console.log(
-            //   `🔘 Opción seleccionada (valor ${respuesta}):`,
-            //   opcionSeleccionada?.texto
-            // );
-            // console.log(
-            //   `🔘 Desbloqueos de esta opción:`,
-            //   opcionSeleccionada?.desbloqueos
-            // );
-
-            if (opcionSeleccionada?.desbloqueos) {
-              opcionSeleccionada.desbloqueos.forEach((d) => {
-                // console.log(
-                //   `🔓 Agregando desbloqueo: ${d.pregunta_desbloqueada}`
-                // );
-                nuevos.add(d.pregunta_desbloqueada);
-              });
-              // } else {
-              // console.log("❌ No se encontró la opción o no tiene desbloqueos");
-            }
-          } else if (
-            pregunta?.tipo === "binaria" ||
-            (pregunta?.tipo === "multiple" &&
-              pregunta?.opciones?.length === 2 &&
-              pregunta?.opciones?.some((op) => op.texto === "Sí") &&
-              pregunta?.opciones?.some((op) => op.texto === "No"))
-          ) {
-            // console.log("🔘 Procesando BINARIA para desbloqueos");
-            // console.log("🔘 Respuesta original:", respuesta);
-
-            // Para preguntas binarias, convertir la respuesta al texto correcto
-            let respuestaTexto;
-            if (
-              respuesta === true ||
-              respuesta === "true" ||
-              respuesta === "1" ||
-              respuesta === "sí" ||
-              respuesta === "si"
-            ) {
-              respuestaTexto = "Sí";
-            } else {
-              respuestaTexto = "No";
-            }
-
-            // console.log("🔘 Respuesta convertida a texto:", respuestaTexto);
-            // console.log("🔘 Todas las opciones:", pregunta?.opciones);
-
-            // Para preguntas binarias, buscar por texto de la opción
-            const opcionSeleccionada = pregunta?.opciones?.find(
-              (op) => op.texto === respuestaTexto
-            );
-
-            // console.log(
-            //   `🔘 Opción seleccionada (texto ${respuestaTexto}):`,
-            //   opcionSeleccionada?.texto
-            // );
-            // console.log(
-            //   `🔘 Desbloqueos de esta opción:`,
-            //   opcionSeleccionada?.desbloqueos
-            // );
-
-            if (opcionSeleccionada?.desbloqueos) {
-              opcionSeleccionada.desbloqueos.forEach((d) => {
-                // console.log(
-                //   `🔓 Agregando desbloqueo: ${d.pregunta_desbloqueada}`
-                // );
-                nuevos.add(d.pregunta_desbloqueada);
-              });
-              // } else {
-              //   console.log("❌ No se encontró la opción o no tiene desbloqueos");
-            }
-          } else {
-            // console.log("🔘 Procesando OTRO TIPO para desbloqueos");
-            // Para otros tipos de preguntas
-            const opcionSeleccionada = pregunta?.opciones?.find(
-              (op) => op.valor === respuesta
-            );
-            // console.log(
-            //   `🔘 Opción seleccionada (valor ${respuesta}):`,
-            //   opcionSeleccionada?.texto
-            // );
-            // console.log(
-            //   `🔘 Desbloqueos de esta opción:`,
-            //   opcionSeleccionada?.desbloqueos
-            // );
-
-            if (opcionSeleccionada?.desbloqueos) {
-              opcionSeleccionada.desbloqueos.forEach((d) => {
-                // console.log(
-                //   `🔓 Agregando desbloqueo: ${d.pregunta_desbloqueada}`
-                // );
-                nuevos.add(d.pregunta_desbloqueada);
-              });
-            }
           }
+        } else {
+          const opcionSeleccionada = pregunta?.opciones?.find(
+            (op) => op.valor === respuesta
+          );
 
-          // console.log("🔓 Desbloqueos finales:", Array.from(nuevos));
-          // console.log("🔄 === FIN ACTUALIZACION DESBLOQUEOS ===\n");
-          return nuevos;
-        });
-      } catch (error) {
-        console.error("Error updating respuesta:", error);
+          if (opcionSeleccionada?.desbloqueos) {
+            opcionSeleccionada.desbloqueos.forEach((d) => {
+              nuevos.add(d.pregunta_desbloqueada);
+            });
+          }
+        }
+        return nuevos;
+      });
+    } catch (error) {
+      console.error("Error updating respuesta:", error);
 
-        // Establecer estado de error para esta pregunta
-        setQuestionSubmitStates((prev) => ({
-          ...prev,
-          [preguntaId]: "error",
-        }));
+      // Establecer estado de error para esta pregunta
+      setQuestionSubmitStates((prev) => ({
+        ...prev,
+        [preguntaId]: "error",
+      }));
 
-        setNotificacion({
-          mensaje: "Error al guardar la respuesta",
-          tipo: "error",
+      setNotificacion({
+        mensaje: "Error al guardar la respuesta",
+        tipo: "error",
+      });
+    }
+  }, 1500);
+}
+
+// Handler para cambios en respuestas
+const handleRespuestaChange = useCallback((preguntaId, respuesta) => {
+  try {
+    // Validar la respuesta antes de guardar
+    const preguntaActual = cuestionario.preguntas.find(
+      (p) => p.id === preguntaId
+    );
+
+    // Always update local state immediately for responsive UI
+    setRespuestas((prev) => ({
+      ...prev,
+      [preguntaId]: respuesta,
+    }));
+
+    // For profile field questions, just update local state for validation purposes
+    if (preguntaActual.profile_field_path) {
+      // Remove from unanswered questions if the response is valid
+      if (
+        isRespuestaValida(respuesta, preguntaActual.tipo, preguntaActual)
+      ) {
+        setPreguntasNoRespondidas((prev) => {
+          const newSet = new Set(prev);
+          newSet.delete(preguntaId);
+          return newSet;
         });
       }
-    }, 1000),
-    [usuario, cuestionario, isRespuestaValida]
+      return;
+    }
+
+    // For regular questions, use the debounced API save
+    const context = {
+      usuario,
+      cuestionario,
+      isRespuestaValida,
+      procesarRespuesta,
+      setQuestionSubmitStates,
+      setNotificacion,
+      setUnlockedQuestions,
+      setPreguntasNoRespondidas
+    };
+
+    debouncedSaveRef.current(preguntaId, respuesta, context);
+    
+  } catch (error) {
+    console.error("Error in handleRespuestaChange:", error);
+  }
+}, [usuario, cuestionario, isRespuestaValida, procesarRespuesta]);
+
+// Memoized calculations to prevent unnecessary recalculations
+const memoizedCalculations = useMemo(() => {
+  const todasLasPreguntas = Object.values(groupedQuestions).flat();
+  
+  const preguntasNoVisibles = todasLasPreguntas.filter(
+    (p) => p.desbloqueos_recibidos.length > 0 && !unlockedQuestions.has(p.id)
   );
+  
+  const totalPreguntas = todasLasPreguntas.length - preguntasNoVisibles.length + unlockedQuestions.size;
+  
+  const respondidas = Object.entries(respuestas).filter(([preguntaId, respuesta]) => {
+    const pregunta = todasLasPreguntas.find((p) => p.id === parseInt(preguntaId));
+    return pregunta && isRespuestaValida(respuesta, pregunta.tipo, pregunta);
+  }).length;
+  
+  return { totalPreguntas, respondidas, todasLasPreguntas };
+}, [groupedQuestions, unlockedQuestions, respuestas, isRespuestaValida]);
+
+// Optimized effect for question counter updates
+useEffect(() => {
+  if (onQuestionUnlock) {
+    onQuestionUnlock("counter", {
+      total: memoizedCalculations.totalPreguntas,
+      answered: memoizedCalculations.respondidas,
+    });
+  }
+}, [memoizedCalculations, onQuestionUnlock]);
 
   // Función para obtener preguntas visibles que no tienen respuesta
   const getUnansweredQuestions = () => {
@@ -1489,21 +1408,6 @@ const Preguntas = ({
     {}
   );
 
-  const handleAccordionChange = (section) => (_, isExpanded) => {
-    if (isExpanded) {
-      setExpandedSection(section);
-
-      // Esperar un poco más para asegurar que el acordeón se abra visualmente
-      setTimeout(() => {
-        requestAnimationFrame(() => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        });
-      }, 300); // tiempo aproximado de la animación de Accordion de MUI
-    } else {
-      setExpandedSection(null);
-    }
-  };
-
   /////////////////////// control para los subitems ///////////////
 
   return (
@@ -1515,9 +1419,8 @@ const Preguntas = ({
           // py: { xs: 1, sm: 2 },
         }}
       >
-        {/* Único bloque de navegación de secciones, solo si hay otherQuestions, justo antes de las preguntas que no son SIS */}
-        {!(sisQuestions.length || specialQuestions.length > 0) &&
-          Object.keys(otherQuestions).length > 0 && (
+        {/* Navegación unificada de secciones */}
+        {unifiedSections.length > 0 && (
             <>
               <Box
                 sx={{
@@ -1530,8 +1433,8 @@ const Preguntas = ({
               >
                 <Typography variant="body1">
                   Sección{" "}
-                  {Object.keys(otherQuestions).indexOf(expandedSection) + 1} de{" "}
-                  {Object.keys(otherQuestions).length}
+                  {unifiedSections.findIndex(s => s.name === expandedSection) + 1} de{" "}
+                  {unifiedSections.length}
                 </Typography>
                 <Typography variant="body1">
                   Respondidas: {getAnsweredUnlockedQuestions()} /{" "}
@@ -1549,14 +1452,14 @@ const Preguntas = ({
               >
                 <IconButton
                   disabled={
-                    Object.keys(otherQuestions).indexOf(expandedSection) === 0
+                    unifiedSections.findIndex(s => s.name === expandedSection) === 0
                   }
                   onClick={() => {
                     const index =
-                      Object.keys(otherQuestions).indexOf(expandedSection);
+                      unifiedSections.findIndex(s => s.name === expandedSection);
                     if (index > 0) {
                       const nuevaSeccion =
-                        Object.keys(otherQuestions)[index - 1];
+                        unifiedSections[index - 1].name;
                       setExpandedSection(nuevaSeccion);
                       setTimeout(() => {
                         if (topRef.current) {
@@ -1583,21 +1486,21 @@ const Preguntas = ({
 
                 <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
                   Sección{" "}
-                  {Object.keys(otherQuestions).indexOf(expandedSection) + 1} de{" "}
-                  {Object.keys(otherQuestions).length}
+                  {unifiedSections.findIndex(s => s.name === expandedSection) + 1} de{" "}
+                  {unifiedSections.length}
                 </Typography>
 
                 <IconButton
                   disabled={
-                    Object.keys(otherQuestions).indexOf(expandedSection) ===
-                    Object.keys(otherQuestions).length - 1
+                    unifiedSections.findIndex(s => s.name === expandedSection) ===
+                    unifiedSections.length - 1
                   }
                   onClick={() => {
                     const index =
-                      Object.keys(otherQuestions).indexOf(expandedSection);
-                    if (index < Object.keys(otherQuestions).length - 1) {
+                      unifiedSections.findIndex(s => s.name === expandedSection);
+                    if (index < unifiedSections.length - 1) {
                       const nuevaSeccion =
-                        Object.keys(otherQuestions)[index + 1];
+                        unifiedSections[index + 1].name;
                       setExpandedSection(nuevaSeccion);
                       setTimeout(() => {
                         if (topRef.current) {
@@ -1633,92 +1536,66 @@ const Preguntas = ({
           />
         )}
 
-        {/* Conteo de preguntas respondidas para SIS y especiales */}
-        {(sisQuestions.length || specialQuestions.length > 0) && (
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "center",
-              px: 2,
-              mb: 1,
-            }}
-          >
-            <Typography variant="body1">
-              Respondidas: {getAnsweredUnlockedQuestions()} /{" "}
-              {getTotalUnlockedQuestions()}
-            </Typography>
-          </Box>
-        )}
-        {/* Preguntas SIS, SIS2, y especiales */}
-        {(sisQuestions.length || specialQuestions.length > 0) && (
+        {/* Preguntas SIS - solo para cuestionarios SIS puros */}
+        {sisQuestions.length > 0 && specialQuestions.length === 0 && (
           <Box sx={{ width: "100%" }}>
-            {sisQuestions.length > 0 && (
-              <ControlSIS
-                preguntas={sisQuestions}
-                respuestas={respuestas}
-                setRespuestas={setRespuestas}
-                handleRespuestaChange={handleRespuestaChange}
-                subitems={subitems}
-                cuestionarioFinalizado={cuestionarioFinalizado}
-                esEditable={esEditable}
-                questionSubmitStates={questionSubmitStates}
-                QuestionSubmitIndicator={QuestionSubmitIndicator}
-              />
-            )}
-            {specialQuestions.length > 0 && (
-              <>
-                {specialQuestions.some((p) => p.tipo === "ed") && (
-                  <ControlCuestionariosEspeciales
-                    preguntas={specialQuestions.filter((p) => p.tipo === "ed")}
-                    respuestas={respuestas}
-                    setRespuestas={setRespuestas}
-                    handleRespuestaChange={handleRespuestaChange}
-                    technicalAids={technicalAids}
-                    chAids={chAids}
-                    cuestionarioFinalizado={cuestionarioFinalizado}
-                    esEditable={esEditable}
-                    questionSubmitStates={questionSubmitStates}
-                    QuestionSubmitIndicator={QuestionSubmitIndicator}
-                  />
-                )}
-                {specialQuestions.some((p) => p.tipo === "ch") && (
-                  <ControlCuestionariosEspeciales
-                    preguntas={specialQuestions.filter((p) => p.tipo === "ch")}
-                    respuestas={respuestas}
-                    setRespuestas={setRespuestas}
-                    handleRespuestaChange={handleRespuestaChange}
-                    technicalAids={technicalAids}
-                    chAids={chAids}
-                    cuestionarioFinalizado={cuestionarioFinalizado}
-                    esEditable={esEditable}
-                    questionSubmitStates={questionSubmitStates}
-                    QuestionSubmitIndicator={QuestionSubmitIndicator}
-                  />
-                )}
-              </>
-            )}
+            <ControlSIS
+              preguntas={sisQuestions}
+              respuestas={respuestas}
+              setRespuestas={setRespuestas}
+              handleRespuestaChange={handleRespuestaChange}
+              subitems={subitems}
+              cuestionarioFinalizado={cuestionarioFinalizado}
+              esEditable={esEditable}
+              questionSubmitStates={questionSubmitStates}
+              QuestionSubmitIndicator={QuestionSubmitIndicator}
+            />
           </Box>
         )}
 
         {/* Secciones agrupadas: solo mostrar contenido de la sección activa */}
-        {!(sisQuestions.length || specialQuestions.length > 0) && (
+        {unifiedSections.length > 0 && (
           <Box sx={{ width: "100%", overflowY: "auto", mt: 3 }}>
             <Typography variant="h6" sx={{ mb: 2, fontWeight: "bold", px: 2 }}>
               {expandedSection}
             </Typography>
-            {Object.entries(otherQuestions).map(([section, preguntas]) =>
-              expandedSection === section ? (
-                <Box key={section}>
-                  {preguntas
-                    .filter((pregunta) => {
-                      if (pregunta.desbloqueos_recibidos.length === 0)
-                        return true;
-                      return pregunta.desbloqueos_recibidos.some((desbloqueo) =>
-                        unlockedQuestions.has(desbloqueo.pregunta_desbloqueada)
-                      );
-                    })
-                    .map((pregunta) => (
+            {unifiedSections.map((sectionData) =>
+              expandedSection === sectionData.name ? (
+                <Box key={sectionData.name}>
+                  {sectionData.type === 'special' ? (
+                    // Render special questions directly
+                    <Box sx={{ width: "100%" }}>
+                      {sectionData.questions.some(p => p.tipo === "ed") && (
+                        <Box sx={{ mb: 2 }}>
+                          {sectionData.questions
+                            .filter(p => p.tipo === "ed")
+                            .map((pregunta) => (
+                              <Box key={pregunta.id} sx={{ mb: 2 }}>
+                                <Typography variant="subtitle1" fontWeight="bold">
+                                  Pregunta ED: {pregunta.texto}
+                                </Typography>
+                              </Box>
+                            ))}
+                        </Box>
+                      )}
+                      {sectionData.questions.some(p => p.tipo === "ch") && (
+                        <CH_0a4
+                          preguntas={sectionData.questions.filter(p => p.tipo === "ch")}
+                          respuestas={respuestas}
+                          setRespuestas={setRespuestas}
+                          handleRespuestaChange={handleRespuestaChange}
+                          disabled={cuestionarioFinalizado && !esEditable}
+                          chAids={chAids}
+                          questionSubmitStates={questionSubmitStates}
+                          QuestionSubmitIndicator={QuestionSubmitIndicator}
+                        />
+                      )}
+                    </Box>
+                  ) : (
+                    // Render regular questions
+                    sectionData.questions
+                      .filter((pregunta) => isQuestionVisible(pregunta))
+                      .map((pregunta) => (
                       <Box
                         key={pregunta.id}
                         id={`pregunta-${pregunta.id}`}
@@ -1751,7 +1628,7 @@ const Preguntas = ({
                           }}
                         >
                           <Box sx={{ width: "100%" }}>
-                            <TiposDePregunta
+                            <MemoizedTiposDePregunta
                               pregunta={pregunta}
                               respuesta={respuestas[pregunta.id]}
                               onRespuestaChange={(resp) => {
@@ -1777,7 +1654,8 @@ const Preguntas = ({
                           </Box>
                         </Paper>
                       </Box>
-                    ))}
+                    ))
+                  )}
                 </Box>
               ) : null
             )}
@@ -1785,8 +1663,7 @@ const Preguntas = ({
         )}
 
         {/* Bloque de navegación y resumen inferior */}
-        {!(sisQuestions.length || specialQuestions.length > 0) &&
-          Object.keys(otherQuestions).length > 0 && (
+        {unifiedSections.length > 0 && (
             <>
               <Box
                 sx={{
@@ -1799,14 +1676,14 @@ const Preguntas = ({
               >
                 <IconButton
                   disabled={
-                    Object.keys(otherQuestions).indexOf(expandedSection) === 0
+                    unifiedSections.findIndex(s => s.name === expandedSection) === 0
                   }
                   onClick={() => {
                     const index =
-                      Object.keys(otherQuestions).indexOf(expandedSection);
+                      unifiedSections.findIndex(s => s.name === expandedSection);
                     if (index > 0) {
                       const nuevaSeccion =
-                        Object.keys(otherQuestions)[index - 1];
+                        unifiedSections[index - 1].name;
                       setExpandedSection(nuevaSeccion);
                       setTimeout(() => {
                         if (topRef.current) {
@@ -1833,21 +1710,21 @@ const Preguntas = ({
 
                 <Typography variant="subtitle1" sx={{ fontWeight: "bold" }}>
                   Sección{" "}
-                  {Object.keys(otherQuestions).indexOf(expandedSection) + 1} de{" "}
-                  {Object.keys(otherQuestions).length}
+                  {unifiedSections.findIndex(s => s.name === expandedSection) + 1} de{" "}
+                  {unifiedSections.length}
                 </Typography>
 
                 <IconButton
                   disabled={
-                    Object.keys(otherQuestions).indexOf(expandedSection) ===
-                    Object.keys(otherQuestions).length - 1
+                    unifiedSections.findIndex(s => s.name === expandedSection) ===
+                    unifiedSections.length - 1
                   }
                   onClick={() => {
                     const index =
-                      Object.keys(otherQuestions).indexOf(expandedSection);
-                    if (index < Object.keys(otherQuestions).length - 1) {
+                      unifiedSections.findIndex(s => s.name === expandedSection);
+                    if (index < unifiedSections.length - 1) {
                       const nuevaSeccion =
-                        Object.keys(otherQuestions)[index + 1];
+                        unifiedSections[index + 1].name;
                       setExpandedSection(nuevaSeccion);
                       setTimeout(() => {
                         if (topRef.current) {
@@ -1883,8 +1760,8 @@ const Preguntas = ({
               >
                 <Typography variant="body1">
                   Sección{" "}
-                  {Object.keys(otherQuestions).indexOf(expandedSection) + 1} de{" "}
-                  {Object.keys(otherQuestions).length}
+                  {unifiedSections.findIndex(s => s.name === expandedSection) + 1} de{" "}
+                  {unifiedSections.length}
                 </Typography>
                 <Typography variant="body1">
                   Respondidas: {getAnsweredUnlockedQuestions()} /{" "}

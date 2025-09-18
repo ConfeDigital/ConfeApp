@@ -245,7 +245,7 @@ const SIS_0a4 = ({
                         <Typography variant="subtitle1" sx={{ mb: 1 }}>
                           {pregunta.texto}
                         </Typography>
-                        <Typography variant="body2">Frecuencia:</Typography>
+                        <Typography variant="subtitle2">Frecuencia:</Typography>
                         <RadioGroup
                           row
                           value={
@@ -283,7 +283,7 @@ const SIS_0a4 = ({
                           ))}
                         </RadioGroup>
 
-                        <Typography variant="body2">
+                        <Typography variant="subtitle2">
                           Tiempo diario de apoyo:
                         </Typography>
                         <RadioGroup
@@ -323,7 +323,7 @@ const SIS_0a4 = ({
                           ))}
                         </RadioGroup>
 
-                        <Typography variant="body2">Tipo de apoyo:</Typography>
+                        <Typography variant="subtitle2">Tipo de apoyo:</Typography>
                         <RadioGroup
                           row
                           value={
@@ -361,7 +361,7 @@ const SIS_0a4 = ({
                           ))}
                         </RadioGroup>
 
-                        <Typography variant="body2">
+                        <Typography variant="subtitle2">
                           ¿Necesita apoyo?
                         </Typography>
                         {(subitems?.[pregunta.texto] || []).map((subitem) => (
@@ -396,6 +396,9 @@ const SIS_0a4 = ({
                           />
                         ))}
 
+                        <Typography variant="subtitle2">
+                          Observaciones:
+                        </Typography>
                         <TextField
                           value={respuestas[pregunta.id]?.observaciones || ""}
                           onChange={(e) =>
@@ -417,8 +420,8 @@ const SIS_0a4 = ({
                       </Box>
                     ) : (
                       <TableRow key={pregunta.id}>
-                        <TableCell>{pregunta.texto}</TableCell>
-                        <TableCell>
+                        <TableCell sx={{ maxWidth: "250px" }}>{pregunta.texto}</TableCell>
+                        <TableCell sx={{ width: "100px" }}>
                           <RadioGroup
                             value={
                               String(respuestas[pregunta.id]?.frecuencia) || ""
@@ -457,7 +460,7 @@ const SIS_0a4 = ({
                             ))}
                           </RadioGroup>
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={{ width: "100px" }}>
                           <RadioGroup
                             value={
                               String(respuestas[pregunta.id]?.tiempo_apoyo) ||
@@ -497,7 +500,7 @@ const SIS_0a4 = ({
                             ))}
                           </RadioGroup>
                         </TableCell>
-                        <TableCell>
+                        <TableCell sx={{ width: "100px" }}>
                           <RadioGroup
                             value={
                               String(respuestas[pregunta.id]?.tipo_apoyo) || ""
@@ -536,9 +539,9 @@ const SIS_0a4 = ({
                             ))}
                           </RadioGroup>
                         </TableCell>
-                        <TableCell sx={{ width: "220px" }}>
+                        <TableCell sx={{ width: "25%" }}>
                           <Box
-                            sx={{ display: "flex", flexDirection: "column" }}
+                            sx={{ display: "flex", flexDirection: "column", maxHeight: "210px", overflowY: "auto", pr: 1}}
                           >
                             {(subitems?.[pregunta.texto] || []).map(
                               (subitem) => (
@@ -579,7 +582,7 @@ const SIS_0a4 = ({
                             )}
                           </Box>
                         </TableCell>
-                        <TableCell sx={{ width: "25%", m: 1 }}>
+                        <TableCell sx={{ width: "25%" }}>
                           <TextField
                             value={respuestas[pregunta.id]?.observaciones || ""}
                             onChange={(e) =>
