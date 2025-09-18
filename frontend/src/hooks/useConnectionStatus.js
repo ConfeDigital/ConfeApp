@@ -10,7 +10,7 @@ export const useConnectionStatus = () => {
   const [isNetworkOnline, setIsNetworkOnline] = useState(navigator.onLine);
   const [isBackendReachable, setIsBackendReachable] = useState(true);
   const [isChecking, setIsChecking] = useState(false);
-  const { isWsConnected, isWsConnecting, isProviderInitializing } = useWebSocketStatus();
+  const { isWsConnected, isWsConnecting, isProviderInitializing, smartReconnect } = useWebSocketStatus();
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   
   const checkIntervalRef = useRef(null);
@@ -63,17 +63,27 @@ export const useConnectionStatus = () => {
     setIsChecking(true);
     lastCheckRef.current = now;
     
+    const wasBackendReachable = isBackendReachable;
     const isReachable = await pingBackend();
     setIsBackendReachable(isReachable);
     
     if (isReachable) {
       consecutiveFailuresRef.current = 0;
+      
+      // If backend was previously unreachable and is now reachable,
+      // and WebSocket is not connected, trigger smart reconnection
+      if (!wasBackendReachable && !isWsConnected && !isWsConnecting && !isProviderInitializing && smartReconnect) {
+        console.log("Backend became available, triggering WebSocket reconnection...");
+        setTimeout(() => {
+          smartReconnect();
+        }, 1000); // Small delay to ensure backend is stable
+      }
     } else {
       consecutiveFailuresRef.current += 1;
     }
     
     setIsChecking(false);
-  }, [pingBackend]);
+  }, [pingBackend, isBackendReachable, isWsConnected, isWsConnecting, isProviderInitializing, smartReconnect]);
 
   // Handle visibility change (mobile browser going to background/foreground)
   const handleVisibilityChange = useCallback(() => {
@@ -140,7 +150,16 @@ export const useConnectionStatus = () => {
         Math.max(MIN_CHECK_INTERVAL, 5000 * Math.pow(2, Math.min(consecutiveFailuresRef.current, 4)))
       );
       
-      checkIntervalRef.current = setInterval(checkBackendConnectivity, interval);
+      checkIntervalRef.current = setInterval(() => {
+        checkBackendConnectivity();
+        
+        // Additional check: if backend is reachable but WebSocket is still disconnected,
+        // trigger smart reconnection every few checks
+        if (isBackendReachable && smartReconnect && consecutiveFailuresRef.current % 3 === 0) {
+          console.log("Periodic WebSocket reconnection attempt...");
+          smartReconnect();
+        }
+      }, interval);
     } else if (checkIntervalRef.current) {
       clearInterval(checkIntervalRef.current);
       checkIntervalRef.current = null;
@@ -151,7 +170,7 @@ export const useConnectionStatus = () => {
         clearInterval(checkIntervalRef.current);
       }
     };
-  }, [isWsConnected, isWsConnecting, isProviderInitializing, isNetworkOnline, isAuthenticated, checkBackendConnectivity]);
+  }, [isWsConnected, isWsConnecting, isProviderInitializing, isNetworkOnline, isAuthenticated, checkBackendConnectivity, isBackendReachable, smartReconnect]);
 
   // Initial connectivity check when authenticated
   useEffect(() => {

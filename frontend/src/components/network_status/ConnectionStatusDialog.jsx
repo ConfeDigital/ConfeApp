@@ -31,7 +31,7 @@ const ConnectionStatusDialog = () => {
     hasRealTimeConnection
   } = useConnectionStatus();
 
-  const { forceReconnect } = useWebSocketStatus();
+  const { forceReconnect, smartReconnect } = useWebSocketStatus();
 
   const isAuthenticated = useSelector((state) => state.auth.isAuthenticated);
   const [isSnackbarOpen, setIsSnackbarOpen] = useState(true);
@@ -59,9 +59,9 @@ const ConnectionStatusDialog = () => {
     setIsSnackbarOpen(true);
     setShowFailureMessage(false); // Reset failure message
 
-    if (forceReconnect) {
-      console.log('Attempting to force WebSocket reconnection...');
-      forceReconnect();
+    if (smartReconnect) {
+      console.log('Attempting smart WebSocket reconnection...');
+      smartReconnect();
 
       // Check if reconnection succeeded after a delay
       setTimeout(() => {
@@ -79,8 +79,11 @@ const ConnectionStatusDialog = () => {
           setIsRetrying(false);
         }
       }, 10000); // Wait 10 seconds for connection attempt
+    } else if (forceReconnect) {
+      console.log('Smart reconnect not available, using force reconnect...');
+      forceReconnect();
     } else {
-      console.log('Force reconnect not available, reloading page...');
+      console.log('No reconnect functions available, reloading page...');
       window.location.reload();
     }
   };
