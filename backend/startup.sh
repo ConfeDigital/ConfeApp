@@ -6,10 +6,25 @@ if [ -d "venv" ]; then
 fi
 
 export DJANGO_SETTINGS_MODULE='backend.deployment'
-python manage.py migrate --noinput
 
-# Collect static files
-python manage.py collectstatic --noinput
+# Only run migrations if needed (check if migrations are pending)
+echo "Checking for pending migrations..."
+python manage.py showmigrations --plan | grep -q '\[ \]' && {
+    echo "Running pending migrations..."
+    python manage.py migrate --noinput
+} || {
+    echo "No pending migrations found, skipping..."
+}
+
+# Only collect static files if they don't exist or are outdated
+echo "Checking static files..."
+if [ ! -d "staticfiles" ] || [ "staticfiles" -ot "static" ]; then
+    echo "Collecting static files..."
+    python manage.py collectstatic --noinput
+else
+    echo "Static files up to date, skipping..."
+fi
 
 # Start Daphne server
+echo "Starting Daphne server..."
 daphne -b 0.0.0.0 -p 8000 backend.asgi:application 
