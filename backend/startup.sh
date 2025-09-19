@@ -1,11 +1,14 @@
 #!/bin/bash
 
-# Activate virtual environment if it exists
-if [ -d "venv" ]; then
-    source venv/bin/activate
+# Set Django settings module
+export DJANGO_SETTINGS_MODULE='backend.deployment'
+
+# Install dependencies if requirements.txt exists
+if [ -f "requirements.txt" ]; then
+    pip install -r requirements.txt
 fi
 
-export DJANGO_SETTINGS_MODULE='backend.deployment'
+# Run database migrations
 python manage.py migrate --noinput
 
 # Collect static files

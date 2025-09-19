@@ -46,19 +46,28 @@ jobs:
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
 
-      - name: Zip artifact for deployment
+      - name: Prepare deployment package
         run: |
           cd backend
           chmod +x startup.sh
-          zip release.zip ./* -r
+          # Create a clean deployment directory
+          mkdir -p ../deployment
+          # Copy all backend files to deployment directory
+          cp -r . ../deployment/
+          # Remove virtual environment from deployment
+          rm -rf ../deployment/venv
+          # Create zip from deployment directory
+          cd ../deployment
+          zip -r ../backend/release.zip ./*
+          # Clean up temporary directory
+          cd ..
+          rm -rf deployment
 
       - name: Upload artifact for deployment jobs
         uses: actions/upload-artifact@v4
         with:
           name: python-app-${{ github.run_number }}
-          path: |
-            backend/release.zip
-            !venv/
+          path: backend/release.zip
           retention-days: 10  # Keep artifacts for only 7 days
 
   deploy:
@@ -75,7 +84,10 @@ jobs:
           name: python-app-${{ github.run_number }}
 
       - name: Unzip artifact for deployment
-        run: unzip release.zip
+        run: |
+          unzip release.zip
+          # Ensure startup.sh is executable
+          chmod +x startup.sh
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
