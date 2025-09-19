@@ -62,7 +62,30 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = [
     'https://kaiuki.com',
     'https://zealous-desert-08853fc0f.6.azurestaticapps.net',
-    'https://ceil.institucionconfe.org.mx'
+    'https://ceil.institucionconfe.org.mx',
+    'https://confe-lin-webapp-cwdnhwd8d9bzc8cv.eastus2-01.azurewebsites.net'
+]
+
+# Additional CORS settings for large requests
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+]
+
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
 ]
 
 # --- Configuración de Media y Static Files ---

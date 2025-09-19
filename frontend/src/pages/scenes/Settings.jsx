@@ -24,10 +24,24 @@ import {
   Notifications,
   ColorLens,
   SettingsBackupRestore,
+  Help,
+  Support,
+  BugReport,
+  Feedback,
+  Description,
+  Accessibility,
+  TextIncrease,
+  TextDecrease,
+  TextFormat,
 } from "@mui/icons-material";
 import axios from "../../api";
 import useDocumentTitle from "../../hooks/useDocumentTitle";
 import { SOUND_ALERT, THEME_FAMILY } from "../../constants";
+import { ColorModeContext } from "../../theme";
+
+// Local storage keys for new settings
+const FONT_SIZE = "fontSize";
+const HIGH_CONTRAST = "highContrast";
 
 // Define a default state object that matches the backend model's fields
 const defaultSettings = {
@@ -38,10 +52,15 @@ const defaultSettings = {
   // This setting is only saved in local storage, not the backend
   soundAlerts: true,
   themeFamily: "confe", // local only
+  fontSize: "medium", // small, medium, large, extra-large
+  highContrast: false, // high contrast mode
 };
 
 export default function Settings() {
   useDocumentTitle("Configuración");
+
+  // Get refresh function from ColorModeContext
+  const { refreshAccessibilitySettings } = React.useContext(ColorModeContext);
 
   // State for backend and local settings
   const [settings, setSettings] = useState(defaultSettings);
@@ -66,6 +85,8 @@ export default function Settings() {
         const localSoundAlerts = JSON.parse(localStorage.getItem(SOUND_ALERT));
         const localThemeFamily =
           localStorage.getItem(THEME_FAMILY) || defaultSettings.themeFamily;
+        const localFontSize = localStorage.getItem(FONT_SIZE) || defaultSettings.fontSize;
+        const localHighContrast = JSON.parse(localStorage.getItem(HIGH_CONTRAST)) || defaultSettings.highContrast;
 
         setSettings({
           ...response.data,
@@ -74,6 +95,8 @@ export default function Settings() {
               ? localSoundAlerts
               : defaultSettings.soundAlerts,
           themeFamily: localThemeFamily,
+          fontSize: localFontSize,
+          highContrast: localHighContrast,
         });
         setError(null);
       } catch (err) {
@@ -101,7 +124,7 @@ export default function Settings() {
   // Handle theme family toggle
   const toggleThemeFamily = () => {
     setSettings((prev) => {
-      const nextFamily = prev.themeFamily === "confe" ? "alt" : "confe";
+      const nextFamily = prev.themeFamily === "confe" ? "colorblind" : "confe";
       localStorage.setItem(THEME_FAMILY, nextFamily);
       return { ...prev, themeFamily: nextFamily };
     });
@@ -111,7 +134,7 @@ export default function Settings() {
   const saveSettings = async () => {
     try {
       // Separate backend settings from local-only settings
-      const { soundAlerts, themeFamily, ...backendSettings } = settings;
+      const { soundAlerts, themeFamily, fontSize, highContrast, ...backendSettings } = settings;
 
       // Save backend settings via PATCH request
       await axios.patch("/api/notifications/settings/", backendSettings);
@@ -119,6 +142,11 @@ export default function Settings() {
       // Save local-only settings
       localStorage.setItem(SOUND_ALERT, JSON.stringify(soundAlerts));
       localStorage.setItem(THEME_FAMILY, themeFamily);
+      localStorage.setItem(FONT_SIZE, fontSize);
+      localStorage.setItem(HIGH_CONTRAST, JSON.stringify(highContrast));
+
+      // Trigger theme refresh to apply accessibility settings immediately
+      refreshAccessibilitySettings();
 
       setSnackbar({
         open: true,
@@ -141,7 +169,7 @@ export default function Settings() {
     setConfirmDialog(false);
     try {
       // Send a PATCH request with default backend values
-      const { soundAlerts, themeFamily, ...backendDefaults } = defaultSettings;
+      const { soundAlerts, themeFamily, fontSize, highContrast, ...backendDefaults } = defaultSettings;
       await axios.patch("/api/notifications/settings/", backendDefaults);
 
       // Reset local-only settings
@@ -150,6 +178,11 @@ export default function Settings() {
         JSON.stringify(defaultSettings.soundAlerts)
       );
       localStorage.setItem(THEME_FAMILY, defaultSettings.themeFamily);
+      localStorage.setItem(FONT_SIZE, defaultSettings.fontSize);
+      localStorage.setItem(HIGH_CONTRAST, JSON.stringify(defaultSettings.highContrast));
+
+      // Trigger theme refresh to apply accessibility settings immediately
+      refreshAccessibilitySettings();
 
       setSettings(defaultSettings);
       setSnackbar({
@@ -258,32 +291,161 @@ export default function Settings() {
           </Paper>
         </Grid>
 
-        {/* Theme Family Settings */}
-        {/* <Grid xs={12} sm={6}>
-          <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+        {/* Accessibility Settings */}
+        <Grid item xs={12} sm={6}>
+          <Paper elevation={2} sx={{ p: 3, mb: 3, maxWidth: "300px" }}>
             <Typography
               variant="h6"
               sx={{ display: "flex", alignItems: "center", mb: 2 }}
             >
-              <ColorLens sx={{ mr: 1 }} /> Tema
+              <Accessibility sx={{ mr: 1 }} /> Accesibilidad
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Tamaño de fuente
+              </Typography>
+              <Box display="flex" alignItems="center" >
+                <Button
+                  size="small"
+                  onClick={() => setSettings(prev => ({ ...prev, fontSize: "small" }))}
+                  variant={settings.fontSize === "small" ? "contained" : "outlined"}
+                >
+                  <TextDecrease />
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => setSettings(prev => ({ ...prev, fontSize: "medium" }))}
+                  variant={settings.fontSize === "medium" ? "contained" : "outlined"}
+                >
+                  <TextFormat />
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => setSettings(prev => ({ ...prev, fontSize: "large" }))}
+                  variant={settings.fontSize === "large" ? "contained" : "outlined"}
+                >
+                  <TextIncrease />
+                </Button>
+                <Button
+                  size="small"
+                  onClick={() => setSettings(prev => ({ ...prev, fontSize: "extra-large" }))}
+                  variant={settings.fontSize === "extra-large" ? "contained" : "outlined"}
+                >
+                  <TextIncrease />
+                  <TextIncrease />
+                </Button>
+              </Box>
+            </Box>
+
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={settings.highContrast}
+                  onChange={(e) => setSettings(prev => ({ ...prev, highContrast: e.target.checked }))}
+                />
+              }
+              label="Alto contraste"
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={settings.themeFamily === "colorblind"}
+                  onChange={toggleThemeFamily}
+                />
+              }
+              label={
+                settings.themeFamily === "colorblind"
+                  ? "Tema Daltónico"
+                  : "Tema Estándar"
+              }
+            />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              💡 Tip: Usa el botón de tema en la barra superior para cambiar entre modo claro y oscuro.
+            </Typography>
+          </Paper>
+        </Grid>
+
+        {/* Theme Family Settings */}
+        {/* <Grid item xs={12} sm={6}>
+          <Paper elevation={2} sx={{ p: 3, mb: 3, maxWidth: "300px" }}>
+            <Typography
+              variant="h6"
+              sx={{ display: "flex", alignItems: "center", mb: 2 }}
+            >
+              <ColorLens sx={{ mr: 1 }} /> Familia de Tema
             </Typography>
             <Divider sx={{ mb: 2 }} />
 
             <FormControlLabel
               control={
                 <Switch
-                  checked={settings.themeFamily === "alt"}
+                  checked={settings.themeFamily === "colorblind"}
                   onChange={toggleThemeFamily}
                 />
               }
               label={
-                settings.themeFamily === "alt"
-                  ? "Tema Alternativo"
-                  : "Tema Confe"
+                settings.themeFamily === "colorblind"
+                  ? "Tema Daltónico"
+                  : "Tema Estándar"
               }
             />
+            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+              El tema daltónico usa colores optimizados para personas con daltonismo
+            </Typography>
           </Paper>
         </Grid> */}
+      </Grid>
+
+      {/* Help & Support Section */}
+      <Grid container spacing={3} sx={{ mt: 2 }} display={ import.meta.env.MODE !== 'development' && 'none' }>
+        <Grid item xs={12}>
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Typography
+              variant="h6"
+              sx={{ display: "flex", alignItems: "center", mb: 2 }}
+            >
+              <Help sx={{ mr: 1 }} /> Ayuda y Soporte
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+
+            <Grid container spacing={2}>
+              <Grid item xs={12}>
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  startIcon={<Help />}
+                  onClick={() => window.open('/help', '_blank')}
+                  sx={{ mb: 1 }}
+                  size="large"
+                >
+                  Centro de Ayuda y Soporte
+                </Button>
+              </Grid>
+            </Grid>
+
+            <Box sx={{ mt: 3, p: 2, bgcolor: 'background.default', borderRadius: 1 }}>
+              <Typography variant="subtitle2" gutterBottom>
+                Información de Contacto
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Si necesitas ayuda adicional, puedes contactarnos:
+              </Typography>
+              <Box sx={{ mt: 1 }}>
+                <Typography variant="body2">
+                  📧 Email: soporte@confeapp.com
+                </Typography>
+                <Typography variant="body2">
+                  📞 Teléfono: +52 (55) 1234-5678
+                </Typography>
+                <Typography variant="body2">
+                  🕒 Horario: Lunes a Viernes, 9:00 AM - 6:00 PM
+                </Typography>
+              </Box>
+            </Box>
+          </Paper>
+        </Grid>
       </Grid>
 
       {/* Actions */}

@@ -286,7 +286,16 @@ class CandidateListDashboardView(generics.ListAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        user_ids = self.request.query_params.getlist('ids')
+        # Support both GET (for backward compatibility) and POST (for large requests)
+        if self.request.method == 'POST':
+            user_ids = self.request.data.get('ids', [])
+        else:
+            user_ids = self.request.query_params.getlist('ids')
+        
         if user_ids:
             return User.objects.filter(id__in=user_ids, groups__name='candidatos')
         return User.objects.none()
+    
+    def post(self, request, *args, **kwargs):
+        """Handle POST requests for large ID lists"""
+        return self.list(request, *args, **kwargs)

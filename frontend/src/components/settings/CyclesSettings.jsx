@@ -243,6 +243,8 @@ export default function CyclesSettings( ) {
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
         onConfirm={handleConfirmDelete}
+        message={entryToDelete ? `¿Estás seguro de que deseas eliminar el ciclo "${entryToDelete.name}"?` : ''}
+        caption="Esta acción no se puede deshacer. Si el ciclo está siendo utilizado por candidatos, dejará de estar disponible para ellos."
       />
     </>
   );

@@ -5,7 +5,7 @@ export const WebSocketContext = createContext(null);
 
 /**
  * A custom hook to use the WebSocket status from the context.
- * @returns {{ isWsConnected: boolean, isWsConnecting: boolean, isProviderInitializing: boolean, forceReconnect: function }} The WebSocket connection status and connecting state.
+ * @returns {{ isWsConnected: boolean, isWsConnecting: boolean, isProviderInitializing: boolean, forceReconnect: function, smartReconnect: function }} The WebSocket connection status and connecting state.
  */
 export const useWebSocketStatus = () => {
   const context = useContext(WebSocketContext);

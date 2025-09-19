@@ -16,6 +16,7 @@ import {
     Chip,
     TextField,
     Alert,
+    Snackbar,
 } from "@mui/material";
 import { DatePicker } from "@mui/x-date-pickers";
 import { useMediaQuery } from "@mui/material";
@@ -55,6 +56,7 @@ export default function Dashboard() {
     const [selectedCycle, setSelectedCycle] = useState(null);
     const [activeFilter, setActiveFilter] = useState(null);
     const [errorMsg, setErrorMsg] = useState("");
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
 
     // Regular user list dialog state
     const [isUserListDialogOpen, setIsUserListDialogOpen] = useState(false);
@@ -112,12 +114,14 @@ export default function Dashboard() {
         setActiveFilter("cycle");
         handleCycleClose();
         setErrorMsg("");
+        setSnackbarOpen(false); // Close snackbar on filter change
     };
 
     const handleClearFilters = () => {
         setSelectedCycle(null);
         setActiveFilter(null);
         setErrorMsg("");
+        setSnackbarOpen(false); // Close snackbar on filter change
     };
 
     const handleApplyDateFilter = async () => {
@@ -129,10 +133,19 @@ export default function Dashboard() {
             setSelectedCycle(null);
             setActiveFilter("date");
             setErrorMsg("");
+            setSnackbarOpen(false); // Close snackbar on success
             handleCalendarClose();
         } catch (validationError) {
             setErrorMsg(validationError.errors.join(". "));
+            setSnackbarOpen(true);
         }
+    };
+
+    const handleCloseSnackbar = (event, reason) => {
+      if (reason === 'clickaway') {
+        return;
+      }
+      setSnackbarOpen(false);
     };
 
     const getButtonVariant = (type) =>
@@ -153,6 +166,7 @@ export default function Dashboard() {
             } catch (error) {
                 console.error("Error fetching transfer request list:", error);
                 setErrorMsg("Error al cargar la lista de solicitudes de traslado.");
+                setSnackbarOpen(true);
             }
             return;
         }
@@ -162,16 +176,26 @@ export default function Dashboard() {
         const userPks = statsData.user_pks?.[userPksKey] || [];
         if (userPks.length > 0) {
             try {
-                const params = new URLSearchParams();
-                userPks.forEach(id => {
-                    params.append('ids', id);
-                });
-                const response = await api.get(`/api/candidatos/dashboard-list/?${params.toString()}`);
-                setUserList(response.data);
+                // Use POST for large lists to avoid URL length limits and CORS issues
+                // Threshold: if more than 50 IDs, use POST, otherwise use GET
+                if (userPks.length > 10) {
+                    const response = await api.post('/api/candidatos/dashboard-list/', {
+                        ids: userPks
+                    });
+                    setUserList(response.data);
+                } else {
+                    const params = new URLSearchParams();
+                    userPks.forEach(id => {
+                        params.append('ids', id);
+                    });
+                    const response = await api.get(`/api/candidatos/dashboard-list/?${params.toString()}`);
+                    setUserList(response.data);
+                }
                 setIsUserListDialogOpen(true);
             } catch (error) {
                 console.error("Error fetching user list:", error);
                 setErrorMsg("Error al cargar la lista de usuarios.");
+                setSnackbarOpen(true);
             }
         } else {
             setUserList([]);
@@ -257,7 +281,7 @@ export default function Dashboard() {
                                             handleOpenUserListDialog(label, userPksKey);
                                         } else if (typeof data[k] === 'string' && data[k].includes('no encontrado')) {
                                             setErrorMsg(data[k]);
-                                            setTimeout(() => setErrorMsg(""), 3000);
+                                            setSnackbarOpen(true);
                                         }
                                     }}
                                     style={{ cursor: typeof data[k] === 'number' ? 'pointer' : 'default' }}
@@ -280,11 +304,21 @@ export default function Dashboard() {
     return (
         <Box m="20px">
             {/* Show validation error if any */}
-            {errorMsg && (
-                <Alert severity="error" sx={{ mb: 2 }}>
+            <Snackbar
+                open={snackbarOpen}
+                autoHideDuration={6000}
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={handleCloseSnackbar}
+                    severity="error"
+                    sx={{ mb: 2, width: '100%' }}
+                >
                     {errorMsg}
                 </Alert>
-            )}
+            </Snackbar>
+            
             {/* Filter toolbar */}
             <Box display="flex" gap={2} mb={3} alignItems="center">
                 <Button

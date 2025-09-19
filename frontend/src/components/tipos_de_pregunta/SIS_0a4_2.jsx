@@ -236,7 +236,11 @@ const SIS_0a4_2 = ({
                             label="Comentarios"
                           />
                           {QuestionSubmitIndicator && (
-                            <QuestionSubmitIndicator preguntaId={pregunta.id} />
+                            <QuestionSubmitIndicator
+                              preguntaId={pregunta.id}
+                              responseState={questionSubmitStates[pregunta.id]}
+                              queuePosition={0}
+                            />
                           )}
                         </Box>
                       ) : (
@@ -296,7 +300,9 @@ const SIS_0a4_2 = ({
                           <TableCell>
                             <SISObservacionesField
                               preguntaId={pregunta.id}
-                              value={respuestas[pregunta.id]?.observaciones ?? ""}
+                              value={
+                                respuestas[pregunta.id]?.observaciones ?? ""
+                              }
                               onChange={handleSISTextChange || handleTextChange}
                               disabled={disabled || loading}
                               label="Comentarios"
@@ -304,6 +310,10 @@ const SIS_0a4_2 = ({
                             {QuestionSubmitIndicator && (
                               <QuestionSubmitIndicator
                                 preguntaId={pregunta.id}
+                                responseState={
+                                  questionSubmitStates[pregunta.id]
+                                }
+                                queuePosition={0}
                               />
                             )}
                           </TableCell>

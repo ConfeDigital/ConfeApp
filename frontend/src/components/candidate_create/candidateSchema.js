@@ -14,7 +14,7 @@ const candidateSchema = yup.object().shape({
   second_last_name: yup.string().max(150, 'El apellido es demasiado largo').required('Los apellidos son obligatorios'), // Assuming User model has max_length=150
   password: yup.string().min(6, 'La contraseña debe tener al menos 6 caracteres').required('La contraseña es obligatoria'),
   birth_date: yup.date().nullable().required('La fecha de nacimiento es obligatoria'),
-  gender: yup.string().oneOf(['M', 'F', 'O']).max(1, 'El género es demasiado largo').required('El género es obligatorio'),
+  gender: yup.string().max(1, 'El género es demasiado largo').required('El género es obligatorio'),
   blood_type: yup.string().max(3, 'El tipo de sangre es demasiado largo').nullable(),
   phone_number: phoneNumberSchema,
   stage: yup.string().max(3, 'La etapa es demasiado larga').nullable(),

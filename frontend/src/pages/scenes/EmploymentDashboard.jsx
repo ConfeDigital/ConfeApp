@@ -33,6 +33,7 @@ import {
   Accordion,
   AccordionSummary,
   AccordionDetails,
+  AccordionActions,
   styled,
   Autocomplete,
   LinearProgress,
@@ -140,6 +141,7 @@ const EmploymentDashboard = () => {
   const [habilidades, setHabilidades] = useState([]);
   const [candidateHabilidades, setCandidateHabilidades] = useState([]);
   const [loadingHabilidades, setLoadingHabilidades] = useState(false);
+  const [editingHabilidad, setEditingHabilidad] = useState(null);
 
   // Estados para popups
   const [openAgencyPopup, setOpenAgencyPopup] = useState(false);
@@ -165,6 +167,9 @@ const EmploymentDashboard = () => {
   // Estados para eliminación
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState(null);
+  const [deleteDialogMessage, setDeleteDialogMessage] = useState('');
+  const [openSkillDeleteDialog, setOpenSkillDeleteDialog] = useState(false);
+  const [skillToDelete, setSkillToDelete] = useState(null);
 
   const [mapOpen, setMapOpen] = useState(false);
 
@@ -328,6 +333,48 @@ const EmploymentDashboard = () => {
     }
   };
 
+  const updateCandidateHabilidad = async (candidateHabilidadId, nivelCompetencia, observaciones = '') => {
+    try {
+      // Find the habilidad ID from the editingHabilidad
+      const habilidadId = editingHabilidad?.habilidad;
+      
+      const payload = {
+        nivel_competencia: nivelCompetencia,
+        observaciones: observaciones,
+        candidato: uid,
+        habilidad: habilidadId,
+      };
+
+      await axios.put(`/api/agencia/candidato-habilidades/${candidateHabilidadId}/`, payload);
+      await fetchCandidateHabilidades(); // Recargar habilidades del candidato
+    } catch (error) {
+      console.error("Error al actualizar habilidad del candidato:", error);
+      throw error;
+    }
+  };
+
+  const deleteCandidateHabilidad = async (candidateHabilidadId) => {
+    try {
+      await axios.delete(`/api/agencia/candidato-habilidades/${candidateHabilidadId}/`);
+      await fetchCandidateHabilidades(); // Recargar habilidades del candidato
+    } catch (error) {
+      console.error("Error al eliminar habilidad del candidato:", error);
+      throw error;
+    }
+  };
+
+  const confirmSkillDelete = async () => {
+    if (!skillToDelete) return;
+    try {
+      await deleteCandidateHabilidad(skillToDelete.id);
+      setOpenSkillDeleteDialog(false);
+      setSkillToDelete(null);
+    } catch (error) {
+      console.error('Error deleting skill:', error);
+      // Could add error handling here
+    }
+  };
+
   // Helper functions
   const getCommentIconAndColor = (type) => {
     switch (type) {
@@ -396,12 +443,30 @@ const EmploymentDashboard = () => {
     delete payload.job;
 
     try {
+      let response;
       if (editingJobHistoryEntry) {
-        await axios.put(`${jobHistoryURL}${editingJobHistoryEntry.id}/`, payload);
+        response = await axios.put(`${jobHistoryURL}${editingJobHistoryEntry.id}/`, payload);
+        const updatedEntry = response.data;
+        
+        // Optimistically update local state instead of full reload
+        setEmploymentHistory(prevHistory => 
+          prevHistory.map(history => 
+            history.id === editingJobHistoryEntry.id 
+              ? { ...updatedEntry, comments: history.comments || [] }
+              : history
+          )
+        );
       } else {
-        await axios.post(jobHistoryURL, payload);
+        response = await axios.post(jobHistoryURL, payload);
+        const newEntry = response.data;
+        
+        // Add new entry to local state
+        setEmploymentHistory(prevHistory => [
+          { ...newEntry, comments: [] },
+          ...prevHistory
+        ]);
       }
-      await fetchAll();
+      
       setOpenJobHistoryDialog(false);
     } catch (e) {
       console.error(e);
@@ -431,8 +496,31 @@ const EmploymentDashboard = () => {
     }
 
     try {
-      await axios.post(`${commentsURL}${jobHistoryForComment.id}/`, commentFormData);
-      await fetchAll();
+      const response = await axios.post(`${commentsURL}${jobHistoryForComment.id}/`, commentFormData);
+      const newComment = response.data;
+      
+      // Optimistically update local state instead of full reload
+      setEmploymentHistory(prevHistory => 
+        prevHistory.map(history => 
+          history.id === jobHistoryForComment.id 
+            ? {
+                ...history,
+                comments: [...(history.comments || []), newComment]
+              }
+            : history
+        )
+      );
+
+      // Update tracking comments
+      setTrackingComments(prevComments => {
+        const updatedComment = {
+          ...newComment,
+          job_title: jobHistoryForComment.job?.name || jobHistoryForComment.position,
+          company: jobHistoryForComment.job?.company?.name || jobHistoryForComment.company
+        };
+        return [updatedComment, ...prevComments];
+      });
+
       setOpenCommentDialog(false);
     } catch (e) {
       console.error(e);
@@ -443,9 +531,24 @@ const EmploymentDashboard = () => {
   // Delete handlers
   const confirmDelete = async () => {
     if (!entryToDelete) return;
-    await axios.delete(`${jobHistoryURL}${entryToDelete.id}/`);
-    setEmploymentHistory(hs => hs.filter(h => h.id !== entryToDelete.id));
-    setOpenDeleteDialog(false);
+    try {
+      await axios.delete(`${jobHistoryURL}${entryToDelete.id}/`);
+      
+      // Optimistically update local state instead of full reload
+      setEmploymentHistory(prevHistory => prevHistory.filter(h => h.id !== entryToDelete.id));
+      
+      // Remove from tracking comments if any
+      setTrackingComments(prevComments => 
+        prevComments.filter(comment => 
+          comment.job_title !== (entryToDelete.job?.name || entryToDelete.position)
+        )
+      );
+      
+      setOpenDeleteDialog(false);
+    } catch (error) {
+      console.error('Error deleting entry:', error);
+      // Could add error handling here
+    }
   };
 
   const handleAptitudeTest = (questionnaireId) => {
@@ -455,11 +558,18 @@ const EmploymentDashboard = () => {
   // Legacy handlers for compatibility
   const handleJobAssignment = async () => {
     try {
-      await axios.post(`/api/candidatos/historial-empleos/`, {
+      const response = await axios.post(`/api/candidatos/historial-empleos/`, {
         ...newJob,
         candidate: uid
       });
-      await fetchAll();
+      const newEntry = response.data;
+      
+      // Optimistically update local state instead of full reload
+      setEmploymentHistory(prevHistory => [
+        { ...newEntry, comments: [] },
+        ...prevHistory
+      ]);
+      
       setAssignOpen(false);
       setNewJob({
         position: "",
@@ -483,8 +593,31 @@ const EmploymentDashboard = () => {
 
   const handleSubmitComment = async () => {
     try {
-      await axios.post(`${commentsURL}${jobHistoryForComment.id}/`, commentFormData);
-      await fetchAll();
+      const response = await axios.post(`${commentsURL}${jobHistoryForComment.id}/`, commentFormData);
+      const newComment = response.data;
+      
+      // Optimistically update local state instead of full reload
+      setEmploymentHistory(prevHistory => 
+        prevHistory.map(history => 
+          history.id === jobHistoryForComment.id 
+            ? {
+                ...history,
+                comments: [...(history.comments || []), newComment]
+              }
+            : history
+        )
+      );
+
+      // Update tracking comments
+      setTrackingComments(prevComments => {
+        const updatedComment = {
+          ...newComment,
+          job_title: jobHistoryForComment.job?.name || jobHistoryForComment.position,
+          company: jobHistoryForComment.job?.company?.name || jobHistoryForComment.company
+        };
+        return [updatedComment, ...prevComments];
+      });
+
       setOpenCommentDialog(false);
       setCommentFormData({ comment_text: "", type: "info" });
     } catch (error) {
@@ -991,28 +1124,54 @@ const EmploymentDashboard = () => {
                           <ListItem key={habilidad.id} sx={{ py: 0.5 }}>
                             <ListItemText
                               primary={habilidad.habilidad_nombre}
-                              secondary={`Nivel: ${habilidad.nivel_competencia} | Categoría: ${habilidad.habilidad_categoria}`}
+                              secondary={`Nivel: ${habilidad.nivel_competencia} | Categoría: ${habilidad.habilidad_categoria}${habilidad.observaciones ? ` | Observaciones: ${habilidad.observaciones}` : ''}`}
                             />
-                            <Chip
-                              label={habilidad.nivel_competencia}
-                              size="small"
-                              color={
-                                habilidad.nivel_competencia === 'experto' ? 'success' :
-                                  habilidad.nivel_competencia === 'avanzado' ? 'primary' :
-                                    habilidad.nivel_competencia === 'intermedio' ? 'warning' : 'default'
-                              }
-                            />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Chip
+                                label={habilidad.nivel_competencia}
+                                size="small"
+                                color={
+                                  habilidad.nivel_competencia === 'experto' ? 'success' :
+                                    habilidad.nivel_competencia === 'avanzado' ? 'primary' :
+                                      habilidad.nivel_competencia === 'intermedio' ? 'warning' : 'default'
+                                }
+                              />
+                              <Tooltip title="Editar habilidad">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => setEditingHabilidad(habilidad)}
+                                  color="primary"
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Eliminar habilidad">
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    setSkillToDelete(habilidad);
+                                    setOpenSkillDeleteDialog(true);
+                                  }}
+                                  color="error"
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </Tooltip>
+                            </Box>
                           </ListItem>
                         ))}
                       </List>
                     </Box>
                   )}
 
-                  {/* Formulario para agregar nueva habilidad */}
+                  {/* Formulario para agregar/editar habilidad */}
                   <CandidateHabilidadForm
                     habilidades={habilidades}
                     candidateHabilidades={candidateHabilidades}
+                    editingHabilidad={editingHabilidad}
                     onSave={saveCandidateHabilidad}
+                    onUpdate={updateCandidateHabilidad}
+                    onCancelEdit={() => setEditingHabilidad(null)}
                   />
                 </Box>
               )}
@@ -1289,11 +1448,6 @@ const EmploymentDashboard = () => {
                               <AddCommentIcon />
                             </IconButton>
                           </Tooltip>
-                          <Tooltip title="Eliminar Historial">
-                            <IconButton color='error' size="small" onClick={() => { setEntryToDelete(entry); setOpenDeleteDialog(true); }}>
-                              <DeleteIcon />
-                            </IconButton>
-                          </Tooltip>
                           {entry.comments && entry.comments.length > 0 && (
                             <Tooltip title={showComments[entry.id] ? "Ocultar Observaciones" : "Ver Observaciones"}>
                               <IconButton size="small" onClick={() => toggleComments(entry.id)}>
@@ -1337,6 +1491,13 @@ const EmploymentDashboard = () => {
                         </Box>
                       )}
                     </AccordionDetails>
+                    <AccordionActions>
+                      <Tooltip title="Eliminar Historial">
+                        <IconButton color='error' size="small" onClick={() => { setEntryToDelete(entry); setOpenDeleteDialog(true); setDeleteDialogMessage(`¿Estás seguro de que deseas eliminar el historial de empleo de ${entry.job?.name || entry.position}?`)}}>
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </AccordionActions>
                   </Accordion>
                 </Card>
               ))
@@ -1547,6 +1708,16 @@ const EmploymentDashboard = () => {
         open={openDeleteDialog}
         onClose={() => setOpenDeleteDialog(false)}
         onConfirm={confirmDelete}
+        message={deleteDialogMessage}
+      />
+
+      {/* Skill Delete Confirmation Dialog */}
+      <DeleteConfirmDialog
+        open={openSkillDeleteDialog}
+        onClose={() => setOpenSkillDeleteDialog(false)}
+        onConfirm={confirmSkillDelete}
+        message={skillToDelete ? `¿Estás seguro de que deseas eliminar la habilidad "${skillToDelete.habilidad_nombre}"?` : ''}
+        caption=""
       />
 
       {/* Job Assignment Modal */}
@@ -1555,9 +1726,15 @@ const EmploymentDashboard = () => {
         candidate={candidateProfile}
         availableJobs={availableJobs}
         onClose={() => setAssignOpen(false)}
-        onAssigned={() => {
+        onAssigned={(newJobHistory) => {
           setAssignOpen(false);
-          fetchAll();
+          // Optimistically update local state instead of full reload
+          if (newJobHistory) {
+            setEmploymentHistory(prevHistory => [
+              { ...newJobHistory, comments: [] },
+              ...prevHistory
+            ]);
+          }
         }}
       />
 
@@ -1566,9 +1743,18 @@ const EmploymentDashboard = () => {
         open={removeOpen}
         candidate={candidateProfile}
         onClose={() => setRemoveOpen(false)}
-        onRemoved={() => {
+        onRemoved={(removedJobId) => {
           setRemoveOpen(false);
-          fetchAll();
+          // Optimistically update local state instead of full reload
+          if (removedJobId) {
+            setEmploymentHistory(prevHistory => 
+              prevHistory.map(history => 
+                history.id === removedJobId 
+                  ? { ...history, end_date: new Date().toISOString().split('T')[0] }
+                  : history
+              )
+            );
+          }
         }}
       />
 
@@ -1590,56 +1776,108 @@ const EmploymentDashboard = () => {
 };
 
 // Componente para evaluar habilidades del candidato
-const CandidateHabilidadForm = ({ habilidades, candidateHabilidades, onSave }) => {
+const CandidateHabilidadForm = ({ habilidades, candidateHabilidades, editingHabilidad, onSave, onUpdate, onCancelEdit }) => {
   const [selectedHabilidad, setSelectedHabilidad] = useState(null);
   const [nivelCompetencia, setNivelCompetencia] = useState('basico');
   const [observaciones, setObservaciones] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Filtrar habilidades que no están ya evaluadas
+  // Initialize form when editing
+  React.useEffect(() => {
+    if (editingHabilidad) {
+      setNivelCompetencia(editingHabilidad.nivel_competencia);
+      setObservaciones(editingHabilidad.observaciones || '');
+      setSelectedHabilidad(null); // Don't show habilidad selector when editing
+    } else {
+      setNivelCompetencia('basico');
+      setObservaciones('');
+      setSelectedHabilidad(null);
+    }
+  }, [editingHabilidad]);
+
+  // Filtrar habilidades que no están ya evaluadas (solo para agregar nuevas)
   const habilidadesDisponibles = habilidades.filter(h =>
     !candidateHabilidades.some(ch => ch.habilidad === h.id)
   );
 
   const handleSave = async () => {
-    if (!selectedHabilidad) return;
-
-    setSaving(true);
-    try {
-      await onSave(selectedHabilidad.id, nivelCompetencia, observaciones);
-      setSelectedHabilidad(null);
-      setNivelCompetencia('basico');
-      setObservaciones('');
-    } catch (error) {
-      console.error('Error al guardar habilidad:', error);
-    } finally {
-      setSaving(false);
+    if (editingHabilidad) {
+      // Update existing habilidad
+      if (!nivelCompetencia) return;
+      setSaving(true);
+      try {
+        await onUpdate(editingHabilidad.id, nivelCompetencia, observaciones);
+        onCancelEdit();
+      } catch (error) {
+        console.error('Error al actualizar habilidad:', error);
+      } finally {
+        setSaving(false);
+      }
+    } else {
+      // Add new habilidad
+      if (!selectedHabilidad) return;
+      setSaving(true);
+      try {
+        await onSave(selectedHabilidad.id, nivelCompetencia, observaciones);
+        setSelectedHabilidad(null);
+        setNivelCompetencia('basico');
+        setObservaciones('');
+      } catch (error) {
+        console.error('Error al guardar habilidad:', error);
+      } finally {
+        setSaving(false);
+      }
     }
   };
 
   return (
     <Box sx={{ p: 2, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
-      <Typography variant="subtitle1" gutterBottom>
-        Agregar Nueva Habilidad
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <Typography variant="subtitle1">
+          {editingHabilidad ? `Editar Habilidad: ${editingHabilidad.habilidad_nombre}` : 'Agregar Nueva Habilidad'}
+        </Typography>
+        {editingHabilidad && (
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={onCancelEdit}
+            disabled={saving}
+          >
+            Cancelar
+          </Button>
+        )}
+      </Box>
 
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'flex-start', mb: 2 }}>
-        <Autocomplete
-          options={habilidadesDisponibles}
-          getOptionLabel={(option) => `${option.nombre} (${option.categoria})`}
-          value={selectedHabilidad}
-          onChange={(event, newValue) => setSelectedHabilidad(newValue)}
-          renderInput={(params) => (
-            <TextField
-              {...params}
-              label="Seleccionar Habilidad"
-              placeholder="Buscar habilidad..."
-              size="small"
-              sx={{ minWidth: 250 }}
-            />
-          )}
-          disabled={saving}
-        />
+        {!editingHabilidad && (
+          <Autocomplete
+            options={habilidadesDisponibles}
+            getOptionLabel={(option) => `${option.nombre} (${option.categoria})`}
+            value={selectedHabilidad}
+            onChange={(event, newValue) => setSelectedHabilidad(newValue)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Seleccionar Habilidad"
+                placeholder="Buscar habilidad..."
+                size="small"
+                sx={{ minWidth: 250 }}
+              />
+            )}
+            disabled={saving}
+          />
+        )}
+
+        {editingHabilidad && (
+          <TextField
+            label="Habilidad"
+            value={editingHabilidad.habilidad_nombre}
+            size="small"
+            sx={{ minWidth: 250 }}
+            disabled
+            helperText="No se puede cambiar la habilidad, solo el nivel y observaciones"
+          />
+        )}
 
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Nivel</InputLabel>
@@ -1659,10 +1897,10 @@ const CandidateHabilidadForm = ({ habilidades, candidateHabilidades, onSave }) =
         <Button
           variant="contained"
           onClick={handleSave}
-          disabled={!selectedHabilidad || saving}
+          disabled={(!selectedHabilidad && !editingHabilidad) || saving}
           size="small"
         >
-          {saving ? 'Guardando...' : 'Agregar'}
+          {saving ? 'Guardando...' : editingHabilidad ? 'Actualizar' : 'Agregar'}
         </Button>
       </Box>
 
