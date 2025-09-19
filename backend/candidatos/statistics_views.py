@@ -11,7 +11,6 @@ from centros.models import Center, TransferRequest
 from discapacidad.models import Disability
 from agencia.models import Job, Habilidad
 from cuestionarios.models import EstadoCuestionario, BaseCuestionarios
-from mycalendar.models import Appointment
 from datetime import datetime, timedelta
 import calendar
 
@@ -321,7 +320,7 @@ class StatisticsView(APIView):
 
 class CentersListAPIView(APIView):
     """API to get list of centers for admin filtering"""
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAdminUser]
 
     def get(self, request):
         if not request.user.is_staff:

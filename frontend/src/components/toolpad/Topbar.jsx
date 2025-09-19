@@ -1,4 +1,4 @@
-import { Box, IconButton, Popover, Typography, List, ListItem, Divider, useTheme, Menu, MenuItem, Avatar, Badge, Tooltip } from "@mui/material";
+import { Box, IconButton, Popover, Typography, List, ListItem, Divider, useTheme, Menu, MenuItem, Avatar, Badge, Tooltip, TextField, InputAdornment, Paper, ListItemIcon, ListItemText } from "@mui/material";
 import { useContext, useState, useEffect } from "react";
 import { ColorModeContext, tokens } from "../../theme";
 import { SidebarContext } from "./SidebarContext";
@@ -16,11 +16,13 @@ import AdminPanelSettingsOutlinedIcon from '@mui/icons-material/AdminPanelSettin
 // NEW: Import the CheckCircleOutlineIcon for the "mark as read" button
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import RadioButtonUncheckedIcon from '@mui/icons-material/RadioButtonUnchecked';
+import SearchIcon from '@mui/icons-material/Search';
 import { useDispatch, useSelector } from "react-redux";
 import { fetchNotifications, markAsRead } from "../../features/notifications/notificationsSlice";
 import { useNavigate, Link, useLocation } from "react-router-dom";
 import { useMsal } from "@azure/msal-react";
 import LogoutConfirmationDialog from "../LogoutConfirmationDialog";
+import { getSearchablePages, searchPages } from "./searchablePages.jsx";
 
 const Topbar = () => {
   const theme = useTheme();
@@ -43,6 +45,9 @@ const Topbar = () => {
   const [menuAnchor, setMenuAnchor] = useState(null);
   const [openNotifications, setOpenNotifications] = useState(false);
   const [settingsAnchor, setSettingsAnchor] = useState(null);
+  const [searchAnchor, setSearchAnchor] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [openSearch, setOpenSearch] = useState(false);
 
   const [dialogOpen, setDialogOpen] = useState(false);
 
@@ -149,6 +154,32 @@ const Topbar = () => {
     );
   };
 
+  // Get searchable pages based on user permissions
+  const searchablePages = getSearchablePages(hasGroup, isStaff);
+
+  // Search handlers
+  const handleSearchClick = (event) => {
+    setSearchAnchor(event.currentTarget);
+    setOpenSearch(!openSearch);
+  };
+
+  const handleSearchClose = () => {
+    setOpenSearch(false);
+    setSearchTerm("");
+  };
+
+  const handleSearchChange = (event) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const handleSearchItemClick = (path) => {
+    navigate(path);
+    handleSearchClose();
+  };
+
+  // Filter pages based on search term (searches title, description, and keywords)
+  const filteredPages = searchPages(searchablePages, searchTerm);
+
   return (
     <Box display="flex" justifyContent="space-between" p={2}>
       {/* Left Section */}
@@ -183,6 +214,12 @@ const Topbar = () => {
 
       {/* Right Section */}
       <Box display="flex">
+        <Tooltip title="Buscar páginas">
+          <IconButton onClick={handleSearchClick}>
+            <SearchIcon />
+          </IconButton>
+        </Tooltip>
+
         <Tooltip title={
           mode === "light"
             ? "Claro"
@@ -338,6 +375,97 @@ const Topbar = () => {
           </List>
         </Box>
       </Popover>
+      {/* Search Popover */}
+      <Popover
+        open={openSearch}
+        anchorEl={searchAnchor}
+        onClose={handleSearchClose}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        transformOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Paper sx={{ width: 350, maxHeight: 400 }}>
+          <Box sx={{ p: 2 }}>
+            <TextField
+              size="small"
+              placeholder="Buscar páginas..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              fullWidth
+              autoFocus
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon />
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Box>
+          <List sx={{ maxHeight: 300, overflowY: "auto" }}>
+            {filteredPages.map((page) => (
+              <ListItem
+                key={page.path}
+                onClick={() => handleSearchItemClick(page.path)}
+                sx={{
+                  "&:hover": {
+                    backgroundColor: theme.palette.action.hover,
+                  },
+                  cursor: "pointer",
+                }}
+              >
+                <ListItemIcon>
+                  {page.icon}
+                </ListItemIcon>
+                <ListItemText 
+                  primary={page.title}
+                  secondary={page.description}
+                  primaryTypographyProps={{
+                    fontWeight: 500,
+                    fontSize: "0.95rem"
+                  }}
+                  secondaryTypographyProps={{
+                    fontSize: "0.8rem",
+                    color: "text.secondary"
+                  }}
+                />
+              </ListItem>
+            ))}
+            {filteredPages.length === 0 && searchTerm.trim() && (
+              <ListItem>
+                <ListItemText 
+                  primary="No se encontraron páginas" 
+                  secondary="Intenta con otros términos de búsqueda"
+                  sx={{ textAlign: "center" }}
+                  primaryTypographyProps={{
+                    color: "text.secondary"
+                  }}
+                  secondaryTypographyProps={{
+                    color: "text.secondary",
+                    fontSize: "0.8rem"
+                  }}
+                />
+              </ListItem>
+            )}
+            {!searchTerm.trim() && (
+              <ListItem>
+                <ListItemText 
+                  primary="Escribe para buscar páginas..." 
+                  secondary="Busca por nombre, descripción o palabras clave"
+                  sx={{ textAlign: "center" }}
+                  primaryTypographyProps={{
+                    color: "text.secondary"
+                  }}
+                  secondaryTypographyProps={{
+                    color: "text.secondary",
+                    fontSize: "0.8rem"
+                  }}
+                />
+              </ListItem>
+            )}
+          </List>
+        </Paper>
+      </Popover>
+
       <LogoutConfirmationDialog
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
