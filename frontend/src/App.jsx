@@ -84,6 +84,12 @@ import Announcements from "./pages/scenes/Announcements";
 import CenterChat from "./pages/scenes/CenterChat";
 import CenterForum from "./pages/scenes/CenterForum";
 import ProfileFieldDemo from "./pages/ProfileFieldDemo";
+import HelpLayout from "./components/help/HelpLayout";
+import HelpHome from "./pages/help/HelpHome";
+import UserGuide from "./pages/help/UserGuide";
+import FAQ from "./pages/help/FAQ";
+import BugReport from "./pages/help/BugReport";
+import FeedbackPage from "./pages/help/Feedback";
 
 import { onSessionExpired } from "./components/session_expired/sessionExpiredEvent";
 import SessionExpiredDialog from "./components/session_expired/SessionExpiredDialog";
@@ -140,7 +146,7 @@ function RegisterAndLogout({ instance }) {
 }
 
 function App({ instance }) {
-  const [{ theme, mode, resolvedMode }, { cycleColorMode }] = useMode();
+  const [{ theme, mode, resolvedMode }, { cycleColorMode, refreshAccessibilitySettings }] = useMode();
   const dispatch = useDispatch();
 
   const [showSessionExpired, setShowSessionExpired] = useState(false);
@@ -171,7 +177,7 @@ function App({ instance }) {
       <MsalProvider instance={instance}>
         <WebSocketProvider instance={instance}>
           <ColorModeContext.Provider
-            value={{ cycleColorMode, mode, resolvedMode }}
+            value={{ cycleColorMode, mode, resolvedMode, refreshAccessibilitySettings }}
           >
             <ThemeProvider theme={theme}>
               <LocalizationProvider
@@ -198,6 +204,14 @@ function App({ instance }) {
                   <Route path="/activate/:uid/:token" element={<Activate />} />
                   <Route path="/info" element={<Info />} />
                   <Route path="/no-autorizado" element={<InActive />} />
+                  
+                  {/* Help & Support Routes */}
+                  <Route path="/help" element={<HelpLayout><HelpHome /></HelpLayout>} />
+                  <Route path="/help/user-guide" element={<HelpLayout><UserGuide /></HelpLayout>} />
+                  <Route path="/help/faq" element={<HelpLayout><FAQ /></HelpLayout>} />
+                  <Route path="/help/report-bug" element={<HelpLayout><BugReport /></HelpLayout>} />
+                  <Route path="/help/feedback" element={<HelpLayout><FeedbackPage /></HelpLayout>} />
+                  
                   <Route path="*" element={<NotFound />} />
 
                   <Route
