@@ -5,6 +5,7 @@ import { Link, useLocation } from "react-router-dom"; // Import useLocation
 import { tokens } from "../../theme";
 import { SidebarContext } from "./SidebarContext";
 import HomeOutlinedIcon from "@mui/icons-material/HomeOutlined";
+import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 import PeopleOutlinedIcon from "@mui/icons-material/PeopleOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import BlindIcon from "@mui/icons-material/Blind";
@@ -65,6 +66,7 @@ const Sidebar = forwardRef((props, ref) => {
       // Define a mapping of paths to sidebar titles
       const pathMap = {
         '/dashboard': 'Inicio',
+        '/estadisticas': 'Estadísticas',
         '/calendar': 'Calendario',
         '/candidatos': 'Consulta General',
         '/seguimiento-candidatos': 'Seguimiento',
@@ -184,6 +186,14 @@ const Sidebar = forwardRef((props, ref) => {
               icon={<HomeOutlinedIcon />}
               selected={selected}
             />
+            {hasGroup("admin") && (
+              <Item
+                title="Estadísticas"
+                to="/estadisticas"
+                icon={<BarChartOutlinedIcon />}
+                selected={selected}
+              />
+            )}
             <Item
               title="Calendario"
               to="/calendar"

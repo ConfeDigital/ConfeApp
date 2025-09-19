@@ -43,6 +43,10 @@ from .dashboard_views import (
     DashboardStatsView,
     CandidateListDashboardView,
 )
+from .statistics_views import (
+    StatisticsView,
+    CentersListAPIView,
+)
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
@@ -82,6 +86,10 @@ urlpatterns = [
 
     path('dashboard-stats/', DashboardStatsView.as_view(), name='dashboard'),
     path('dashboard-list/', CandidateListDashboardView.as_view(), name='dashboard-list'),
+    
+    # Statistics endpoints
+    path('statistics/', StatisticsView.as_view(), name='statistics'),
+    path('centers-list/', CentersListAPIView.as_view(), name='centers-list'),
 
     path('seguimiento/sis-aid/', SISAidCandidateHistoryCreateAPIView.as_view(), name='sis-aid-create'),
     path('seguimiento/sis-aid/<uuid:candidate_id>/', SISAidCandidateHistoryListAPIView.as_view(), name='sis-aid-list'),

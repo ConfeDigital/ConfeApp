@@ -366,40 +366,39 @@ export default function Settings() {
             </Typography>
           </Paper>
         </Grid>
-
-        {/* Theme Family Settings */}
-        {/* <Grid item xs={12} sm={6}>
-          <Paper elevation={2} sx={{ p: 3, mb: 3, maxWidth: "300px" }}>
-            <Typography
-              variant="h6"
-              sx={{ display: "flex", alignItems: "center", mb: 2 }}
-            >
-              <ColorLens sx={{ mr: 1 }} /> Familia de Tema
-            </Typography>
-            <Divider sx={{ mb: 2 }} />
-
-            <FormControlLabel
-              control={
-                <Switch
-                  checked={settings.themeFamily === "colorblind"}
-                  onChange={toggleThemeFamily}
-                />
-              }
-              label={
-                settings.themeFamily === "colorblind"
-                  ? "Tema Daltónico"
-                  : "Tema Estándar"
-              }
-            />
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-              El tema daltónico usa colores optimizados para personas con daltonismo
-            </Typography>
-          </Paper>
-        </Grid> */}
       </Grid>
 
+      {/* Actions */}
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "left",
+          flexWrap: "wrap",
+          gap: 2,
+        }}
+      >
+        <Button
+          variant="contained"
+          color="primary"
+          startIcon={<Save />}
+          onClick={saveSettings}
+          disabled={isLoading}
+        >
+          Guardar configuración
+        </Button>
+        <Button
+          variant="outlined"
+          color="info"
+          startIcon={<SettingsBackupRestore />}
+          onClick={() => setConfirmDialog(true)}
+          disabled={isLoading}
+        >
+          Restablecer valores predeterminados
+        </Button>
+      </Box>
+
       {/* Help & Support Section */}
-      <Grid container spacing={3} sx={{ mt: 2 }} display={ import.meta.env.MODE !== 'development' && 'none' }>
+      <Grid container spacing={3} sx={{ mt: 4 }} display={import.meta.env.MODE !== 'development' && 'none'}>
         <Grid item xs={12}>
           <Paper elevation={2} sx={{ p: 3 }}>
             <Typography
@@ -447,36 +446,6 @@ export default function Settings() {
           </Paper>
         </Grid>
       </Grid>
-
-      {/* Actions */}
-      <Box
-        sx={{
-          mt: 4,
-          display: "flex",
-          justifyContent: "left",
-          flexWrap: "wrap",
-          gap: 2,
-        }}
-      >
-        <Button
-          variant="contained"
-          color="primary"
-          startIcon={<Save />}
-          onClick={saveSettings}
-          disabled={isLoading}
-        >
-          Guardar configuración
-        </Button>
-        <Button
-          variant="outlined"
-          color="info"
-          startIcon={<SettingsBackupRestore />}
-          onClick={() => setConfirmDialog(true)}
-          disabled={isLoading}
-        >
-          Restablecer valores predeterminados
-        </Button>
-      </Box>
 
       {/* Snackbar for notifications */}
       <Snackbar

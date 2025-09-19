@@ -18,11 +18,14 @@ import {
   CircularProgress,
   useTheme, 
   styled,
+  TextField,
+  InputAdornment,
 } from '@mui/material';
 import AddLocationIcon from '@mui/icons-material/AddLocation';
 import EditIcon from '@mui/icons-material/Edit';
 import ToggleOnIcon from '@mui/icons-material/ToggleOn';
 import ToggleOffIcon from '@mui/icons-material/ToggleOff';
+import SearchIcon from '@mui/icons-material/Search';
 import {
   GoogleMap,
   useJsApiLoader,
@@ -54,6 +57,7 @@ export default function CentersSettings() {
   const [openDialog, setOpenDialog] = useState(false);
   const [editingCenter, setEditingCenter] = useState(null);
   const [selectedCenter, setSelectedCenter] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const { isLoaded, loadError } = useJsApiLoader({
     googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
@@ -115,6 +119,26 @@ export default function CentersSettings() {
     setSelectedCenter(center);
   }, []);
 
+  // Filter centers based on search term
+  const filteredCenters = centers.filter(center => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    const centerName = center.name.toLowerCase();
+    const centerType = CENTER_TYPES.find(t => t.value === center.center_type)?.label?.toLowerCase() || '';
+    const location = center.location_details 
+      ? `${center.location_details.address_road} ${center.location_details.address_number} ${center.location_details.address_municip} ${center.location_details.address_city}`.toLowerCase()
+      : '';
+    
+    return centerName.includes(searchLower) || 
+           centerType.includes(searchLower) || 
+           location.includes(searchLower);
+  });
+
+  // Handle center selection from table
+  const handleCenterSelect = (center) => {
+    setSelectedCenter(center);
+  };
+
   if (loadError) return <Typography>Error loading maps</Typography>;
 
   return (
@@ -124,6 +148,23 @@ export default function CentersSettings() {
         <Button size="small" variant="contained" startIcon={<AddLocationIcon />} onClick={() => handleOpen(null)}>
           {!isSmall && 'Agregar Centro'}
         </Button>
+      </Box>
+
+      <Box mb={2}>
+        <TextField
+          size="small"
+          placeholder="Buscar centros por nombre, tipo o ubicación..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          fullWidth
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
       </Box>
 
       {isLoaded && (
@@ -139,7 +180,7 @@ export default function CentersSettings() {
               : defaultCenter
           }
         >
-          {centers.map(center => {
+          {filteredCenters.map(center => {
             const lat = parseFloat(center.location_details?.address_lat);
             const lng = parseFloat(center.location_details?.address_lng);
             if (!isNaN(lat) && !isNaN(lng)) {
@@ -148,6 +189,16 @@ export default function CentersSettings() {
                   key={center.id}
                   position={{ lat, lng }}
                   onClick={() => onMapClickMarker(center)}
+                  icon={selectedCenter?.id === center.id ? {
+                    url: 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`
+                      <svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="20" cy="20" r="18" fill="#1976d2" stroke="#ffffff" stroke-width="3"/>
+                        <circle cx="20" cy="20" r="8" fill="#ffffff"/>
+                      </svg>
+                    `),
+                    scaledSize: new window.google.maps.Size(40, 40),
+                    anchor: new window.google.maps.Point(20, 20)
+                  } : undefined}
                 />
               );
             }
@@ -193,8 +244,32 @@ export default function CentersSettings() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {centers.map(c => (
-                <TableRow key={c.id} sx={{ opacity: c.is_active ? 1 : 0.5 }} component={c.id == currentUser.center?.id ? SuccessTableRow : TableRow}>
+              {filteredCenters.map(c => {
+                const isCurrentUserCenter = c.id == currentUser.center?.id;
+                const isSelected = selectedCenter?.id === c.id;
+                
+                return (
+                  <TableRow 
+                    key={c.id} 
+                    sx={{ 
+                      opacity: c.is_active ? 1 : 0.5,
+                      backgroundColor: isCurrentUserCenter 
+                        ? theme.palette.success.light 
+                        : isSelected 
+                          ? theme.palette.action.selected 
+                          : 'inherit',
+                      cursor: 'pointer',
+                      '& > *': isCurrentUserCenter ? {
+                        color: theme.palette.mode === 'dark' ? '#000000' : '#FFFFFF',
+                      } : {},
+                      '&:hover': {
+                        backgroundColor: isCurrentUserCenter 
+                          ? theme.palette.success.light 
+                          : theme.palette.action.hover,
+                      }
+                    }} 
+                    onClick={() => handleCenterSelect(c)}
+                  >
                   <TableCell>{c.name}</TableCell>
                   <TableCell>{CENTER_TYPES.find(t => t.value === c.center_type)?.label}</TableCell>
                   <TableCell>
@@ -205,7 +280,14 @@ export default function CentersSettings() {
                   <TableCell>{c.is_active ? 'Sí' : 'No'}</TableCell>
                   <TableCell>
                     <Tooltip title="Editar">
-                      <IconButton color="primary" size="small" onClick={() => handleOpen(c)}>
+                      <IconButton 
+                        color="primary" 
+                        size="small" 
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent row selection when clicking edit
+                          handleOpen(c);
+                        }}
+                      >
                         <EditIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -221,7 +303,8 @@ export default function CentersSettings() {
                     )} */}
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </TableContainer>

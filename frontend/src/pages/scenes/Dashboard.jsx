@@ -23,6 +23,7 @@ import { useMediaQuery } from "@mui/material";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import FilterListIcon from "@mui/icons-material/FilterList";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
+import BarChartOutlinedIcon from "@mui/icons-material/BarChartOutlined";
 import api from "../../api";
 import dayjs from "dayjs";
 import * as Yup from "yup";
@@ -31,6 +32,7 @@ import useDocumentTitle from "../../hooks/useDocumentTitle";
 import UserListDialog from "../../components/dashboard/UserListDialog";
 import TransferListDialog from "../../components/dashboard/TransferListDialog"; // Import the new component
 import DashboardSkeleton from "../../components/dashboard/DashboardSkeleton";
+import { useNavigate } from "react-router-dom";
 
 const dateFilterSchema = Yup.object({
     start_date: Yup.date()
@@ -43,6 +45,7 @@ const dateFilterSchema = Yup.object({
 export default function Dashboard() {
     useDocumentTitle("Inicio");
     const isSmallScreen = useMediaQuery("(max-width:600px)");
+    const navigate = useNavigate();
 
     const [dateRange, setDateRange] = useState([
         dayjs().subtract(1, "month"),
@@ -320,7 +323,7 @@ export default function Dashboard() {
             </Snackbar>
             
             {/* Filter toolbar */}
-            <Box display="flex" gap={2} mb={3} alignItems="center">
+            <Box display="flex" gap={2} mb={3} alignItems="center" flexWrap="wrap">
                 <Button
                     variant="contained"
                     startIcon={<GroupsOutlinedIcon />}
@@ -328,6 +331,14 @@ export default function Dashboard() {
                     color={activeFilter === null ? "primary" : "inherit"}
                 >
                     {(!isSmallScreen || (activeFilter === null)) && "Ver Todos"}
+                </Button>
+                <Button
+                    variant="outlined"
+                    startIcon={<BarChartOutlinedIcon />}
+                    onClick={() => navigate('/estadisticas')}
+                    color="secondary"
+                >
+                    {!isSmallScreen && "Ver Estadísticas"}
                 </Button>
                 <Button
                     variant={getButtonVariant("date")}

@@ -35,6 +35,7 @@ import Home from "./pages/Home";
 import NotFound from "./pages/NotFound";
 import InActive from "./pages/InActive";
 import Dashboard from "./pages/scenes/Dashboard";
+import Statistics from "./pages/scenes/Statistics";
 import CandidateConsult from "./pages/scenes/CandidateConsult";
 import Calendar from "./pages/scenes/Calendar";
 import CalendarMicrosoft from "./pages/scenes/CalendarMicrosoft";
@@ -313,6 +314,7 @@ function App({ instance }) {
                       path="/carga-masiva-respuestas"
                       element={<CargaMasivaRespuestas />}
                     />
+                    <Route path="/estadisticas" element={<Statistics />} />
                   </Route>
 
                   <Route

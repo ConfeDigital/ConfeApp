@@ -1,4 +1,4 @@
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, HttpResponseForbidden
 from candidatos.models import UserProfile
 from .report_ficha_tecnica import FichaTecnicaReport
 from .report_proyecto_vida import ProyectoVidaReport

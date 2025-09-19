@@ -179,6 +179,35 @@ export const useConnectionStatus = () => {
     }
   }, [isAuthenticated, checkBackendConnectivity]);
 
+  // Force a backend connectivity check (bypasses interval restrictions)
+  const forceBackendCheck = useCallback(async () => {
+    console.log('Force checking backend connectivity...');
+    setIsChecking(true);
+    lastCheckRef.current = 0; // Reset last check time to bypass interval
+    
+    const wasBackendReachable = isBackendReachable;
+    const isReachable = await pingBackend();
+    setIsBackendReachable(isReachable);
+    
+    if (isReachable) {
+      consecutiveFailuresRef.current = 0;
+      
+      // If backend was previously unreachable and is now reachable,
+      // and WebSocket is not connected, trigger smart reconnection
+      if (!wasBackendReachable && !isWsConnected && !isWsConnecting && !isProviderInitializing && smartReconnect) {
+        console.log("Backend became available after force check, triggering WebSocket reconnection...");
+        setTimeout(() => {
+          smartReconnect();
+        }, 1000); // Small delay to ensure backend is stable
+      }
+    } else {
+      consecutiveFailuresRef.current += 1;
+    }
+    
+    setIsChecking(false);
+    return isReachable;
+  }, [pingBackend, isBackendReachable, isWsConnected, isWsConnecting, isProviderInitializing, smartReconnect]);
+
   return {
     isNetworkOnline,
     isBackendReachable,
@@ -189,6 +218,8 @@ export const useConnectionStatus = () => {
     // App is usable if network is online AND backend is reachable via HTTP
     isConnected: isNetworkOnline && isBackendReachable,
     // Separate flag for real-time features
-    hasRealTimeConnection: isWsConnected
+    hasRealTimeConnection: isWsConnected,
+    // Function to force a backend connectivity check
+    forceBackendCheck
   };
 };
