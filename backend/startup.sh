@@ -3,11 +3,6 @@
 # Set Django settings module
 export DJANGO_SETTINGS_MODULE='backend.deployment'
 
-# Install dependencies if requirements.txt exists
-if [ -f "requirements.txt" ]; then
-    pip install -r requirements.txt
-fi
-
 # Run database migrations
 python manage.py migrate --noinput
 
