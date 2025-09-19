@@ -16,9 +16,13 @@ import {
   Grid,
   Chip,
   useTheme,
+  Alert,
+  Tooltip,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import LockIcon from "@mui/icons-material/Lock";
 import { useSelector, useDispatch } from "react-redux";
+import * as Yup from "yup";
 import axios from "../../api";
 import useDocumentTitle from "../../hooks/useDocumentTitle";
 import { tokens } from "../../theme";
@@ -67,10 +71,17 @@ export default function Profile() {
 
   // dialog & form state
   const [open, setOpen] = useState(false);
+  const [openPasswordDialog, setOpenPasswordDialog] = useState(false);
+  const [alert, setAlert] = useState(null);
   const [formData, setFormData] = useState({
     first_name: "",
     last_name: "",
     email: "",
+  });
+  const [passwordData, setPasswordData] = useState({
+    current_password: "",
+    new_password: "",
+    confirm_password: "",
   });
 
   // prefill form when user loads or opens dialog
@@ -88,18 +99,28 @@ export default function Profile() {
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
+  const handleOpenPasswordDialog = () => setOpenPasswordDialog(true);
+  const handleClosePasswordDialog = () => {
+    setOpenPasswordDialog(false);
+    setPasswordData({
+      current_password: "",
+      new_password: "",
+      confirm_password: "",
+    });
+    setAlert(null);
+  };
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((fd) => ({ ...fd, [name]: value }));
   };
 
+  const handlePasswordChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData((pd) => ({ ...pd, [name]: value }));
+  };
+
   const handleSave = async () => {
-    // validate matching passwords
-    if (formData.password && formData.password !== formData.confirm_password) {
-      alert("Las contraseñas no coinciden");
-      return;
-    }
-    // build payload
     const payload = {
       first_name: formData.first_name,
       last_name: formData.last_name,
@@ -113,6 +134,47 @@ export default function Profile() {
     } catch (e) {
       console.error(e);
       alert("Error guardando perfil");
+    }
+  };
+
+  // Password validation schema
+  const passwordSchema = Yup.object().shape({
+    current_password: Yup.string().required("La contraseña actual es requerida"),
+    new_password: Yup.string()
+      .min(6, "La nueva contraseña debe tener al menos 6 caracteres")
+      .required("La nueva contraseña es requerida"),
+    confirm_password: Yup.string()
+      .oneOf([Yup.ref("new_password")], "Las contraseñas deben coincidir")
+      .required("Confirma la nueva contraseña"),
+  });
+
+  const handlePasswordSave = async () => {
+    try {
+      await passwordSchema.validate(passwordData, { abortEarly: false });
+
+      const payload = {
+        current_password: passwordData.current_password,
+        new_password: passwordData.new_password,
+        re_new_password: passwordData.confirm_password,
+      };
+
+      await axios.post("/api/auth/users/set_password/", payload);
+      setAlert({ severity: "success", message: "Contraseña actualizada correctamente" });
+      handleClosePasswordDialog();
+    } catch (err) {
+      if (err.name === "ValidationError") {
+        const msg = err.inner.map((e) => e.message).join(". ");
+        setAlert({ severity: "error", message: msg });
+      } else if (err.response?.data) {
+        const data = err.response.data;
+        if (data.current_password) {
+          setAlert({ severity: "error", message: "La contraseña actual es incorrecta" });
+        } else {
+          setAlert({ severity: "error", message: "Error al cambiar la contraseña" });
+        }
+      } else {
+        setAlert({ severity: "error", message: "Error al cambiar la contraseña" });
+      }
     }
   };
 
@@ -164,9 +226,18 @@ export default function Profile() {
           </Typography>
         </Box>
         {authType === "djoser" && (
-          <IconButton color="primary" onClick={handleOpen}>
-            <EditIcon />
-          </IconButton>
+          <Box>
+            <Tooltip title="Editar Perfil">
+              <IconButton color="primary" onClick={handleOpen} sx={{ mr: 1 }}>
+                <EditIcon />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Cambiar Contraseña">
+              <IconButton color="secondary" onClick={handleOpenPasswordDialog}>
+                <LockIcon />
+              </IconButton>
+            </Tooltip>
+          </Box>
         )}
       </Box>
 
@@ -251,6 +322,60 @@ export default function Profile() {
           </Button>
           <Button onClick={handleSave} variant="contained">
             Guardar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Change Password Dialog */}
+      <Dialog open={openPasswordDialog} onClose={handleClosePasswordDialog} fullWidth maxWidth="sm">
+        <DialogTitle>Cambiar Contraseña</DialogTitle>
+        <DialogContent dividers>
+          <Box display="flex" flexDirection="column" gap={2} mt={1}>
+            {alert && (
+              <Alert
+                severity={alert.severity}
+                onClose={() => setAlert(null)}
+                sx={{ mb: 2 }}
+              >
+                {alert.message}
+              </Alert>
+            )}
+            <TextField
+              label="Contraseña Actual"
+              name="current_password"
+              type="password"
+              size="small"
+              value={passwordData.current_password}
+              onChange={handlePasswordChange}
+              fullWidth
+              autoComplete="current-password"
+            />
+            <TextField
+              label="Nueva Contraseña"
+              name="new_password"
+              type="password"
+              size="small"
+              value={passwordData.new_password}
+              onChange={handlePasswordChange}
+              fullWidth
+              autoComplete="new-password"
+            />
+            <TextField
+              label="Confirmar Nueva Contraseña"
+              name="confirm_password"
+              type="password"
+              size="small"
+              value={passwordData.confirm_password}
+              onChange={handlePasswordChange}
+              fullWidth
+              autoComplete="new-password"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button color="secondary" onClick={handleClosePasswordDialog}>Cancelar</Button>
+          <Button onClick={handlePasswordSave} variant="contained">
+            Cambiar Contraseña
           </Button>
         </DialogActions>
       </Dialog>

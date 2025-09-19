@@ -28,7 +28,8 @@ const ConnectionStatusDialog = () => {
     isProviderInitializing,
     isChecking,
     isConnected,
-    hasRealTimeConnection
+    hasRealTimeConnection,
+    forceBackendCheck
   } = useConnectionStatus();
 
   const { forceReconnect, smartReconnect } = useWebSocketStatus();
@@ -54,37 +55,69 @@ const ConnectionStatusDialog = () => {
   (showSuccessMessage || showFailureMessage || isRetrying || !hasRealTimeConnection);
 
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
     setIsRetrying(true);
     setIsSnackbarOpen(true);
     setShowFailureMessage(false); // Reset failure message
 
-    if (smartReconnect) {
-      console.log('Attempting smart WebSocket reconnection...');
-      smartReconnect();
-
-      // Check if reconnection succeeded after a delay
-      setTimeout(() => {
-        if (!hasRealTimeConnection) {
-          // Reconnection failed, show failure message briefly
-          setShowFailureMessage(true);
-          setIsRetrying(false);
-
-          // Hide snackbar after showing failure message
-          setTimeout(() => {
-            setIsSnackbarOpen(false);
-            setShowFailureMessage(false);
-          }, 3000); // Show failure message for 3 seconds
+    try {
+      console.log('Force checking backend connectivity first...');
+      
+      // First, force a backend health check
+      const isBackendHealthy = await forceBackendCheck();
+      
+      if (isBackendHealthy) {
+        console.log('Backend is healthy, attempting WebSocket reconnection...');
+        
+        // Backend is reachable, now try WebSocket reconnection
+        if (smartReconnect) {
+          console.log('Attempting smart WebSocket reconnection...');
+          smartReconnect();
+        } else if (forceReconnect) {
+          console.log('Smart reconnect not available, using force reconnect...');
+          forceReconnect();
         } else {
-          setIsRetrying(false);
+          console.log('No reconnect functions available, reloading page...');
+          window.location.reload();
         }
-      }, 10000); // Wait 10 seconds for connection attempt
-    } else if (forceReconnect) {
-      console.log('Smart reconnect not available, using force reconnect...');
-      forceReconnect();
-    } else {
-      console.log('No reconnect functions available, reloading page...');
-      window.location.reload();
+
+        // Check if reconnection succeeded after a delay
+        setTimeout(() => {
+          if (!hasRealTimeConnection) {
+            // Reconnection failed, show failure message briefly
+            setShowFailureMessage(true);
+            setIsRetrying(false);
+
+            // Hide snackbar after showing failure message
+            setTimeout(() => {
+              setIsSnackbarOpen(false);
+              setShowFailureMessage(false);
+            }, 3000); // Show failure message for 3 seconds
+          } else {
+            setIsRetrying(false);
+          }
+        }, 10000); // Wait 10 seconds for connection attempt
+      } else {
+        console.log('Backend is not reachable, skipping WebSocket reconnection');
+        setShowFailureMessage(true);
+        setIsRetrying(false);
+
+        // Hide snackbar after showing failure message
+        setTimeout(() => {
+          setIsSnackbarOpen(false);
+          setShowFailureMessage(false);
+        }, 3000); // Show failure message for 3 seconds
+      }
+    } catch (error) {
+      console.error('Error during retry process:', error);
+      setShowFailureMessage(true);
+      setIsRetrying(false);
+
+      // Hide snackbar after showing failure message
+      setTimeout(() => {
+        setIsSnackbarOpen(false);
+        setShowFailureMessage(false);
+      }, 3000);
     }
   };
 

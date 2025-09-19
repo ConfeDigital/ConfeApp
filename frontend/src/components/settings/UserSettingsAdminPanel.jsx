@@ -29,11 +29,13 @@ import {
     CircularProgress,
     useTheme, 
     styled,
+    InputAdornment,
 } from '@mui/material';
 import PersonAddAltIcon from '@mui/icons-material/PersonAddAlt';
 import EditIcon from '@mui/icons-material/Edit';
 import ToggleOnIcon from '@mui/icons-material/ToggleOn';
 import ToggleOffIcon from '@mui/icons-material/ToggleOff';
+import SearchIcon from '@mui/icons-material/Search';
 import * as Yup from 'yup';
 import api from '../../api';
 import { translateGroupName } from './groupsUtils';
@@ -68,6 +70,7 @@ export default function UserSettingsAdminPanel() {
     const [centers, setCenters] = useState([]);
     const [selectedCenterData, setSelectedCenterData] = useState(null);
     const [selectedCenter, setSelectedCenter] = useState(currentUser.center?.id || null);
+    const [searchTerm, setSearchTerm] = useState("");
 
     // Fetch centers
     useEffect(() => {
@@ -272,6 +275,15 @@ export default function UserSettingsAdminPanel() {
         setSelectedCenter(event.target.value);
     };
 
+    // Filter users based on search term
+    const filteredUsers = users.filter(user => {
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+        const email = user.email.toLowerCase();
+        return fullName.includes(searchLower) || email.includes(searchLower);
+    });
+
     return (
         <>
             <Box display="flex" justifyContent="space-between" mb={2} flexDirection={isSmall ? 'column' : 'row'} alignItems={isSmall ? 'flex-start': 'center'}>
@@ -326,6 +338,23 @@ export default function UserSettingsAdminPanel() {
                 </Box>
             </Box>
 
+            <Box mb={2}>
+                <TextField
+                    size="small"
+                    placeholder="Buscar usuarios por nombre o email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    fullWidth
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <SearchIcon />
+                            </InputAdornment>
+                        ),
+                    }}
+                />
+            </Box>
+
             {loadingUsers ? (
                 <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
                     <CircularProgress />
@@ -347,7 +376,7 @@ export default function UserSettingsAdminPanel() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {users.map(u => (
+                            {filteredUsers.map(u => (
                                 <TableRow key={u.id} sx={{ opacity: u.is_active ? 1 : 0.5 }} component={u.id == currentUser.id ? SuccessTableRow : TableRow}>
                                     <TableCell>{`${u.first_name} ${u.last_name}`}</TableCell>
                                     <TableCell>{u.email}</TableCell>

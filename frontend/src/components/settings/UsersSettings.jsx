@@ -2,13 +2,14 @@
 import React, { useState, useEffect } from "react";
 import { Alert, Box, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
   useMediaQuery, FormControl, InputLabel, Select, MenuItem, Checkbox, ListItemText, FormControlLabel, Dialog, DialogTitle, DialogContent, DialogActions,
-  TextField, IconButton, Tooltip, Typography, useTheme, styled, Divider, CircularProgress,
+  TextField, IconButton, Tooltip, Typography, useTheme, styled, Divider, CircularProgress, InputAdornment,
 } from "@mui/material";
 import PersonAddAltIcon from "@mui/icons-material/PersonAddAlt";
 import EditIcon from "@mui/icons-material/Edit";
 import ToggleOnIcon from "@mui/icons-material/ToggleOn";
 import ToggleOffIcon from "@mui/icons-material/ToggleOff";
 import SwapHorizIcon from "@mui/icons-material/SwapHoriz";
+import SearchIcon from "@mui/icons-material/Search";
 import * as Yup from "yup";
 import api from "../../api";
 import { translateGroupName } from "./groupsUtils";
@@ -42,7 +43,8 @@ export default function UsersSettings() {
         useState("");
     const [centers, setCenters] = useState([]);
     const [selectedDestinationCenterData, setSelectedDestinationCenterData] = useState(null);
-    const [localSentRequests, setLocalSentRequests] = useState([]); 
+    const [localSentRequests, setLocalSentRequests] = useState([]);
+    const [searchTerm, setSearchTerm] = useState(""); 
 
     const [formData, setFormData] = useState({
         first_name: "",
@@ -229,6 +231,15 @@ export default function UsersSettings() {
         );
     };
 
+    // Filter users based on search term
+    const filteredUsers = users.filter(user => {
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        const fullName = `${user.first_name} ${user.last_name}`.toLowerCase();
+        const email = user.email.toLowerCase();
+        return fullName.includes(searchLower) || email.includes(searchLower);
+    });
+
     const handleOpenTransferDialog = (user) => {
         setSelectedUserForTransfer(user);
         setTransferDestinationCenter("");
@@ -295,6 +306,23 @@ export default function UsersSettings() {
                 </Button>
             </Box>
 
+            <Box mb={2}>
+                <TextField
+                    size="small"
+                    placeholder="Buscar usuarios por nombre o email..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    fullWidth
+                    InputProps={{
+                        startAdornment: (
+                            <InputAdornment position="start">
+                                <SearchIcon />
+                            </InputAdornment>
+                        ),
+                    }}
+                />
+            </Box>
+
             {loadingUsers ? (
                 <Box display="flex" justifyContent="center" alignItems="center" minHeight={200}>
                     <CircularProgress />
@@ -313,7 +341,7 @@ export default function UsersSettings() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {users.map((u) => (
+                            {filteredUsers.map((u) => (
                                 <TableRow
                                     key={u.id}
                                     sx={{ opacity: u.is_active ? 1 : 0.5 }}

@@ -25,6 +25,7 @@ function DashboardSkeleton() {
             <Skeleton variant="circular" width={25} height={25} sx={{ ml: 1 }}/>
             <Skeleton variant="circular" width={25} height={25} sx={{ ml: 1 }}/>
             <Skeleton variant="circular" width={25} height={25} sx={{ ml: 1 }}/>
+            <Skeleton variant="circular" width={25} height={25} sx={{ ml: 1 }}/>
           </Box>
         </Box>
         {/* Filter / Status Bar */}

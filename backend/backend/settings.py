@@ -215,6 +215,10 @@ SERVER_EMAIL = email_user
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        'OPTIONS': {
+                'user_attributes': ('username', 'email'), # Exclude 'first_name and last_name'
+                # 'max_similarity': 0.8, # Adjust if necessary, but use with caution
+            }
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',

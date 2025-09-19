@@ -19,11 +19,13 @@ import {
   useMediaQuery,
   Tooltip,
   Typography,
+  InputAdornment,
 } from '@mui/material';
 import { DatePicker } from '@mui/x-date-pickers';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import SearchIcon from '@mui/icons-material/Search';
 import * as Yup from 'yup';
 import dayjs from 'dayjs';
 import api from '../../api';
@@ -55,6 +57,7 @@ export default function CyclesSettings( ) {
   const [editingCycle, setEditingCycle] = useState(null);
   const [formData, setFormData] = useState({ name: '', start_date: null, end_date: null });
   const currentUser = useSelector((state) => state.auth.user);
+  const [searchTerm, setSearchTerm] = useState("");
 
   // For delete confirmation
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
@@ -145,6 +148,14 @@ export default function CyclesSettings( ) {
     setEntryToDelete(null);
   };
 
+  // Filter cycles based on search term
+  const filteredCycles = cycles.filter(cycle => {
+    if (!searchTerm) return true;
+    const searchLower = searchTerm.toLowerCase();
+    const cycleName = cycle.name.toLowerCase();
+    return cycleName.includes(searchLower);
+  });
+
   if(!currentUser.center) return <Typography>Sin Centro</Typography>
 
   return (
@@ -163,6 +174,23 @@ export default function CyclesSettings( ) {
         </Button>
       </Box>
 
+      <Box mb={2}>
+        <TextField
+          size="small"
+          placeholder="Buscar ciclos por nombre..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          fullWidth
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+      </Box>
+
       <TableContainer component={Paper} variant="outlined">
         <Table size="small">
           <TableHead>
@@ -174,7 +202,7 @@ export default function CyclesSettings( ) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {cycles.map(cycle => (
+            {filteredCycles.map(cycle => (
               <TableRow key={cycle.id}>
                 <TableCell>{cycle.name}</TableCell>
                 <TableCell>{cycle.start_date}</TableCell>
