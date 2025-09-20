@@ -66,6 +66,7 @@ class StatisticsView(APIView):
             'overview': self._get_overview_stats(base_queryset),
             'stages': self._get_stage_stats(base_queryset),
             'demographics': self._get_demographics_stats(base_queryset),
+            'domicile': self._get_domicile_stats(base_queryset),
             'disabilities': self._get_disability_stats(base_queryset),
             'employment': self._get_employment_stats(base_queryset),
             'training': self._get_training_stats(base_queryset),
@@ -157,6 +158,11 @@ class StatisticsView(APIView):
             count=Count('user_id')
         ).exclude(disability__isnull=True).order_by('-count')[:10]
 
+        # Disability group statistics
+        disability_group_stats = queryset.values('disability__group__name').annotate(
+            count=Count('user_id')
+        ).exclude(disability__group__isnull=True).order_by('-count')
+
         # Disability certificate statistics
         cert_stats = queryset.aggregate(
             with_certificate=Count('user_id', filter=Q(has_disability_certificate=True)),
@@ -165,7 +171,29 @@ class StatisticsView(APIView):
 
         return {
             'common_disabilities': {item['disability__name']: item['count'] for item in disability_stats},
+            'disability_groups': {item['disability__group__name']: item['count'] for item in disability_group_stats},
             'certificate_status': cert_stats
+        }
+
+    def _get_domicile_stats(self, queryset):
+        """Get domicile/location statistics"""
+        # State distribution
+        state_stats = queryset.values('domicile__address_state').annotate(
+            count=Count('user_id')
+        ).exclude(domicile__address_state__isnull=True).exclude(
+            domicile__address_state=''
+        ).order_by('-count')[:10]
+
+        # City distribution
+        city_stats = queryset.values('domicile__address_city').annotate(
+            count=Count('user_id')
+        ).exclude(domicile__address_city__isnull=True).exclude(
+            domicile__address_city=''
+        ).order_by('-count')[:10]
+
+        return {
+            'states': {item['domicile__address_state']: item['count'] for item in state_stats},
+            'cities': {item['domicile__address_city']: item['count'] for item in city_stats}
         }
 
     def _get_employment_stats(self, queryset):

@@ -33,14 +33,8 @@ CSRF_TRUSTED_ORIGINS = ['https://'+os.environ['WEBSITE_HOSTNAME'], 'https://api.
 DEBUG = False
 SECRET_KEY = os.environ['MY_SECRET_KEY']
 
-try:
-    hostname_check = os.environ['WEBSITE_HOSTNAME']
-    logger.warning(f"DEBUGGING: WEBSITE_HOSTNAME is: {hostname_check}")
-except KeyError:
-    logger.error("DEBUGGING: WEBSITE_HOSTNAME environment variable not found!")
-
-# Log the allowed hosts for debugging
-logger.info(f"DEBUGGING: ALLOWED_HOSTS configured: {ALLOWED_HOSTS}")
+# Minimal startup logging for performance
+logger.info("Azure App Service configuration loaded")
 
 # --- Middlewares (ADD DynamicHostMiddleware FIRST) ---
 MIDDLEWARE = [
@@ -131,16 +125,9 @@ SQL_SERVER_DATABASE = CONNECTION_PARAMS.get('Initial Catalog', '').strip()
 SQL_SERVER_USER = CONNECTION_PARAMS.get('User ID', '').strip()
 SQL_SERVER_PASSWORD = CONNECTION_PARAMS.get('Password', '').strip()
 
-# --- ADD THESE DEBUGGING LOGS HERE (IMPORTANT: DO NOT LOG FULL PASSWORD) ---
-logger.info(f"DEBUG DB Config (Raw Connection String Part): {CONNECTION_STRING_RAW.split('Password=')[0]}Password=*****")
-logger.info(f"DEBUG DB Config - Host: {SQL_SERVER_HOST}")
-logger.info(f"DEBUG DB Config - Port: {SQL_SERVER_PORT}")
-logger.info(f"DEBUG DB Config - Database: {SQL_SERVER_DATABASE}")
-logger.info(f"DEBUG DB Config - User: {SQL_SERVER_USER}")
-logger.info(f"DEBUG DB Config - Password (first 3 chars): {SQL_SERVER_PASSWORD[:3]}*****")
-logger.info(f"DEBUG DB Config - TrustServerCertificate: {CONNECTION_PARAMS.get('TrustServerCertificate', 'False').lower()}")
-logger.info(f"DEBUG DB Config - Encrypt: {CONNECTION_PARAMS.get('Encrypt', 'True').lower()}")
-# --- END DEBUGGING LOGS ---
+# --- MINIMAL STARTUP LOGGING (Reduced for performance) ---
+logger.info(f"DB Config - Host: {SQL_SERVER_HOST}, Database: {SQL_SERVER_DATABASE}")
+# --- END STARTUP LOGGING ---
 
 # Configuración DATABASES
 DATABASES = {
@@ -155,7 +142,10 @@ DATABASES = {
             "driver": "ODBC Driver 17 for SQL Server", # Confirma este driver en App Service
             "TrustServerCertificate": CONNECTION_PARAMS.get('TrustServerCertificate', 'False').lower(), # Should be 'false' for Azure
             "Encrypt": CONNECTION_PARAMS.get('Encrypt', 'True').lower(), # Should be 'true' for Azure
-            "Connection Timeout": CONNECTION_PARAMS.get('Connection Timeout', '30'), # Use parsed value
+            "Connection Timeout": CONNECTION_PARAMS.get('Connection Timeout', '15'), # Reduced from 30 to 15 seconds
+            "Command Timeout": "30", # Add command timeout
+            "Pooling": "True", # Enable connection pooling
+            "Max Pool Size": "10", # Limit pool size
         },
         "AUTOCOMMIT": True,
         "ATOMIC_REQUESTS": True,
@@ -186,8 +176,8 @@ if AZURE_REDIS_CONNECTIONSTRING:
     protocol = "rediss" if ssl_enabled else "redis"
     REDIS_URL = f"{protocol}://:{redis_password}@{redis_host}:{redis_port}/1"
     
-    # Log the constructed URL for debugging (without the full password)
-    logger.info(f"DEBUGGING: Redis URL constructed: {protocol}://:***@{redis_host}:{redis_port}/1")
+    # Minimal Redis logging for performance
+    logger.info(f"Redis configured: {redis_host}:{redis_port}")
     
     CACHES = {
         'default': {
@@ -195,6 +185,12 @@ if AZURE_REDIS_CONNECTIONSTRING:
             'LOCATION': REDIS_URL,
             'OPTIONS': {
                 'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+                'CONNECTION_POOL_KWARGS': {
+                    'max_connections': 10,
+                    'retry_on_timeout': True,
+                    'socket_connect_timeout': 5,
+                    'socket_timeout': 5,
+                }
             },
             'KEY_PREFIX': 'my_app'
         }
@@ -205,6 +201,10 @@ if AZURE_REDIS_CONNECTIONSTRING:
             'BACKEND': 'channels_redis.core.RedisChannelLayer',
             'CONFIG': {
                 'hosts': [REDIS_URL],
+                'capacity': 1000,
+                'expiry': 600,
+                'group_expiry': 86400,
+                'symmetric_encryption_keys': [SECRET_KEY[:32]],
             },
         },
     }

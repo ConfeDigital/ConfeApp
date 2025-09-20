@@ -33,6 +33,7 @@ import UserListDialog from "../../components/dashboard/UserListDialog";
 import TransferListDialog from "../../components/dashboard/TransferListDialog"; // Import the new component
 import DashboardSkeleton from "../../components/dashboard/DashboardSkeleton";
 import { useNavigate } from "react-router-dom";
+import { useSelector } from "react-redux";
 
 const dateFilterSchema = Yup.object({
     start_date: Yup.date()
@@ -71,6 +72,9 @@ export default function Dashboard() {
     const [transferUserList, setTransferUserList] = useState([]);
     const [transferTitle, setTransferTitle] = useState("");
     const [transferType, setTransferType] = useState("");
+
+    const user = useSelector((state) => state.auth.user);
+    const isStaff = user?.is_staff;
 
     const [isLoading, setIsLoading] = useState(true);
     // Fetch cycles once
@@ -333,14 +337,6 @@ export default function Dashboard() {
                     {(!isSmallScreen || (activeFilter === null)) && "Ver Todos"}
                 </Button>
                 <Button
-                    variant="outlined"
-                    startIcon={<BarChartOutlinedIcon />}
-                    onClick={() => navigate('/estadisticas')}
-                    color="secondary"
-                >
-                    {!isSmallScreen && "Ver Estadísticas"}
-                </Button>
-                <Button
                     variant={getButtonVariant("date")}
                     startIcon={<CalendarTodayIcon />}
                     onClick={handleCalendarClick}
@@ -403,6 +399,15 @@ export default function Dashboard() {
                         </MenuItem>
                     ))}
                 </Menu>
+                <Button
+                    variant="outlined"
+                    startIcon={<BarChartOutlinedIcon />}
+                    onClick={() => navigate('/estadisticas')}
+                    color="secondary"
+                    sx={{ display: !isStaff && "none" }}
+                >
+                    {!isSmallScreen && "Ver Estadísticas"}
+                </Button>
             </Box>
 
             <Divider sx={{ mb: 2 }} />
