@@ -67,6 +67,21 @@ const COLORS = [
     "#ff00ff", "#00ffff", "#ffff00", "#ff0000", "#0000ff"
 ];
 
+const STAGES = [
+    { code: "Reg", label: "Registro" },
+    { code: "Pre", label: "Preentrevista" },
+    { code: "Can", label: "Canalización" },
+    { code: "Ent", label: "Entrevista" },
+    { code: "Cap", label: "Capacitación" },
+    { code: "Agn", label: "Agencia" },
+];
+
+const AGENCY_STATES = [
+    { code: "Bol", label: "Bolsa de Trabajo" },
+    { code: "Emp", label: "Empleado" },
+    { code: "Des", label: "Desempleado" },
+];
+
 export default function Statistics() {
     useDocumentTitle("Estadísticas");
     const isSmallScreen = useMediaQuery("(max-width:600px)");
@@ -196,7 +211,7 @@ export default function Statistics() {
     const prepareStageData = () => {
         if (!statsData.stages) return [];
         return Object.entries(statsData.stages).map(([stage, data]) => ({
-            name: stage,
+            name: STAGES.find((s) => s.code === stage)?.label || stage,
             value: data.count,
             percentage: data.percentage
         }));
@@ -226,10 +241,18 @@ export default function Statistics() {
         }));
     };
 
+    const prepareDisabilityGroupData = () => {
+        if (!statsData.disabilities?.disability_groups) return [];
+        return Object.entries(statsData.disabilities.disability_groups).map(([group, count]) => ({
+            name: group,
+            value: count
+        }));
+    };
+
     const prepareEmploymentData = () => {
         if (!statsData.employment?.agency_states) return [];
         return Object.entries(statsData.employment.agency_states).map(([state, count]) => ({
-            name: state,
+            name: AGENCY_STATES.find((s) => s.code === state)?.label || state,
             value: count
         }));
     };
@@ -249,6 +272,22 @@ export default function Statistics() {
             completed: data.completed,
             total: data.total,
             completion_rate: data.completion_rate
+        }));
+    };
+
+    const prepareDomicileData = () => {
+        if (!statsData.domicile?.states) return [];
+        return Object.entries(statsData.domicile.states).map(([state, count]) => ({
+            name: state,
+            value: count
+        }));
+    };
+
+    const prepareCityData = () => {
+        if (!statsData.domicile?.cities) return [];
+        return Object.entries(statsData.domicile.cities).map(([city, count]) => ({
+            name: city,
+            value: count
         }));
     };
 
@@ -326,6 +365,7 @@ export default function Statistics() {
                 <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
                     <Tab label="Distribución por Etapas" />
                     <Tab label="Demografía" />
+                    <Tab label="Ubicación" />
                     <Tab label="Discapacidades" />
                     <Tab label="Empleo" />
                     <Tab label="Capacitación" />
@@ -363,15 +403,15 @@ export default function Statistics() {
                         <Grid item xs={12} md={6}>
                             <Paper sx={{ p: 2 }}>
                                 <Typography variant="h6" gutterBottom>
-                                    Etapas - Gráfico de Barras
+                                    Registros por Mes
                                 </Typography>
                                 <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={prepareStageData()}>
+                                    <BarChart data={prepareTimelineData()}>
                                         <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="name" />
+                                        <XAxis dataKey="month" />
                                         <YAxis />
                                         <Tooltip />
-                                        <Bar dataKey="value" fill="#8884d8" />
+                                        <Bar dataKey="registrations" name="Registros" fill="#8884d8" />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </Paper>
@@ -418,7 +458,7 @@ export default function Statistics() {
                                         <XAxis dataKey="name" />
                                         <YAxis />
                                         <Tooltip />
-                                        <Bar dataKey="value" fill="#82ca9d" />
+                                        <Bar dataKey="value" name="Cantidad" fill="#82ca9d" />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </Paper>
@@ -431,15 +471,15 @@ export default function Statistics() {
                         <Grid item xs={12} md={6}>
                             <Paper sx={{ p: 2 }}>
                                 <Typography variant="h6" gutterBottom>
-                                    Discapacidades Más Comunes
+                                    Distribución por Estado
                                 </Typography>
                                 <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={prepareDisabilityData()}>
+                                    <BarChart data={prepareDomicileData()}>
                                         <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                                        <XAxis dataKey="name" angle={-30} textAnchor="end" height={100} />
                                         <YAxis />
                                         <Tooltip />
-                                        <Bar dataKey="value" fill="#ffc658" />
+                                        <Bar dataKey="value" name="Cantidad" fill="#82ca9d" />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </Paper>
@@ -447,16 +487,50 @@ export default function Statistics() {
                         <Grid item xs={12} md={6}>
                             <Paper sx={{ p: 2 }}>
                                 <Typography variant="h6" gutterBottom>
-                                    Estado de Certificados
+                                    Distribución por Ciudad
                                 </Typography>
-                                {statsData.disabilities?.certificate_status && (
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={prepareCityData()}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="name" angle={-30} textAnchor="end" height={100} />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Bar dataKey="value" name="Cantidad" fill="#ffc658" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </Paper>
+                        </Grid>
+                    </Grid>
+                )}
+
+                {activeTab === 3 && (
+                    <Grid container spacing={3}>
+                        <Grid item xs={12} md={6}>
+                            <Paper sx={{ p: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Discapacidades Más Comunes
+                                </Typography>
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <BarChart data={prepareDisabilityData()}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="name" angle={-30} textAnchor="end" height={100} />
+                                        <YAxis />
+                                        <Tooltip />
+                                        <Bar dataKey="value" name="Cantidad" fill="#ffc658" />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </Paper>
+                        </Grid>
+                        <Grid item xs={12} md={6}>
+                            <Paper sx={{ p: 2 }}>
+                                <Typography variant="h6" gutterBottom>
+                                    Distribución por Grupos de Discapacidad
+                                </Typography>
+                                {prepareDisabilityGroupData().length > 0 && (
                                     <ResponsiveContainer width="100%" height={300}>
                                         <PieChart>
                                             <Pie
-                                                data={[
-                                                    { name: "Con Certificado", value: statsData.disabilities.certificate_status.with_certificate },
-                                                    { name: "Sin Certificado", value: statsData.disabilities.certificate_status.without_certificate }
-                                                ]}
+                                                data={prepareDisabilityGroupData()}
                                                 cx="50%"
                                                 cy="50%"
                                                 labelLine={false}
@@ -465,8 +539,9 @@ export default function Statistics() {
                                                 fill="#8884d8"
                                                 dataKey="value"
                                             >
-                                                <Cell fill="#82ca9d" />
-                                                <Cell fill="#ffc658" />
+                                                {prepareDisabilityGroupData().map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                ))}
                                             </Pie>
                                             <Tooltip />
                                         </PieChart>
@@ -477,7 +552,7 @@ export default function Statistics() {
                     </Grid>
                 )}
 
-                {activeTab === 3 && (
+                {activeTab === 4 && (
                     <Grid container spacing={3}>
                         <Grid item xs={12} md={6}>
                             <Paper sx={{ p: 2 }}>
@@ -517,7 +592,7 @@ export default function Statistics() {
                                             <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
                                             <YAxis />
                                             <Tooltip />
-                                            <Bar dataKey="value" fill="#ff7300" />
+                                            <Bar dataKey="value" name="Cantidad" fill="#ff7300" />
                                         </BarChart>
                                     </ResponsiveContainer>
                                 )}
@@ -526,7 +601,7 @@ export default function Statistics() {
                     </Grid>
                 )}
 
-                {activeTab === 4 && (
+                {activeTab === 5 && (
                     <Grid container spacing={3}>
                         <Grid item xs={12}>
                             <Paper sx={{ p: 2 }}>
@@ -536,10 +611,10 @@ export default function Statistics() {
                                 <ResponsiveContainer width="100%" height={300}>
                                     <BarChart data={prepareTrainingData()}>
                                         <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                                        <XAxis dataKey="name" angle={-20} textAnchor="end" height={100} />
                                         <YAxis />
                                         <Tooltip />
-                                        <Bar dataKey="completion_rate" fill="#00ff00" />
+                                        <Bar dataKey="completion_rate" fill="#00ff00" name="Tasa de Completación" />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </Paper>
@@ -547,7 +622,7 @@ export default function Statistics() {
                     </Grid>
                 )}
 
-                {activeTab === 5 && (
+                {activeTab === 6 && (
                     <Grid container spacing={3}>
                         <Grid item xs={12}>
                             <Paper sx={{ p: 2 }}>
@@ -561,7 +636,7 @@ export default function Statistics() {
                                         <YAxis />
                                         <Tooltip />
                                         <Legend />
-                                        <Line type="monotone" dataKey="registrations" stroke="#8884d8" strokeWidth={2} />
+                                        <Line type="monotone" dataKey="registrations" name="Registros" stroke="#8884d8" strokeWidth={2} />
                                     </LineChart>
                                 </ResponsiveContainer>
                             </Paper>
