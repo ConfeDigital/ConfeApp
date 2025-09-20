@@ -1,8 +1,8 @@
 asgiref==3.8.1
-Django==5.0.14
+Django==5.1.12
 django-cors-headers==4.5.0
 djangorestframework==3.15.2
-djangorestframework-simplejwt==5.3.1
+djangorestframework-simplejwt==5.5.1
 djoser==2.2.3
 PyJWT==2.9.0
 pytz==2024.2
@@ -23,7 +23,7 @@ PyPDF2==3.0.1
 whitenoise==6.9.0
 django-simple-history==3.8.0
 python-pptx==1.0.2
-mssql-django==1.5
+mssql-django==1.6
 django-storages==1.14.6
 azure-storage-blob==12.26.0
 fuzzywuzzy==0.18.0
