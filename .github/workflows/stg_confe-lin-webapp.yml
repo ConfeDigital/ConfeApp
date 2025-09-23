@@ -19,7 +19,9 @@ jobs:
     permissions:
       contents: read #This is required for actions/checkout
 
-    container: python:3.12-bullseye
+    container:
+      image: python:3.12-bullseye
+      options: --entrypoint /bin/bash
 
     steps:
       - uses: actions/checkout@v4
