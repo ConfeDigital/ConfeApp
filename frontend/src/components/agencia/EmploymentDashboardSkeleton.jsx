@@ -11,7 +11,7 @@ import {
 
 const EmploymentDashboardSkeleton = () => {
   return (
-    <Box sx={{ p: 3 }}>
+    <Box sx={{ p: 2 }}>
       {/* Skeleton para el encabezado con información básica */}
       <Paper sx={{ p: 3, mb: 3 }}>
         <Grid container spacing={3} alignItems="center">

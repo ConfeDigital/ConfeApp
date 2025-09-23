@@ -591,11 +591,20 @@ class FichaTecnicaReport:
         margins = 50 * 2
         available_width = page_width - margins
         
+        # Ensure available_width is positive
+        if available_width <= 0:
+            available_width = 400  # Fallback width
+        
         if title == "Habilidades Adaptativas":
             col_widths = [available_width * 0.08] + [available_width * 0.13] * 7 + [available_width * 0.08]
         else:
             num_cols = len(formatted_data[0]) if formatted_data else 1
+            if num_cols <= 0:
+                num_cols = 1
             col_widths = [available_width / num_cols] * num_cols
+        
+        # Ensure all column widths are positive
+        col_widths = [max(1, width) for width in col_widths]
         
         repeat_rows = 3 if title == "Habilidades Adaptativas" else 1
         table = Table(formatted_data, repeatRows=repeat_rows, colWidths=col_widths)

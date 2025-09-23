@@ -527,7 +527,7 @@ export default function UserSettingsAdminPanel() {
                                 </Typography>
                             </Box>
                         )}
-                        {currentUser.is_staff && (
+                        {/* {currentUser.is_staff && (
                             <FormControlLabel
                                 control={<Checkbox
                                     name="is_staff"
@@ -537,7 +537,7 @@ export default function UserSettingsAdminPanel() {
                                 />}
                                 label="Administrador"
                             />
-                        )}
+                        )} */}
                     </Box>
                 </DialogContent>
                 <DialogActions>

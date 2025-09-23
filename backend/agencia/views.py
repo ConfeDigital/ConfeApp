@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q, Count
 from api.permissions import IsEmployer, IsEmployerOrReadOnly
+import math
 from .models import Location, Company, Job, Employer, Habilidad, JobHabilidadRequerida
 from .serializers import (
     JobWithAssignedCandidatesSerializer, LocationSerializer, CompanySerializer, 
@@ -10,6 +11,28 @@ from .serializers import (
 )
 from candidatos.models import UserProfile, CandidatoHabilidadEvaluada
 from candidatos.serializers import CandidatoHabilidadEvaluadaSerializer
+
+def calculate_distance(lat1, lng1, lat2, lng2):
+    """
+    Calculate the great circle distance between two points 
+    on the earth (specified in decimal degrees).
+    Returns distance in kilometers.
+    """
+    if None in [lat1, lng1, lat2, lng2]:
+        return None
+    
+    # Convert decimal degrees to radians
+    lat1, lng1, lat2, lng2 = map(math.radians, [float(lat1), float(lng1), float(lat2), float(lng2)])
+    
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlng = lng2 - lng1
+    a = math.sin(dlat/2)**2 + math.cos(lat1) * math.cos(lat2) * math.sin(dlng/2)**2
+    c = 2 * math.asin(math.sqrt(a))
+    
+    # Radius of earth in kilometers
+    r = 6371
+    return c * r
 
 class LocationViewSet(viewsets.ModelViewSet):
     queryset         = Location.objects.all()
@@ -53,12 +76,40 @@ class JobViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, IsEmployerOrReadOnly]
     serializer_class = JobSerializer
 
-    queryset = Job.objects.select_related('company').all()
+    queryset = Job.objects.select_related('company', 'location').all()
 
     def get_queryset(self):
-        qs = Job.objects.select_related('company').all()
+        qs = Job.objects.select_related('company', 'location').all()
         if not self.request.user.is_staff and not self.request.user.groups.filter(name='personal').exists():
             qs = qs.filter(company=self.request.user.employer.company)
+        
+        # Proximity filtering
+        max_distance = self.request.query_params.get('max_distance', None)
+        candidate_lat = self.request.query_params.get('candidate_lat', None)
+        candidate_lng = self.request.query_params.get('candidate_lng', None)
+        
+        if max_distance and candidate_lat and candidate_lng:
+            try:
+                max_distance = float(max_distance)
+                candidate_lat = float(candidate_lat)
+                candidate_lng = float(candidate_lng)
+                
+                # Filter jobs by distance
+                filtered_jobs = []
+                for job in qs:
+                    if job.location and job.location.address_lat and job.location.address_lng:
+                        distance = calculate_distance(
+                            candidate_lat, candidate_lng,
+                            job.location.address_lat, job.location.address_lng
+                        )
+                        if distance is not None and distance <= max_distance:
+                            filtered_jobs.append(job.id)
+                
+                qs = qs.filter(id__in=filtered_jobs)
+            except (ValueError, TypeError):
+                # If invalid parameters, ignore proximity filtering
+                pass
+        
         return qs
 
 class EmployerViewSet(viewsets.ModelViewSet):

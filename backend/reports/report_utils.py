@@ -99,6 +99,11 @@ def create_basic_table(data, col_widths=None, title=None, center_right_column=Fa
                 processed_row.append(str(cell) if cell is not None else "")
         processed_data.append(processed_row)
     
+    # Ensure col_widths are valid
+    if col_widths:
+        # Ensure all column widths are positive
+        col_widths = [max(1, width) if width is not None else 100 for width in col_widths]
+    
     table = Table(processed_data, colWidths=col_widths)
     table_style = TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
@@ -171,13 +176,17 @@ def create_side_by_side_tables(table_data_1, table_data_2, inner_col_widths = [8
     processed_data_1 = process_table_data(table_data_1)
     processed_data_2 = process_table_data(table_data_2)
 
-    num_cols = len(processed_data_1[1])
+    # Ensure we have data before calculating columns
+    if not processed_data_1 or len(processed_data_1) < 2:
+        num_cols = 2  # Default to 2 columns
+    else:
+        num_cols = len(processed_data_1[1]) if processed_data_1[1] else 2
     
-    # Create individual tables
-    table1 = Table(processed_data_1, colWidths=inner_col_widths)
-    table2 = Table(processed_data_2, colWidths=inner_col_widths)
+    # Ensure inner_col_widths are valid
+    if inner_col_widths:
+        inner_col_widths = [max(1, width) if width is not None else 100 for width in inner_col_widths]
     
-    # Apply styling to both tables
+    # Create table style (will be applied after potential scaling)
     table_style = TableStyle([
         ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
@@ -197,17 +206,47 @@ def create_side_by_side_tables(table_data_1, table_data_2, inner_col_widths = [8
         table_style.add('SPAN', (0, 0), (num_cols - 1, 0))
         table_style.add('ALIGN', (0, 0), (num_cols - 1, 0), 'CENTER')
     
+    # Create individual tables with default widths (may be scaled later)
+    table1 = Table(processed_data_1, colWidths=inner_col_widths)
+    table2 = Table(processed_data_2, colWidths=inner_col_widths)
+    
+    # Apply styling to both tables
     table1.setStyle(table_style)
     table2.setStyle(table_style)
 
     # --- KEY FIX START ---
     
-    # Calculate the actual rendered width of the inner tables
-    # sum of col widths + left padding + right padding
-    table_actual_width = sum(inner_col_widths) + 8 + 8  # 80 + 150 + 8 + 8 = 246
+    # Calculate available width and adjust table sizes accordingly
+    page_width = 612
+    available_width = page_width - (50 * 2)  # Document margins
     
-    # Define the margin between the two tables (e.g., 20 points)
-    margin_between = 0
+    # Define the margin between the two tables
+    margin_between = 20
+    
+    # Calculate how much space we have for each table
+    space_for_tables = available_width - margin_between
+    max_table_width = space_for_tables / 2
+    
+    # If the default table width is too large, scale down the column widths
+    current_table_width = sum(inner_col_widths) + 16  # 16 for padding (8 left + 8 right)
+    
+    if current_table_width > max_table_width:
+        # Scale down the column widths proportionally
+        scale_factor = (max_table_width - 16) / (current_table_width - 16)  # Subtract padding from both
+        scaled_inner_col_widths = [width * scale_factor for width in inner_col_widths]
+        
+        # Recreate tables with scaled widths
+        table1 = Table(processed_data_1, colWidths=scaled_inner_col_widths)
+        table2 = Table(processed_data_2, colWidths=scaled_inner_col_widths)
+        
+        # Apply styling to the resized tables
+        table1.setStyle(table_style)
+        table2.setStyle(table_style)
+        
+        # Update the table width for container calculations
+        table_actual_width = sum(scaled_inner_col_widths) + 16
+    else:
+        table_actual_width = current_table_width
     
     # Create a container table with three columns: table1, a spacer, and table2
     side_by_side_data = [[table1, Spacer(margin_between, 1), table2]]
@@ -225,7 +264,15 @@ def create_side_by_side_tables(table_data_1, table_data_2, inner_col_widths = [8
     available_width = page_width - (50 * 2)  # Your document's margins are 50 points on each side
     total_table_width = sum(container_col_widths)
     
+    # Ensure we don't have negative padding
+    if total_table_width >= available_width:
+        # If tables are too wide, just use the container table without centering
+        return [KeepTogether(container_table)]
+    
     left_padding_width = (available_width - total_table_width) / 2
+    
+    # Ensure left_padding_width is not negative
+    left_padding_width = max(0, left_padding_width)
     
     # Create a wrapper table to apply centering using Spacers
     wrapper_table = Table([

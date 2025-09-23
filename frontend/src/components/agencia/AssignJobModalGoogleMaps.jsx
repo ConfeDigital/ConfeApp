@@ -223,290 +223,473 @@ const AssignJobModal = ({ open, candidate, availableJobs, onClose, onAssigned })
   };
 
   return (
-    <Dialog open={open} onClose={onClose} fullWidth maxWidth="lg">
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xl">
       <DialogTitle>Asignar empleo a {candidate?.nombre_completo}</DialogTitle>
-      <DialogContent>
-        <Grid container spacing={2}>
-          {/* Left panel */}
-          <Grid item xs={12} md={5}>
-            {alert && <Alert severity={alert.severity} sx={{ mb: 2 }}>{alert.message}</Alert>}
-            <FormControl fullWidth sx={{ mt: 1 }}>
-              <InputLabel id="job-select-label">Empleo</InputLabel>
-              <Select
-                labelId="job-select-label"
-                value={selectedJob}
-                label="Empleo"
-                onChange={e => setSelectedJob(e.target.value)}
-              >
-                {filteredJobs.map(job => (
-                  <MenuItem key={job.id} value={job.id}>
-                    {job.name} — {job.company_name}
-                    {job.distance != null && ` (${job.distance.toFixed(1)} km)`}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-            <DatePicker
-              label="Fecha de Inicio"
-              value={startDate}
-              onChange={v => setStartDate(v)}
-              slotProps={{ textField: { fullWidth: true, margin: 'dense' } }}
-              sx={{ mt: 2 }}
-            />
+      <DialogContent sx={{ 
+        height: { xs: '90vh', md: '85vh' }, 
+        overflow: { xs: 'auto', md: 'hidden' },
+        p: { xs: 2, md: 3 }
+      }}>
+        {alert && <Alert severity={alert.severity} sx={{ mb: 2 }}>{alert.message}</Alert>}
+        
+        {/* Job Selection Section */}
+        <Box sx={{ mb: 3, mt: 1 }}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={6}>
+              <FormControl fullWidth>
+                <InputLabel id="job-select-label">Seleccionar Empleo</InputLabel>
+                <Select
+                  labelId="job-select-label"
+                  value={selectedJob}
+                  label="Seleccionar Empleo"
+                  onChange={e => setSelectedJob(e.target.value)}
+                >
+                  {filteredJobs.map(job => (
+                    <MenuItem key={job.id} value={job.id}>
+                      {job.name} — {job.company_name}
+                      {job.distance != null && ` (${job.distance.toFixed(1)} km)`}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <DatePicker
+                label="Fecha de Inicio"
+                value={startDate}
+                onChange={v => setStartDate(v)}
+                slotProps={{ textField: { fullWidth: true } }}
+              />
+            </Grid>
+          </Grid>
+        </Box>
+
+        {/* Main Content Area */}
+        <Grid container spacing={3} sx={{ 
+          height: { xs: 'auto', md: 'calc(100% - 100px)' },
+          flexDirection: { xs: 'column', md: 'row' }
+        }}>
+          {/* Left panel: Job Details and Matching - Scrollable */}
+          <Grid item xs={12} md={6} sx={{ 
+            height: { xs: 'auto', md: '100%' }, 
+            overflow: { xs: 'visible', md: 'auto' }, 
+            pr: { xs: 0, md: 1 },
+            mb: { xs: 2, md: 0 },
+            '&::-webkit-scrollbar': {
+              width: '6px',
+            },
+            '&::-webkit-scrollbar-track': {
+              background: 'transparent',
+            },
+            '&::-webkit-scrollbar-thumb': {
+              background: 'rgba(0,0,0,0.2)',
+              borderRadius: '3px',
+            },
+            '&::-webkit-scrollbar-thumb:hover': {
+              background: 'rgba(0,0,0,0.3)',
+            },
+          }}>
 
             {selectedJob && (
-              <Box mt={1}>
-                <Typography variant="h5" gutterBottom>Detalles del Empleo</Typography>
-                <Typography>
-                  <strong>Ubicación:</strong>{' '}
-                  {(() => {
-                    const loc = filteredJobs.find(j => j.id === selectedJob).location_details;
-                    return `${loc.address_road} ${loc.address_number}, ${loc.address_municip}, ${loc.address_state}, CP ${loc.address_PC}`;
-                  })()}
-                </Typography>
-                <Typography>
-                  <strong>Empresa:</strong> {filteredJobs.find(j => j.id === selectedJob).company_name}
-                </Typography>
-                <Typography>
-                  <strong>Descripción:</strong> {filteredJobs.find(j => j.id === selectedJob).job_description}
-                </Typography>
-
-                {/* Mostrar nuevos campos del empleo si existen */}
+              <Box>
                 {(() => {
                   const job = filteredJobs.find(j => j.id === selectedJob);
+                  const loc = job.location_details;
                   return (
                     <>
-                      {job.horario && (
-                        <Typography>
-                          <strong>Horario:</strong> {job.horario}
+                      {/* Job Overview Card */}
+                      <Box sx={{ 
+                        p: 2, 
+                        border: '1px solid', 
+                        borderColor: 'divider', 
+                        borderRadius: 2, 
+                        mb: 3,
+                        bgcolor: 'background.paper'
+                      }}>
+                        <Typography variant="h6" gutterBottom color="primary">
+                          {job.name}
                         </Typography>
-                      )}
-                      {job.sueldo_base && (
-                        <Typography>
-                          <strong>Sueldo Base:</strong> ${job.sueldo_base.toLocaleString()}
+                        <Typography variant="subtitle1" color="text.secondary" gutterBottom>
+                          {job.company_name}
                         </Typography>
-                      )}
-                      {job.prestaciones && (
-                        <Typography>
-                          <strong>Prestaciones:</strong> {job.prestaciones}
-                        </Typography>
-                      )}
-                      {job.habilidades_requeridas && job.habilidades_requeridas.length > 0 && (
-                        <Box sx={{ mt: 1 }}>
-                          <Typography variant="subtitle2" gutterBottom>Habilidades Requeridas:</Typography>
-                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                            {job.habilidades_requeridas.map((habilidad, index) => (
-                              <Chip
-                                key={index}
-                                label={`${habilidad.habilidad_nombre} (${habilidad.nivel_importancia})`}
-                                size="small"
-                                variant="outlined"
-                              />
-                            ))}
+                        
+                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                          <Grid item xs={12} sm={6}>
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Ubicación:</strong>
+                            </Typography>
+                            <Typography variant="body2">
+                              {`${loc.address_road} ${loc.address_number}, ${loc.address_municip}`}
+                            </Typography>
+                            <Typography variant="body2">
+                              {`${loc.address_state}, CP ${loc.address_PC}`}
+                            </Typography>
+                          </Grid>
+                          {job.distance != null && (
+                            <Grid item xs={12} sm={6}>
+                              <Typography variant="body2" color="text.secondary">
+                                <strong>Distancia:</strong>
+                              </Typography>
+                              <Typography variant="body2">
+                                {job.distance.toFixed(1)} km
+                              </Typography>
+                            </Grid>
+                          )}
+                        </Grid>
+
+                        {/* Job Details Grid */}
+                        <Grid container spacing={2} sx={{ mt: 2 }}>
+                          {job.horario && (
+                            <Grid item xs={12} sm={6}>
+                              <Typography variant="body2" color="text.secondary">
+                                <strong>Horario:</strong>
+                              </Typography>
+                              <Typography variant="body2">{job.horario}</Typography>
+                            </Grid>
+                          )}
+                          {job.sueldo_base && (
+                            <Grid item xs={12} sm={6}>
+                              <Typography variant="body2" color="text.secondary">
+                                <strong>Sueldo Base:</strong>
+                              </Typography>
+                              <Typography variant="body2">
+                                ${job.sueldo_base.toLocaleString()}
+                              </Typography>
+                            </Grid>
+                          )}
+                          {job.prestaciones && (
+                            <Grid item xs={12}>
+                              <Typography variant="body2" color="text.secondary">
+                                <strong>Prestaciones:</strong>
+                              </Typography>
+                              <Typography variant="body2">{job.prestaciones}</Typography>
+                            </Grid>
+                          )}
+                        </Grid>
+
+                        {/* Job Description */}
+                        {job.job_description && (
+                          <Box sx={{ mt: 2 }}>
+                            <Typography variant="body2" color="text.secondary">
+                              <strong>Descripción:</strong>
+                            </Typography>
+                            <Typography variant="body2" sx={{ mt: 1 }}>
+                              {job.job_description}
+                            </Typography>
                           </Box>
-                        </Box>
-                      )}
+                        )}
+
+                        {/* Required Skills */}
+                        {job.habilidades_requeridas && job.habilidades_requeridas.length > 0 && (
+                          <Box sx={{ mt: 2 }}>
+                            <Typography variant="body2" color="text.secondary" gutterBottom>
+                              <strong>Habilidades Requeridas:</strong>
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                              {job.habilidades_requeridas.map((habilidad, index) => (
+                                <Chip
+                                  key={index}
+                                  label={`${habilidad.habilidad_nombre} (${habilidad.nivel_importancia})`}
+                                  size="small"
+                                  variant="outlined"
+                                  color="primary"
+                                />
+                              ))}
+                            </Box>
+                          </Box>
+                        )}
+                      </Box>
                     </>
                   );
                 })()}
 
-                <Divider sx={{ my: 2 }} />
-
-                {/* Análisis de Matching */}
-                <Typography variant="h6" gutterBottom>
-                  <StarIcon sx={{ mr: 1, verticalAlign: 'middle' }} />
-                  Análisis de Coincidencia
-                </Typography>
-
-                {loadingMatching ? (
-                  <Box display="flex" alignItems="center" gap={2}>
-                    <LinearProgress sx={{ flexGrow: 1 }} />
-                    <Typography variant="body2">Analizando coincidencias...</Typography>
-                  </Box>
-                ) : matchingData ? (
-                  <Box>
-                    <Box display="flex" alignItems="center" gap={2} mb={2}>
-                      <Chip
-                        label={getMatchingLabel(matchingData.matching_percentage)}
-                        color={getMatchingColor(matchingData.matching_percentage)}
-                        variant="filled"
-                      />
-                      <Typography variant="h6">
-                        {matchingData.matching_percentage}%
-                      </Typography>
-                      <LinearProgress
-                        variant="determinate"
-                        value={matchingData.matching_percentage}
-                        color={getMatchingColor(matchingData.matching_percentage)}
-                        sx={{ flexGrow: 1 }}
-                      />
-                    </Box>
-
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
-                      {matchingData.habilidades_coincidentes_count} de {matchingData.total_habilidades_requeridas} habilidades requeridas
+                {/* Matching Analysis Card */}
+                <Box sx={{ 
+                  p: 2, 
+                  border: '1px solid', 
+                  borderColor: 'divider', 
+                  borderRadius: 2, 
+                  mb: 3,
+                  bgcolor: 'background.paper'
+                }}>
+                  <Box display="flex" alignItems="center" gap={1} mb={2}>
+                    <StarIcon color="primary" />
+                    <Typography variant="h6">
+                      Análisis de Coincidencia
                     </Typography>
-
-                    {matchingData.habilidades_coincidentes.length > 0 && (
-                      <Accordion>
-                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                          <Typography variant="subtitle2">
-                            Habilidades Coincidentes ({matchingData.habilidades_coincidentes.length})
-                          </Typography>
-                        </AccordionSummary>
-                        <AccordionDetails>
-                          <List dense>
-                            {matchingData.habilidades_coincidentes.map((habilidad, idx) => (
-                              <ListItem key={idx}>
-                                <ListItemText
-                                  primary={habilidad.habilidad}
-                                  secondary={`Requerido: ${habilidad.nivel_requerido} | Candidato: ${habilidad.nivel_candidato} | Puntuación: ${habilidad.puntuacion}`}
-                                />
-                              </ListItem>
-                            ))}
-                          </List>
-                        </AccordionDetails>
-                      </Accordion>
-                    )}
-
-                    {matchingData.habilidades_faltantes.length > 0 && (
-                      <Accordion>
-                        <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                          <Typography variant="subtitle2" color="error">
-                            Habilidades Faltantes ({matchingData.habilidades_faltantes.length})
-                          </Typography>
-                        </AccordionSummary>
-                        <AccordionDetails>
-                          <List dense>
-                            {matchingData.habilidades_faltantes.map((habilidad, idx) => (
-                              <ListItem key={idx}>
-                                <ListItemText
-                                  primary={habilidad.habilidad}
-                                  secondary={`Requerido: ${habilidad.nivel_requerido}`}
-                                />
-                              </ListItem>
-                            ))}
-                          </List>
-                        </AccordionDetails>
-                      </Accordion>
-                    )}
                   </Box>
-                ) : (
-                  <Typography color="text.secondary">
-                    No se pudo cargar el análisis de coincidencias.
+
+                  {loadingMatching ? (
+                    <Box display="flex" alignItems="center" gap={2}>
+                      <LinearProgress sx={{ flexGrow: 1 }} />
+                      <Typography variant="body2">Analizando coincidencias...</Typography>
+                    </Box>
+                  ) : matchingData ? (
+                    <Box>
+                      {/* Matching Score Display */}
+                      <Box sx={{ 
+                        p: 2, 
+                        borderRadius: 2, 
+                        bgcolor: getMatchingColor(matchingData.matching_percentage) === 'success' ? 'success.light' : 
+                                getMatchingColor(matchingData.matching_percentage) === 'warning' ? 'warning.light' : 'error.light',
+                        mb: 2
+                      }}>
+                        <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
+                          <Typography variant="h4" fontWeight="bold">
+                            {matchingData.matching_percentage}%
+                          </Typography>
+                          <Chip
+                            label={getMatchingLabel(matchingData.matching_percentage)}
+                            color={getMatchingColor(matchingData.matching_percentage)}
+                            variant="filled"
+                            size="medium"
+                          />
+                        </Box>
+                        <LinearProgress
+                          variant="determinate"
+                          value={matchingData.matching_percentage}
+                          color={getMatchingColor(matchingData.matching_percentage)}
+                          sx={{ height: 8, borderRadius: 4 }}
+                        />
+                        <Typography variant="body2" sx={{ mt: 1, opacity: 0.8 }}>
+                          {matchingData.habilidades_coincidentes_count} de {matchingData.total_habilidades_requeridas} habilidades requeridas
+                        </Typography>
+                      </Box>
+
+                      {/* Skills Details */}
+                      {matchingData.habilidades_coincidentes.length > 0 && (
+                        <Accordion sx={{ mb: 1 }}>
+                          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography variant="subtitle2" color="success.main">
+                              Habilidades Coincidentes ({matchingData.habilidades_coincidentes.length})
+                            </Typography>
+                          </AccordionSummary>
+                          <AccordionDetails>
+                            <List dense>
+                              {matchingData.habilidades_coincidentes.map((habilidad, idx) => (
+                                <ListItem key={idx}>
+                                  <ListItemText
+                                    primary={habilidad.habilidad}
+                                    secondary={`Requerido: ${habilidad.nivel_requerido} | Candidato: ${habilidad.nivel_candidato} | Puntuación: ${habilidad.puntuacion}`}
+                                  />
+                                </ListItem>
+                              ))}
+                            </List>
+                          </AccordionDetails>
+                        </Accordion>
+                      )}
+
+                      {matchingData.habilidades_faltantes.length > 0 && (
+                        <Accordion>
+                          <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                            <Typography variant="subtitle2" color="error.main">
+                              Habilidades Faltantes ({matchingData.habilidades_faltantes.length})
+                            </Typography>
+                          </AccordionSummary>
+                          <AccordionDetails>
+                            <List dense>
+                              {matchingData.habilidades_faltantes.map((habilidad, idx) => (
+                                <ListItem key={idx}>
+                                  <ListItemText
+                                    primary={habilidad.habilidad}
+                                    secondary={`Requerido: ${habilidad.nivel_requerido}`}
+                                  />
+                                </ListItem>
+                              ))}
+                            </List>
+                          </AccordionDetails>
+                        </Accordion>
+                      )}
+                    </Box>
+                  ) : (
+                    <Typography color="text.secondary">
+                      No se pudo cargar el análisis de coincidencias.
+                    </Typography>
+                  )}
+                </Box>
+
+                {/* Travel Times and Route Controls */}
+                <Box sx={{ 
+                  p: 2, 
+                  border: '1px solid', 
+                  borderColor: 'divider', 
+                  borderRadius: 2,
+                  bgcolor: 'background.paper'
+                }}>
+                  <Typography variant="h6" gutterBottom>
+                    Información de Viaje
                   </Typography>
-                )}
-
-                <Divider sx={{ my: 2 }} />
-
-                <Typography variant="subtitle1" mt={2}>Tiempos de viaje:</Typography>
-                {modes.map(m => (
-                  <Typography key={m.value}>
-                    <strong>{m.label}:</strong> {durations[m.value] || 'Calculando...'}
-                  </Typography>
-                ))}
-
-                <FormControl fullWidth sx={{ mt: 2 }}>
-                  <InputLabel id="mode-select-label">Visualizar Ruta por Modo de Transporte</InputLabel>
-                  <Select
-                    labelId="mode-select-label"
-                    value={routeMode}
-                    label="Visualizar Ruta por Modo de Transporte"
-                    onChange={e => setRouteMode(e.target.value)}
-                  >
+                  
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
                     {modes.map(m => (
-                      <MenuItem key={m.value} value={m.value}>{m.label}</MenuItem>
+                      <Grid item xs={6} sm={3} key={m.value}>
+                        <Box sx={{ textAlign: 'center', p: 1, border: '1px solid', borderColor: 'divider', borderRadius: 1 }}>
+                          <Typography variant="caption" color="text.secondary">
+                            {m.label}
+                          </Typography>
+                          <Typography variant="body2" fontWeight="bold">
+                            {durations[m.value] || 'Calculando...'}
+                          </Typography>
+                        </Box>
+                      </Grid>
                     ))}
-                  </Select>
-                </FormControl>
+                  </Grid>
 
-                {!showRoute && (
-                  <Button variant="contained" sx={{ mt: 1 }} onClick={handleShowRoute}>
-                    Mostrar ruta
-                  </Button>
-                )}
+                  <FormControl fullWidth sx={{ mb: 2 }}>
+                    <InputLabel id="mode-select-label">Modo de Transporte para Ruta</InputLabel>
+                    <Select
+                      labelId="mode-select-label"
+                      value={routeMode}
+                      label="Modo de Transporte para Ruta"
+                      onChange={e => setRouteMode(e.target.value)}
+                    >
+                      {modes.map(m => (
+                        <MenuItem key={m.value} value={m.value}>{m.label}</MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+
+                  {!showRoute && (
+                    <Button 
+                      variant="contained" 
+                      fullWidth 
+                      onClick={handleShowRoute}
+                      startIcon={<StarIcon />}
+                    >
+                      Mostrar Ruta en Mapa
+                    </Button>
+                  )}
+                </Box>
               </Box>
             )}
           </Grid>
 
-          {/* Right panel: Map */}
-          <Grid item xs={12} md={7}>
-            <Box sx={{ mt: 2 }}>
-              {isLoaded && !loadError ? (
-                <GoogleMap
-                  mapContainerStyle={mapContainerStyle}
-                  center={
-                    selectedJob
-                      ? markers.find(m => m.id === selectedJob)?.position
-                      : markers.find(m => m.id === 'cand')?.position || defaultCenter
-                  }
-                  zoom={12}
-                >
-                  {markers.map(m => (
-                    <Marker
-                      key={m.id}
-                      position={m.position}
-                      icon={
-                        m.id === 'cand'
-                          ? 'http://maps.google.com/mapfiles/ms/icons/homegardenbusiness.png'
-                          : m.id === selectedJob
-                            ? 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
-                            : 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
-                      }
-                      onClick={() => {
-                        if (m.id !== 'cand') setSelectedJob(m.id);
-                        setHoveredMarker(m);
-                      }}
-                    />
-                  ))}
+          {/* Right panel: Map - Fixed */}
+          <Grid item xs={12} md={6} sx={{ 
+            height: { xs: '400px', md: '100%' },
+            minHeight: { xs: '400px', md: 'auto' }
+          }}>
+            <Box sx={{ 
+              border: '1px solid', 
+              borderColor: 'divider', 
+              borderRadius: 2, 
+              overflow: 'hidden',
+              height: { xs: '400px', md: '100%' },
+              position: { xs: 'relative', md: 'sticky' },
+              top: 0
+            }}>
+              {/* Map Header */}
+              <Box sx={{ 
+                p: 1.5, 
+                bgcolor: 'background.paper', 
+                borderBottom: '1px solid', 
+                borderColor: 'divider' 
+              }}>
+                <Typography variant="h6" color="primary">
+                  Mapa de Ubicaciones
+                </Typography>
+              </Box>
 
-                  {hoveredMarker && hoveredMarker.id !== 'cand' && (
-                    <InfoWindow
-                      position={hoveredMarker.position}
-                      onCloseClick={() => setHoveredMarker(null)}
-                    >
-                      <Box sx={{ maxWidth: 220 }}>
-                        <Box display="flex" alignItems="center" gap={1} mb={1}>
-                          <img
-                            src={availableJobs.find(j => j.id === hoveredMarker.id)?.company_logo}
-                            alt="Company Logo"
-                            style={{
-                              width: 40,
-                              height: 40,
-                              objectFit: "contain",
-                              borderRadius: "50%",
-                            }}
-                          />
-                          <Typography variant="body2" color="black">
-                            {availableJobs.find(j => j.id === hoveredMarker.id)?.company_name}
+              {/* Map Container */}
+              <Box sx={{ 
+                height: { xs: 'calc(400px - 60px)', md: 'calc(100% - 60px)' }, 
+                position: 'relative',
+                minHeight: { xs: '340px', md: 'auto' }
+              }}>
+                {isLoaded && !loadError ? (
+                  <GoogleMap
+                    mapContainerStyle={{ width: '100%', height: '100%' }}
+                    center={
+                      selectedJob
+                        ? markers.find(m => m.id === selectedJob)?.position
+                        : markers.find(m => m.id === 'cand')?.position || defaultCenter
+                    }
+                    zoom={12}
+                  >
+                    {markers.map(m => (
+                      <Marker
+                        key={m.id}
+                        position={m.position}
+                        icon={
+                          m.id === 'cand'
+                            ? 'http://maps.google.com/mapfiles/ms/icons/homegardenbusiness.png'
+                            : m.id === selectedJob
+                              ? 'http://maps.google.com/mapfiles/ms/icons/blue-dot.png'
+                              : 'http://maps.google.com/mapfiles/ms/icons/green-dot.png'
+                        }
+                        onClick={() => {
+                          if (m.id !== 'cand') setSelectedJob(m.id);
+                          setHoveredMarker(m);
+                        }}
+                      />
+                    ))}
+
+                    {hoveredMarker && hoveredMarker.id !== 'cand' && (
+                      <InfoWindow
+                        position={hoveredMarker.position}
+                        onCloseClick={() => setHoveredMarker(null)}
+                      >
+                        <Box sx={{ maxWidth: 220 }}>
+                          <Box display="flex" alignItems="center" gap={1} mb={1}>
+                            <img
+                              src={availableJobs.find(j => j.id === hoveredMarker.id)?.company_logo}
+                              alt="Company Logo"
+                              style={{
+                                width: 40,
+                                height: 40,
+                                objectFit: "contain",
+                                borderRadius: "50%",
+                              }}
+                            />
+                            <Typography variant="body2" color="black">
+                              {availableJobs.find(j => j.id === hoveredMarker.id)?.company_name}
+                            </Typography>
+                          </Box>
+                          <Typography variant="subtitle2" color="black" fontWeight="bold">
+                            {availableJobs.find(j => j.id === hoveredMarker.id)?.name}
                           </Typography>
                         </Box>
-                        <Typography variant="subtitle2" color="black" fontWeight="bold">
-                          {availableJobs.find(j => j.id === hoveredMarker.id)?.name}
-                        </Typography>
-                      </Box>
-                    </InfoWindow>
-                  )}
+                      </InfoWindow>
+                    )}
 
-                  {directions && <DirectionsRenderer directions={directions} />}
-                </GoogleMap>
-              ) : (
-                <Typography>Cargando mapa...</Typography>
-              )}
-            </Box>
+                    {directions && <DirectionsRenderer directions={directions} />}
+                  </GoogleMap>
+                ) : (
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'center', 
+                    height: '100%',
+                    bgcolor: 'grey.100'
+                  }}>
+                    <Typography>Cargando mapa...</Typography>
+                  </Box>
+                )}
+              </Box>
 
-            {/* Legend */}
-            <Box sx={{ mt: 2, display: 'flex', gap: 2, alignItems: 'center', overflowX: 'auto' }}>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <img src="http://maps.google.com/mapfiles/ms/icons/blue-dot.png" alt="Seleccionado" />
-                <Typography variant="body2">Empleo seleccionado</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <img src="http://maps.google.com/mapfiles/ms/icons/green-dot.png" alt="Disponible" />
-                <Typography variant="body2">Empleos disponibles</Typography>
-              </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <img src="http://maps.google.com/mapfiles/ms/icons/homegardenbusiness.png" alt="Candidato" />
-                <Typography variant="body2">Candidato</Typography>
+              {/* Legend */}
+              <Box sx={{ 
+                p: 1.5, 
+                bgcolor: 'background.paper', 
+                borderTop: '1px solid', 
+                borderColor: 'divider',
+                display: 'flex', 
+                gap: 2, 
+                alignItems: 'center', 
+                flexWrap: 'wrap'
+              }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <img src="http://maps.google.com/mapfiles/ms/icons/blue-dot.png" alt="Seleccionado" width="16" height="16" />
+                  <Typography variant="caption">Seleccionado</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <img src="http://maps.google.com/mapfiles/ms/icons/green-dot.png" alt="Disponible" width="16" height="16" />
+                  <Typography variant="caption">Disponibles</Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <img src="http://maps.google.com/mapfiles/ms/icons/homegardenbusiness.png" alt="Candidato" width="16" height="16" />
+                  <Typography variant="caption">Candidato</Typography>
+                </Box>
               </Box>
             </Box>
           </Grid>

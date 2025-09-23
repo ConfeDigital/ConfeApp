@@ -500,12 +500,17 @@ export default function UsersSettings() {
                                     <Checkbox checked />
                                     <ListItemText primary="Personal" />
                                 </MenuItem>
-                                <MenuItem value="agencia_laboral">
-                                    <Checkbox
-                                        checked={formData.groups_names.includes("agencia_laboral")}
-                                    />
-                                    <ListItemText primary="Agencia Laboral" />
-                                </MenuItem>
+                                {currentUser.is_staff && (
+                                    <MenuItem 
+                                        value="agencia_laboral"
+                                        disabled={!currentUser.is_staff}
+                                    >
+                                        <Checkbox
+                                            checked={formData.groups_names.includes("agencia_laboral")}
+                                        />
+                                        <ListItemText primary="Agencia Laboral" />
+                                    </MenuItem>
+                                )}
                                 <MenuItem
                                     value="gerente"
                                     disabled={
@@ -519,7 +524,7 @@ export default function UsersSettings() {
                                 </MenuItem>
                             </Select>
                         </FormControl>
-                        {currentUser.is_staff && (
+                        {/* {currentUser.is_staff && (
                             <FormControlLabel
                                 control={
                                     <Checkbox
@@ -533,7 +538,7 @@ export default function UsersSettings() {
                                 labelPlacement="start"
                                 sx={{ ml: 0 }}
                             />
-                        )}
+                        )} */}
                     </Box>
                 </DialogContent>
                 <DialogActions>
