@@ -1,32 +1,28 @@
 #!/bin/bash
 
-# Activate virtual environment if it exists
-echo "Activating virtual environment..."
-if [ -d "./venv" ]; then
-    echo "Virtual environment found, activating..."
-    source ./venv/bin/activate
-fi
+# Define the absolute path to the virtual environment's bin directory
+VENV_BIN="./venv/bin"
 
-export DJANGO_SETTINGS_MODULE='backend.deployment'
+echo "Using virtual environment at: $VENV_BIN"
 
-# Only run migrations if needed (check if migrations are pending)
+# Check for pending migrations using the venv's python executable
 echo "Checking for pending migrations..."
-python manage.py showmigrations --plan | grep -q '\[ \]' && {
+$VENV_BIN/python manage.py showmigrations --plan | grep -q '\[ \]' && {
     echo "Running pending migrations..."
-    python manage.py migrate --noinput
+    $VENV_BIN/python manage.py migrate --noinput
 } || {
     echo "No pending migrations found, skipping..."
 }
 
-# Only collect static files if they don't exist or are outdated
+# Check static files using the venv's python executable
 echo "Checking static files..."
 if [ ! -d "staticfiles" ] || [ "staticfiles" -ot "static" ]; then
     echo "Collecting static files..."
-    python manage.py collectstatic --noinput
+    $VENV_BIN/python manage.py collectstatic --noinput
 else
     echo "Static files up to date, skipping..."
 fi
 
-# Start Daphne server
+# Start Daphne server using the venv's daphne executable
 echo "Starting Daphne server..."
-daphne -b 0.0.0.0 -p 8000 backend.asgi:application 
+$VENV_BIN/daphne -b 0.0.0.0 -p 8000 backend.asgi:application
