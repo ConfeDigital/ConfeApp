@@ -19,7 +19,7 @@ django-auth-adfs==1.15.0
 pandas==2.2.3
 openpyxl==3.1.5
 django-model-utils==5.0.0
-PyPDF2==3.0.1
+reportlab==4.4.4
 whitenoise==6.9.0
 django-simple-history==3.8.0
 python-pptx==1.0.2

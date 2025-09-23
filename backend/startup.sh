@@ -1,8 +1,10 @@
 #!/bin/bash
 
 # Activate virtual environment if it exists
-if [ -d "venv" ]; then
-    source venv/bin/activate
+echo "Activating virtual environment..."
+if [ -d "./venv" ]; then
+    echo "Virtual environment found, activating..."
+    source ./venv/bin/activate
 fi
 
 export DJANGO_SETTINGS_MODULE='backend.deployment'
