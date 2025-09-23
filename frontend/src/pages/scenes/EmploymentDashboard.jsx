@@ -217,15 +217,40 @@ const EmploymentDashboard = () => {
   const fetchAll = () => {
     if (!uid) return;
     setLoading(true);
-    Promise.all([
-      axios.get(`${agenciaProfileURL}${uid}/`), // Agency-specific data for job context
-      axios.get(`${jobHistoryURL}?candidate=${uid}`),
-      axios.get(jobsURL),
-      fetchAptitudeQuestionnaires(),
-      fetchStageQuestionnaires(),
-      fetchHabilidades(),
-      fetchCandidateHabilidades(),
-    ])
+    
+    // Build jobs URL with proximity filter if candidate has location
+    const buildJobsURL = async () => {
+      try {
+        const profileResponse = await axios.get(`${agenciaProfileURL}${uid}/`);
+        const profile = profileResponse.data;
+        
+        // Check if candidate has location coordinates
+        if (profile.domicile && profile.domicile.address_lat && profile.domicile.address_lng) {
+          const params = new URLSearchParams({
+            max_distance: '50', // 50km radius
+            candidate_lat: profile.domicile.address_lat.toString(),
+            candidate_lng: profile.domicile.address_lng.toString()
+          });
+          return `${jobsURL}?${params.toString()}`;
+        }
+        return jobsURL;
+      } catch (error) {
+        console.error('Error getting profile for proximity filter:', error);
+        return jobsURL;
+      }
+    };
+    
+    // Build the jobs URL with proximity filter
+    buildJobsURL().then(jobsURLWithFilter => {
+      Promise.all([
+        axios.get(`${agenciaProfileURL}${uid}/`), // Agency-specific data for job context
+        axios.get(`${jobHistoryURL}?candidate=${uid}`),
+        axios.get(jobsURLWithFilter),
+        fetchAptitudeQuestionnaires(),
+        fetchStageQuestionnaires(),
+        fetchHabilidades(),
+        fetchCandidateHabilidades(),
+      ])
       .then(([agenciaRes, histRes, jobsRes]) => {
         setCandidateProfile(agenciaRes.data);
 
@@ -253,6 +278,7 @@ const EmploymentDashboard = () => {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
+    });
   };
 
   useEffect(fetchAll, [uid]);
@@ -721,6 +747,13 @@ const EmploymentDashboard = () => {
                 <Chip
                   label={`Discapacidad: ${candidateProfile.disability_name}`}
                   variant="outlined"
+                  sx={{
+                    height: 'auto', // Allow the chip to expand vertically
+                    minHeight: '32px',
+                    '& .MuiChip-label': {
+                      whiteSpace: 'normal', // Allow text to wrap
+                    },
+                  }}
                 />
               </Grid>
             </Grid>
@@ -1728,13 +1761,8 @@ const EmploymentDashboard = () => {
         onClose={() => setAssignOpen(false)}
         onAssigned={(newJobHistory) => {
           setAssignOpen(false);
-          // Optimistically update local state instead of full reload
-          if (newJobHistory) {
-            setEmploymentHistory(prevHistory => [
-              { ...newJobHistory, comments: [] },
-              ...prevHistory
-            ]);
-          }
+          // Refresh all data to ensure consistency
+          fetchAll();
         }}
       />
 
@@ -1745,16 +1773,8 @@ const EmploymentDashboard = () => {
         onClose={() => setRemoveOpen(false)}
         onRemoved={(removedJobId) => {
           setRemoveOpen(false);
-          // Optimistically update local state instead of full reload
-          if (removedJobId) {
-            setEmploymentHistory(prevHistory => 
-              prevHistory.map(history => 
-                history.id === removedJobId 
-                  ? { ...history, end_date: new Date().toISOString().split('T')[0] }
-                  : history
-              )
-            );
-          }
+          // Refresh all data to ensure consistency
+          fetchAll();
         }}
       />
 

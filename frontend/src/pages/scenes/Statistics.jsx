@@ -82,6 +82,12 @@ const AGENCY_STATES = [
     { code: "Des", label: "Desempleado" },
 ];
 
+const GENDER = [
+    { code: "M", label: "Masculino" },
+    { code: "F", label: "Femenino" },
+    { code: "O", label: "Otro" },
+];
+
 export default function Statistics() {
     useDocumentTitle("Estadísticas");
     const isSmallScreen = useMediaQuery("(max-width:600px)");
@@ -220,7 +226,7 @@ export default function Statistics() {
     const prepareGenderData = () => {
         if (!statsData.demographics?.gender) return [];
         return Object.entries(statsData.demographics.gender).map(([gender, count]) => ({
-            name: gender,
+            name: GENDER.find((g) => g.code === gender)?.label || gender,
             value: count
         }));
     };
