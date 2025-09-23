@@ -30,18 +30,22 @@ jobs:
       - name: Create and start virtual environment
         run: |
           cd backend
-          python -m venv venv
+          python -m venv venv --copies
           source venv/bin/activate
       
       - name: Install dependencies
         run: |
           cd backend
+          source venv/bin/activate
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          # Verify installation
+          pip list | grep -E "(django|daphne)"
       
       - name: Collect static files
         run: |
           cd backend
+          source venv/bin/activate
           python manage.py collectstatic --noinput
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)

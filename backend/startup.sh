@@ -5,6 +5,13 @@ echo "Activating virtual environment..."
 if [ -d "venv" ]; then
     echo "Virtual environment found, activating..."
     source venv/bin/activate
+    echo "Virtual environment activated"
+    echo "Python version: $(python --version)"
+    echo "Python location: $(which python)"
+    echo "Pip list (first 10 packages):"
+    pip list | head -10
+else
+    echo "No virtual environment found"
 fi
 
 export DJANGO_SETTINGS_MODULE='backend.deployment'
