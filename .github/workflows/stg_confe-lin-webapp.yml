@@ -54,8 +54,6 @@ jobs:
           mkdir -p ../deployment
           # Copy all backend files to deployment directory
           cp -r . ../deployment/
-          # Remove virtual environment from deployment
-          rm -rf ../deployment/venv
           # Create zip from deployment directory
           cd ../deployment
           zip -r ../backend/release.zip ./*
