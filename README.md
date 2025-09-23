@@ -26,7 +26,7 @@ Aplicación web para la gestión y evaluación de usuarios, con backend en Djang
 
 ## Tech Stack / Tecnologías
 
-- **Backend:** Django, Django REST Framework, Channels, Redis, PostgreSQL/SQLite, Djoser, PyJWT, Pandas, Openpyxl, PyPDF2, python-pptx
+- **Backend:** Django, Django REST Framework, Channels, Redis, PostgreSQL/SQLite, Djoser, PyJWT, Pandas, Openpyxl, reportab, python-pptx
 - **Frontend:** React, Vite, MUI, Redux, FullCalendar, Axios, Formik, Yup, and more / y más
 
 ---
