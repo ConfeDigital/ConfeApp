@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Debug information
+echo "=== Startup Script Debug Info ==="
+echo "Current directory: $(pwd)"
+echo "Script location: $0"
+echo "Python version: $(python3.12 --version)"
+echo "Available Python: $(which python3.12)"
+echo "================================"
+
 # Set Django settings module for deployment
 export DJANGO_SETTINGS_MODULE='backend.deployment'
 
@@ -26,4 +34,5 @@ fi
 
 # Start Daphne server using system Python
 echo "Starting Daphne server..."
+echo "Daphne location: $(which daphne)"
 python3.12 -m daphne -b 0.0.0.0 -p 8000 backend.asgi:application 

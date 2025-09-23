@@ -48,9 +48,12 @@ jobs:
           mkdir -p ../deployment
           # Copy all backend files to deployment directory
           cp -r . ../deployment/
+          # Ensure startup.sh is executable in the deployment directory
+          chmod +x ../deployment/startup.sh
           # Create zip from deployment directory
           cd ../deployment
-          zip -r ../backend/release.zip ./*
+          # Use zip with proper permissions preservation
+          zip -r ../backend/release.zip . -x "*.pyc" "__pycache__/*" "*.log" "celerybeat-schedule.db"
           # Clean up temporary directory
           cd ..
           rm -rf deployment
@@ -78,8 +81,10 @@ jobs:
       - name: Unzip artifact for deployment
         run: |
           unzip release.zip
-          # Ensure startup.sh is executable
+          # Ensure startup.sh is executable and has proper permissions
           chmod +x startup.sh
+          # Verify startup.sh exists and is executable
+          ls -la startup.sh
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
