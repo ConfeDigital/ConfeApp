@@ -27,15 +27,18 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install dependencies globally
+      - name: Create and activate virtual environment
         run: |
           cd backend
+          python -m venv venv
+          source venv/bin/activate
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       
       - name: Collect static files
         run: |
           cd backend
+          source venv/bin/activate
           python manage.py collectstatic --noinput
         
       # Optional: Add step to run tests here (PyTest, Django test suites, etc.)
@@ -46,14 +49,14 @@ jobs:
           chmod +x startup.sh
           # Create a clean deployment directory
           mkdir -p ../deployment
-          # Copy all backend files to deployment directory
+          # Copy all backend files to deployment directory (including venv)
           cp -r . ../deployment/
           # Ensure startup.sh is executable in the deployment directory
           chmod +x ../deployment/startup.sh
           # Create zip from deployment directory
           cd ../deployment
-          # Use zip with proper permissions preservation
-          zip -r ../backend/release.zip . -x "*.pyc" "__pycache__/*" "*.log" "celerybeat-schedule.db"
+          # Use zip with proper permissions preservation, but include venv
+          zip -r ../backend/release.zip . -x "*.pyc" "__pycache__/*" "*.log" "celerybeat-schedule.db" "*.git*" "test_*" "tests/*"
           # Clean up temporary directory
           cd ..
           rm -rf deployment
@@ -85,6 +88,15 @@ jobs:
           chmod +x startup.sh
           # Verify startup.sh exists and is executable
           ls -la startup.sh
+          # Debug: Show package contents
+          echo "=== Package Contents ==="
+          ls -la
+          echo "========================"
+          # Verify critical files exist
+          echo "=== Critical Files Check ==="
+          ls -la manage.py
+          ls -la backend/
+          echo "============================"
 
       - name: 'Deploy to Azure Web App'
         uses: azure/webapps-deploy@v3
@@ -93,3 +105,5 @@ jobs:
           app-name: 'confe-lin-webapp'
           slot-name: 'Production'
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9FCFC18F720B4177B65FCAD2F702E3FA }}
+          package: '.'
+          startup-command: './startup.sh'
