@@ -27,13 +27,7 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Create and start virtual environment
-        run: |
-          cd backend
-          python -m venv venv
-          source venv/bin/activate
-      
-      - name: Install dependencies
+      - name: Install dependencies globally
         run: |
           cd backend
           python -m pip install --upgrade pip
@@ -54,8 +48,6 @@ jobs:
           mkdir -p ../deployment
           # Copy all backend files to deployment directory
           cp -r . ../deployment/
-          # Remove virtual environment from deployment
-          rm -rf ../deployment/venv
           # Create zip from deployment directory
           cd ../deployment
           zip -r ../backend/release.zip ./*
