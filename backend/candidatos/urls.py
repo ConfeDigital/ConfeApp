@@ -37,7 +37,8 @@ from .views import (
     CHAidCandidateHistoryHistoryAPIView,    
     TAidCandidateHistoryCreateAPIView,  
     TAidCandidateHistoryListAPIView,    
-    TAidCandidateHistoryHistoryAPIView, 
+    TAidCandidateHistoryHistoryAPIView,
+    CandidateToggleActiveStatusAPIView,
 )
 from .dashboard_views import (
     DashboardStatsView,
@@ -104,6 +105,9 @@ urlpatterns = [
     path('seguimiento/ed-aid/', TAidCandidateHistoryCreateAPIView.as_view(), name='taid-create'),
     path('seguimiento/ed-aid/<uuid:candidate_id>/', TAidCandidateHistoryListAPIView.as_view(), name='taid-list'),
     path('seguimiento/ed-aid/<uuid:candidate_id>/history/', TAidCandidateHistoryHistoryAPIView.as_view(), name='taid-history'),
+    
+    # Toggle candidate active status
+    path('toggle-status/<uuid:uid>/', CandidateToggleActiveStatusAPIView.as_view(), name='candidate-toggle-status'),
 ]
 
 urlpatterns += router.urls

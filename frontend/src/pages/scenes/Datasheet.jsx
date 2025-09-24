@@ -56,11 +56,11 @@ const stageOrder = [
   { code: "Can", label: "Canalización" },
   { code: "Ent", label: "Entrevista" },
   { code: "Cap", label: "Capacitación", subphases: ["SIS", "ED", "PA", "PV"] },
-  { code: "Agn", label: "Agencia" },
+  { code: "Final", label: "Selección Final", isSelectionStep: true },
 ];
 
 // Helper: returns button props given a relative index and active group value.
-const getButtonProps = (index, activeGroup, stageCode, questionnaires) => {
+const getButtonProps = (index, activeGroup, stageCode, questionnaires, currentStage) => {
   if (activeGroup < 0) {
     return { variant: "outlined", color: undefined };
   }
@@ -71,6 +71,14 @@ const getButtonProps = (index, activeGroup, stageCode, questionnaires) => {
   if (index < activeGroup) {
     return { variant: "contained", color: "success" };
   } else if (index === activeGroup) {
+    // Special handling for final selection step
+    if (stageCode === "Final") {
+      // If current stage is Agn or TrC, this final step should be completed
+      if (currentStage === "Agn" || currentStage === "TrC") {
+        return { variant: "contained", color: "success" };
+      }
+      return { variant: "contained", color: "warning" };
+    }
     return { variant: "contained", color: "info" };
   } else if (isCompleted) {
     return { variant: "contained", color: "success" };
@@ -117,6 +125,8 @@ const Datasheet = () => {
   const [datasheetLoading, setDatasheetLoading] = useState(false);
 
   const [openImageDialog, setOpenImageDialog] = useState(false);
+  const [openStageSelectionDialog, setOpenStageSelectionDialog] = useState(false);
+  const [openToggleStatusDialog, setOpenToggleStatusDialog] = useState(false);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -186,9 +196,13 @@ const Datasheet = () => {
         //   currentStageQuestionnaires
         // );
 
-        const stageIdx = stageOrder.findIndex(
-          (stage) => stage.code === currentStage
-        );
+        // For Agn and TrC stages, set the index to the final step (5)
+        let stageIdx;
+        if (currentStage === "Agn" || currentStage === "TrC") {
+          stageIdx = stageOrder.findIndex((stage) => stage.code === "Final");
+        } else {
+          stageIdx = stageOrder.findIndex((stage) => stage.code === currentStage);
+        }
         setCurrentStageIndex(stageIdx);
 
         if (!currentStageQuestionnaires.length) {
@@ -205,25 +219,30 @@ const Datasheet = () => {
             stageIdx >= 0 &&
             stageIdx < stageOrder.length - 1
           ) {
-            const nextStage = stageOrder[stageIdx + 1];
+            // Special case: if completing Cap stage, show stage selection dialog
+            if (currentStage === "Cap") {
+              setOpenStageSelectionDialog(true);
+            } else {
+              const nextStage = stageOrder[stageIdx + 1];
 
-            try {
-              await axios.put(`/api/candidatos/editar/${uid}/`, {
-                stage: nextStage.code,
-                email: profileResponse.data.user.email,
-              });
+              try {
+                await axios.put(`/api/candidatos/editar/${uid}/`, {
+                  stage: nextStage.code,
+                  email: profileResponse.data.user.email,
+                });
 
-              // Actualizar el estado local después de la actualización exitosa
-              setCandidateProfile({
-                ...profileResponse.data,
-                stage: nextStage.code,
-              });
-              setCurrentStageIndex(stageIdx + 1);
-            } catch (error) {
-              console.error(
-                "❌ Error al actualizar la etapa del candidato:",
-                error
-              );
+                // Actualizar el estado local después de la actualización exitosa
+                setCandidateProfile({
+                  ...profileResponse.data,
+                  stage: nextStage.code,
+                });
+                setCurrentStageIndex(stageIdx + 1);
+              } catch (error) {
+                console.error(
+                  "❌ Error al actualizar la etapa del candidato:",
+                  error
+                );
+              }
             }
           }
         }
@@ -279,10 +298,12 @@ const Datasheet = () => {
     const stageLabels = {
       Reg: "Registro",
       Pre: "Preentrevista",
+      Can: "Canalización",
       Ent: "Entrevista",
       Cap: "Capacitación",
       Agn: "Agencia",
-      Can: "Canalización",
+      TrC: "Trabajo en Casa",
+      Final: "Selección Final",
     };
     return stageLabels[stageCode] || stageCode; // Return the code if label is not found
   };
@@ -294,9 +315,11 @@ const Datasheet = () => {
   }
 
   // Global active step (0 to 5)
-  const activeStep = stageOrder.findIndex(
-    (stage) => stage.code === candidateProfile.stage
-  );
+  const activeStep = candidateProfile.stage === "Final" 
+    ? stageOrder.findIndex((stage) => stage.code === "Final")
+    : candidateProfile.stage === "Agn" || candidateProfile.stage === "TrC"
+    ? stageOrder.findIndex((stage) => stage.code === "Final")
+    : stageOrder.findIndex((stage) => stage.code === candidateProfile.stage);
 
   const handleStageClick = (stageCode) => {
     /**
@@ -306,6 +329,12 @@ const Datasheet = () => {
      * 3. Si ya contestó → Mostrar en azul y abrir la versión que contestó
      * 4. Si está finalizado → Mostrar en verde
      */
+
+    // Special handling for final selection step
+    if (stageCode === "Final") {
+      setOpenStageSelectionDialog(true);
+      return;
+    }
 
     // 🔍 Filtrar cuestionarios de la etapa actual
     const filteredQuestionnaires = questionnaires.filter(
@@ -438,6 +467,61 @@ const Datasheet = () => {
     // Función para refrescar la data, si es necesaria
   };
 
+  const handleStageSelection = async (selectedStage) => {
+    try {
+      await axios.put(`/api/candidatos/editar/${uid}/`, {
+        stage: selectedStage,
+        email: candidateProfile.user.email,
+      });
+
+      // Update local state
+      setCandidateProfile({
+        ...candidateProfile,
+        stage: selectedStage,
+      });
+      
+      // For Agn and TrC, we need to find their index in the original stageOrder
+      // Since they're not in the current stageOrder, we'll use a mapping
+      const stageMapping = {
+        "Agn": 5, // Final step index
+        "TrC": 5  // Final step index
+      };
+      
+      setCurrentStageIndex(stageMapping[selectedStage] || 5);
+      
+      setOpenStageSelectionDialog(false);
+    } catch (error) {
+      console.error("❌ Error al actualizar la etapa del candidato:", error);
+    }
+  };
+
+  const handleCloseStageSelectionDialog = () => {
+    setOpenStageSelectionDialog(false);
+  };
+
+  const handleToggleStatus = async () => {
+    try {
+      const response = await axios.patch(`/api/candidatos/toggle-status/${uid}/`);
+      
+      // Update local state
+      setCandidateProfile({
+        ...candidateProfile,
+        user: {
+          ...candidateProfile.user,
+          is_active: response.data.is_active,
+        },
+      });
+      
+      setOpenToggleStatusDialog(false);
+    } catch (error) {
+      console.error("❌ Error al cambiar el estado del candidato:", error);
+    }
+  };
+
+  const handleCloseToggleStatusDialog = () => {
+    setOpenToggleStatusDialog(false);
+  };
+
   return (
     <Box m={{ xs: 1, sm: 2, md: 3 }}>
       <Paper
@@ -528,11 +612,19 @@ const Datasheet = () => {
               <Chip
                 label={candidateProfile.user.is_active ? "ACTIVO" : "INACTIVO"}
                 color={candidateProfile.user.is_active ? "success" : "error"}
+                onClick={() => setOpenToggleStatusDialog(true)}
                 sx={{
                   fontWeight: "bold",
                   py: 1,
                   minWidth: "120px",
+                  cursor: "pointer",
+                  "&:hover": {
+                    opacity: 0.8,
+                    transform: "scale(1.05)",
+                  },
+                  transition: "all 0.2s ease-in-out",
                 }}
+                title={`Click para ${candidateProfile.user.is_active ? "dar de baja" : "reactivar"}`}
               />
               <Button
                 variant="outlined"
@@ -564,7 +656,8 @@ const Datasheet = () => {
                 }}
                 disabled={
                   candidateProfile.stage != "Agn" &&
-                  candidateProfile.stage != "Cap"
+                  candidateProfile.stage != "Cap" &&
+                  candidateProfile.stage != "TrC"
                 }
               >
                 Apoyos
@@ -601,7 +694,8 @@ const Datasheet = () => {
                 }}
                 disabled={
                   candidateProfile.stage != "Agn" &&
-                  candidateProfile.stage != "Cap"
+                  candidateProfile.stage != "Cap" &&
+                  candidateProfile.stage != "TrC"
                 }
               >
                 Proyecto de Vida
@@ -672,7 +766,7 @@ const Datasheet = () => {
                 // Mobile: use same color logic as desktop
                 // Previous steps: green, current: blue, next: outlined
                 return (
-                  <Step key={index} completed={isStageCompleted}>
+                  <Step key={index} completed={isStageCompleted || (index === activeStep && (candidateProfile.stage === "Agn" || candidateProfile.stage === "TrC"))}>
                     <StepLabel
                       StepIconComponent={() => (
                         <Box
@@ -701,7 +795,10 @@ const Datasheet = () => {
                                 : "transparent",
                           }}
                         >
-                          {index < activeStep ? "✓" : index + 1}
+                          {index < activeStep ? "✓" : 
+                           stage.isSelectionStep && candidateProfile.stage === "Final" ? "?" : 
+                           stage.isSelectionStep && (candidateProfile.stage === "Agn" || candidateProfile.stage === "TrC") ? "✓" :
+                           index + 1}
                         </Box>
                       )}
                     >
@@ -713,7 +810,7 @@ const Datasheet = () => {
                             ? "contained"
                             : index === activeStep
                               ? "contained"
-                              : isStageCompleted
+                              : isStageCompleted || (index === activeStep && (candidateProfile.stage === "Agn" || candidateProfile.stage === "TrC"))
                                 ? "contained"
                                 : "outlined"
                         }
@@ -721,8 +818,8 @@ const Datasheet = () => {
                           index < activeStep
                             ? "success"
                             : index === activeStep
-                              ? "info"
-                              : isStageCompleted
+                              ? (candidateProfile.stage === "Agn" || candidateProfile.stage === "TrC") ? "success" : "info"
+                              : isStageCompleted || (index === activeStep && (candidateProfile.stage === "Agn" || candidateProfile.stage === "TrC"))
                                 ? "success"
                                 : "primary"
                         }
@@ -731,7 +828,11 @@ const Datasheet = () => {
                         onClick={() => handleStageClick(stage.code)}
                         disabled={currentStageIndex < stageIndex}
                       >
-                        {stage.label.toUpperCase()}
+                        {stage.isSelectionStep && candidateProfile.stage === "Final" 
+                          ? "SELECCIÓN FINAL" 
+                          : stage.isSelectionStep && (candidateProfile.stage === "Agn" || candidateProfile.stage === "TrC")
+                          ? (candidateProfile.stage === "Agn" ? "AGENCIA" : "TRABAJO EN CASA")
+                          : stage.label.toUpperCase()}
                       </Button>
                       {expandedPhase === stage.code && (
                         <Box mt={1}>
@@ -801,10 +902,11 @@ const Datasheet = () => {
                   index,
                   activeStep,
                   stage.code,
-                  questionnaires
+                  questionnaires,
+                  candidateProfile.stage
                 );
                 return (
-                  <Step key={index} completed={index < activeStep}>
+                  <Step key={index} completed={index < activeStep || (index === activeStep && (candidateProfile.stage === "Agn" || candidateProfile.stage === "TrC"))}>
                     <StepLabel>
                       <Button
                         variant={btnProps.variant}
@@ -824,7 +926,11 @@ const Datasheet = () => {
                         onClick={() => handleStageClick(stage.code)}
                         disabled={currentStageIndex < stageIndex}
                       >
-                        {`${stage.label.toUpperCase()}`}
+                        {stage.isSelectionStep && candidateProfile.stage === "Final" 
+                          ? "SELECCIÓN FINAL" 
+                          : stage.isSelectionStep && (candidateProfile.stage === "Agn" || candidateProfile.stage === "TrC")
+                          ? (candidateProfile.stage === "Agn" ? "AGENCIA" : "TRABAJO EN CASA")
+                          : `${stage.label.toUpperCase()}`}
                       </Button>
                       {expandedPhase === stage.code && (
                         <Box mt={1}>
@@ -1029,6 +1135,104 @@ const Datasheet = () => {
             }}
           />
         </DialogContent>
+      </Dialog>
+
+      {/* Stage Selection Dialog */}
+      <Dialog
+        open={openStageSelectionDialog}
+        onClose={handleCloseStageSelectionDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6" component="div" textAlign="center">
+            {candidateProfile.stage === "Agn" || candidateProfile.stage === "TrC" ? "Cambiar Etapa" : "Seleccionar Próxima Etapa"}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          {candidateProfile.stage === "Agn" || candidateProfile.stage === "TrC" ? (
+            <Typography variant="body1" textAlign="center" sx={{ mb: 3 }}>
+              Seleccione la etapa a la que desea cambiar, o cancele:
+            </Typography>
+          ) : (
+            <Typography variant="body1" textAlign="center" sx={{ mb: 3 }}>
+              ¡Felicitaciones! {candidateProfile?.user?.first_name} ha completado exitosamente 
+              la etapa de Capacitación. Por favor, seleccione la próxima etapa:
+            </Typography>
+          )}
+          <Box display="flex" flexDirection="column" gap={2} alignItems="center">
+            <Button
+              variant="contained"
+              color="primary"
+              size="large"
+              fullWidth
+              onClick={() => handleStageSelection("Agn")}
+              sx={{ py: 2, fontSize: "1.1rem" }}
+            >
+              Agencia
+            </Button>
+            <Button
+              variant="contained"
+              color="secondary"
+              size="large"
+              fullWidth
+              onClick={() => handleStageSelection("TrC")}
+              sx={{ py: 2, fontSize: "1.1rem" }}
+            >
+              Trabajo en Casa
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseStageSelectionDialog} color="secondary">
+            Cancelar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Toggle Status Dialog */}
+      <Dialog
+        open={openToggleStatusDialog}
+        onClose={handleCloseToggleStatusDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>
+          <Typography variant="h6" component="div" textAlign="center">
+            {candidateProfile?.user?.is_active ? "Dar de Baja Candidato" : "Reactivar Candidato"}
+          </Typography>
+        </DialogTitle>
+        <DialogContent>
+          <Typography variant="body1" textAlign="center" sx={{ mb: 3 }}>
+            {candidateProfile?.user?.is_active ? (
+              <>
+                ¿Está seguro de que desea dar de baja a <strong>{candidateProfile?.user?.first_name} {candidateProfile?.user?.last_name}</strong>?
+                <br />
+                <br />
+                Esta acción cambiará el estado del candidato a inactivo y ya no podrá acceder a la plataforma.
+              </>
+            ) : (
+              <>
+                ¿Está seguro de que desea reactivar a <strong>{candidateProfile?.user?.first_name} {candidateProfile?.user?.last_name}</strong>?
+                <br />
+                <br />
+                Esta acción cambiará el estado del candidato a activo y ya podrá acceder a la plataforma.
+              </>
+            )}
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseToggleStatusDialog} color="secondary">
+            Cancelar
+          </Button>
+          <Button
+            variant="contained"
+            color={candidateProfile?.user?.is_active ? "error" : "success"}
+            onClick={handleToggleStatus}
+          >
+            {candidateProfile?.user?.is_active ? "Dar de Baja" : "Reactivar"}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );
