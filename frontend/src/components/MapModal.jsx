@@ -8,7 +8,8 @@ import {
   Typography,
   Button,
 } from "@mui/material";
-import { GoogleMap, Marker, useJsApiLoader } from "@react-google-maps/api";
+import { GoogleMap, Marker } from "@react-google-maps/api";
+import { useMap } from "../maps/MapProvider";
 
 const mapContainerStyle = {
   width: "100%",
@@ -19,11 +20,7 @@ const mapContainerStyle = {
 const defaultMapCenter = { lat: 19.4326, lng: -99.1332 }; // CDMX fallback
 
 const MapModal = ({ open, onClose, lat, lng, label = "Ubicación" }) => {
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: ["places"],
-    language: "es",
-  });
+  const { isLoaded, loadError } = useMap();
 
   const position = {
     lat: parseFloat(lat),

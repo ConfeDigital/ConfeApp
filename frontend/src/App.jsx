@@ -26,6 +26,8 @@ import "dayjs/locale/es";
 
 import DashboardLayout from "./components/toolpad/DashboardLayout";
 import WebSocketProvider from "./websocket/WebSocketProvider";
+import { MapProvider } from "./maps/MapProvider";
+
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import ResetPassword from "./pages/auth/ResetPassword";
@@ -181,268 +183,270 @@ function App({ instance }) {
             value={{ cycleColorMode, mode, resolvedMode, refreshAccessibilitySettings }}
           >
             <ThemeProvider theme={theme}>
-              <LocalizationProvider
-                dateAdapter={AdapterDayjs}
-                adapterLocale="es"
-              >
-                <CssBaseline />
-                <Routes>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route
-                    path="/logout"
-                    element={<Logout instance={instance} />}
+              <MapProvider>
+                <LocalizationProvider
+                  dateAdapter={AdapterDayjs}
+                  adapterLocale="es"
+                >
+                  <CssBaseline />
+                  <Routes>
+                    <Route path="/" element={<Home />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route
+                      path="/logout"
+                      element={<Logout instance={instance} />}
+                    />
+                    <Route
+                      path="/register"
+                      element={<RegisterAndLogout instance={instance} />}
+                    />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route
+                      path="/password/reset/confirm/:uid/:token"
+                      element={<ResetPasswordConfirm />}
+                    />
+                    <Route path="/activate/:uid/:token" element={<Activate />} />
+                    <Route path="/info" element={<Info />} />
+                    <Route path="/no-autorizado" element={<InActive />} />
+
+                    {/* Help & Support Routes */}
+                    <Route path="/help" element={<HelpLayout><HelpHome /></HelpLayout>} />
+                    <Route path="/help/user-guide" element={<HelpLayout><UserGuide /></HelpLayout>} />
+                    <Route path="/help/faq" element={<HelpLayout><FAQ /></HelpLayout>} />
+                    <Route path="/help/report-bug" element={<HelpLayout><BugReport /></HelpLayout>} />
+                    <Route path="/help/feedback" element={<HelpLayout><FeedbackPage /></HelpLayout>} />
+
+                    <Route path="*" element={<NotFound />} />
+
+                    <Route
+                      element={
+                        <ProtectedRoute allowedRoles={["candidatos"]}>
+                          <Outlet />
+                        </ProtectedRoute>
+                      }
+                    >
+                      <Route
+                        path="/candidato/perfil"
+                        element={<CandidateDatasheet />}
+                      />
+                      <Route
+                        path="/candidato/dashboard"
+                        element={<CandidateDashboard />}
+                      />
+                      <Route
+                        path="/candidato/apoyos"
+                        element={<CandidateAids />}
+                      />
+                      <Route
+                        path="/candidato/preentrevista"
+                        element={<Preentrevista />}
+                      />
+                      <Route
+                        path="/candidato/:userId/:questionnaireId"
+                        element={<PaginaCuestionarioCandidato />}
+                      />
+                    </Route>
+
+                    <Route
+                      element={
+                        <ProtectedRoute allowedRoles={["empleador"]}>
+                          <SidebarProvider>
+                            <DashboardLayout employer={true} />
+                          </SidebarProvider>
+                        </ProtectedRoute>
+                      }
+                    >
+                      <Route path="/empleador" element={<EmployerPanel />} />
+                      <Route
+                        path="/empleador/perfil"
+                        element={<EmployerProfile />}
+                      />
+                      <Route
+                        path="/empleador/empleo/:jobId"
+                        element={<JobCandidatesPage />}
+                      />
+                      <Route
+                        path="/empleador/configuracion"
+                        element={<Settings />}
+                      />
+                    </Route>
+
+                    <Route
+                      element={
+                        <ProtectedRoute allowedRoles={["admin"]}>
+                          <SidebarProvider>
+                            <DashboardLayout />
+                          </SidebarProvider>
+                        </ProtectedRoute>
+                      }
+                    >
+                      <Route path="/cuestionarios" element={<Cuestionarios />} />
+                      <Route
+                        path="/cargaMT"
+                        element={<CargaMasivaCuestionario />}
+                      />
+                      <Route
+                        path="/baseCuestionarios"
+                        element={<BaseCuestionarios />}
+                      />
+                      <Route
+                        path="/baseCuestionarios/:id"
+                        element={<CuestionarioDetail />}
+                      />
+                      <Route
+                        path="/baseCuestionarios/:idBase/:idCuestionario"
+                        element={<QuestionnaireInterface />}
+                      />
+                      <Route
+                        path="/tablas-de-equivalencia"
+                        element={<TablasEquivalencia />}
+                      />
+                      <Route
+                        path="/tablas-de-equivalencia/:id"
+                        element={<TablaDetalle />}
+                      />
+                      <Route
+                        path="/panel-de-administracion"
+                        element={<AdminPanel />}
+                      />
+                      <Route
+                        path="/cargaMasiva"
+                        element={<CargaMasivaCandidatos />}
+                      />
+                      <Route
+                        path="/carga-masiva-respuestas"
+                        element={<CargaMasivaRespuestas />}
+                      />
+                      <Route path="/estadisticas" element={<Statistics />} />
+                    </Route>
+
+                    <Route
+                      element={
+                        <ProtectedRoute allowedRoles={["admin", "gerente"]}>
+                          <SidebarProvider>
+                            <DashboardLayout />
+                          </SidebarProvider>
+                        </ProtectedRoute>
+                      }
+                    >
+                      <Route
+                        path="/configuracion-del-centro"
+                        element={<ManagerSettings />}
+                      />
+                    </Route>
+
+                    <Route
+                      element={
+                        <ProtectedRoute allowedRoles={["personal"]}>
+                          <SidebarProvider>
+                            <DashboardLayout />
+                          </SidebarProvider>
+                        </ProtectedRoute>
+                      }
+                    >
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/candidatos" element={<CandidateConsult />} />
+                      <Route path="/calendar" element={<Calendar />} />
+                      <Route
+                        path="/calendar-microsoft"
+                        element={<CalendarMicrosoft />}
+                      />
+                      <Route path="/candidatos/:uid" element={<Datasheet />} />
+                      <Route
+                        path="/candidatos/visualizar/:uid"
+                        element={<DatasheetReadOnly />}
+                      />
+                      <Route
+                        path="/candidatos/:uid/:cuestionarioId"
+                        element={<PaginaCuestionario />}
+                      />
+                      <Route
+                        path="/seguimiento-candidatos/:uid"
+                        element={<Seguimiento />}
+                      />
+                      <Route
+                        path="/seguimiento-candidatos"
+                        element={<NavegacionSeguimiento />}
+                      />
+                      <Route path="/dashboard/*" element={<NotFound />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route
+                        path="/candidatos/crear"
+                        element={<CandidateCreate />}
+                      />
+                      <Route
+                        path="/candidatos/editar/:uid"
+                        element={<CandidateEdit />}
+                      />
+                      <Route
+                        path="/candidatos/historial-apoyos/:uid"
+                        element={<CandidateAidHistory />}
+                      />
+                      <Route
+                        path="/candidatos/historial-empleos/:uid"
+                        element={<CandidateJobHistory />}
+                      />
+                      <Route
+                        path="/candidatos/empleo/:uid"
+                        element={<EmploymentDashboard />}
+                      />
+                      <Route
+                        path="/candidatos/proyecto-vida/:uid"
+                        element={<ProyectoDeVidaSeguimiento />}
+                      />
+                      <Route path="/discapacidades" element={<Disabilities />} />
+                      <Route
+                        path="/apoyos/evaluacion-diagnostica"
+                        element={<TechnicalAids />}
+                      />
+                      <Route path="/apoyos/SIS" element={<SISAids />} />
+                      <Route
+                        path="/apoyos/cuadro-habilidades"
+                        element={<CHAids />}
+                      />
+                      <Route path="/configuracion" element={<Settings />} />
+                      <Route path="/anuncios" element={<Announcements />} />
+                      <Route
+                        path="/comunicacion-centros"
+                        element={<CenterChat />}
+                      />
+                      <Route path="/foro" element={<CenterForum />} />
+                      <Route path="/demo" element={<ProfileFieldDemo />} />
+                    </Route>
+                    <Route
+                      element={
+                        <ProtectedRoute allowedRoles={["agencia_laboral"]}>
+                          <SidebarProvider>
+                            <DashboardLayout />
+                          </SidebarProvider>
+                        </ProtectedRoute>
+                      }
+                    >
+                      <Route
+                        path="/agencia-laboral/dashboard"
+                        element={<AgenciaLaboralDashboard />}
+                      />
+                      <Route
+                        path="/agencia-laboral/empleo/:jobId"
+                        element={<JobCandidatesPage />}
+                      />
+                      <Route
+                        path="/agencia-laboral/administracion"
+                        element={<AdminAgencia />}
+                      />
+                      <Route
+                        path="/agencia-laboral/habilidades"
+                        element={<HabilidadesEmpleo />}
+                      />
+                    </Route>
+                  </Routes>
+                  <SessionExpiredDialog
+                    open={showSessionExpired}
+                    onClose={() => setShowSessionExpired(false)}
                   />
-                  <Route
-                    path="/register"
-                    element={<RegisterAndLogout instance={instance} />}
-                  />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route
-                    path="/password/reset/confirm/:uid/:token"
-                    element={<ResetPasswordConfirm />}
-                  />
-                  <Route path="/activate/:uid/:token" element={<Activate />} />
-                  <Route path="/info" element={<Info />} />
-                  <Route path="/no-autorizado" element={<InActive />} />
-                  
-                  {/* Help & Support Routes */}
-                  <Route path="/help" element={<HelpLayout><HelpHome /></HelpLayout>} />
-                  <Route path="/help/user-guide" element={<HelpLayout><UserGuide /></HelpLayout>} />
-                  <Route path="/help/faq" element={<HelpLayout><FAQ /></HelpLayout>} />
-                  <Route path="/help/report-bug" element={<HelpLayout><BugReport /></HelpLayout>} />
-                  <Route path="/help/feedback" element={<HelpLayout><FeedbackPage /></HelpLayout>} />
-                  
-                  <Route path="*" element={<NotFound />} />
-
-                  <Route
-                    element={
-                      <ProtectedRoute allowedRoles={["candidatos"]}>
-                        <Outlet />
-                      </ProtectedRoute>
-                    }
-                  >
-                    <Route
-                      path="/candidato/perfil"
-                      element={<CandidateDatasheet />}
-                    />
-                    <Route
-                      path="/candidato/dashboard"
-                      element={<CandidateDashboard />}
-                    />
-                    <Route
-                      path="/candidato/apoyos"
-                      element={<CandidateAids />}
-                    />
-                    <Route
-                      path="/candidato/preentrevista"
-                      element={<Preentrevista />}
-                    />
-                    <Route
-                      path="/candidato/:userId/:questionnaireId"
-                      element={<PaginaCuestionarioCandidato />}
-                    />
-                  </Route>
-
-                  <Route
-                    element={
-                      <ProtectedRoute allowedRoles={["empleador"]}>
-                        <SidebarProvider>
-                          <DashboardLayout employer={true} />
-                        </SidebarProvider>
-                      </ProtectedRoute>
-                    }
-                  >
-                    <Route path="/empleador" element={<EmployerPanel />} />
-                    <Route
-                      path="/empleador/perfil"
-                      element={<EmployerProfile />}
-                    />
-                    <Route
-                      path="/empleador/empleo/:jobId"
-                      element={<JobCandidatesPage />}
-                    />
-                    <Route
-                      path="/empleador/configuracion"
-                      element={<Settings />}
-                    />
-                  </Route>
-
-                  <Route
-                    element={
-                      <ProtectedRoute allowedRoles={["admin"]}>
-                        <SidebarProvider>
-                          <DashboardLayout />
-                        </SidebarProvider>
-                      </ProtectedRoute>
-                    }
-                  >
-                    <Route path="/cuestionarios" element={<Cuestionarios />} />
-                    <Route
-                      path="/cargaMT"
-                      element={<CargaMasivaCuestionario />}
-                    />
-                    <Route
-                      path="/baseCuestionarios"
-                      element={<BaseCuestionarios />}
-                    />
-                    <Route
-                      path="/baseCuestionarios/:id"
-                      element={<CuestionarioDetail />}
-                    />
-                    <Route
-                      path="/baseCuestionarios/:idBase/:idCuestionario"
-                      element={<QuestionnaireInterface />}
-                    />
-                    <Route
-                      path="/tablas-de-equivalencia"
-                      element={<TablasEquivalencia />}
-                    />
-                    <Route
-                      path="/tablas-de-equivalencia/:id"
-                      element={<TablaDetalle />}
-                    />
-                    <Route
-                      path="/panel-de-administracion"
-                      element={<AdminPanel />}
-                    />
-                    <Route
-                      path="/cargaMasiva"
-                      element={<CargaMasivaCandidatos />}
-                    />
-                    <Route
-                      path="/carga-masiva-respuestas"
-                      element={<CargaMasivaRespuestas />}
-                    />
-                    <Route path="/estadisticas" element={<Statistics />} />
-                  </Route>
-
-                  <Route
-                    element={
-                      <ProtectedRoute allowedRoles={["admin", "gerente"]}>
-                        <SidebarProvider>
-                          <DashboardLayout />
-                        </SidebarProvider>
-                      </ProtectedRoute>
-                    }
-                  >
-                    <Route
-                      path="/configuracion-del-centro"
-                      element={<ManagerSettings />}
-                    />
-                  </Route>
-
-                  <Route
-                    element={
-                      <ProtectedRoute allowedRoles={["personal"]}>
-                        <SidebarProvider>
-                          <DashboardLayout />
-                        </SidebarProvider>
-                      </ProtectedRoute>
-                    }
-                  >
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/candidatos" element={<CandidateConsult />} />
-                    <Route path="/calendar" element={<Calendar />} />
-                    <Route
-                      path="/calendar-microsoft"
-                      element={<CalendarMicrosoft />}
-                    />
-                    <Route path="/candidatos/:uid" element={<Datasheet />} />
-                    <Route
-                      path="/candidatos/visualizar/:uid"
-                      element={<DatasheetReadOnly />}
-                    />
-                    <Route
-                      path="/candidatos/:uid/:cuestionarioId"
-                      element={<PaginaCuestionario />}
-                    />
-                    <Route
-                      path="/seguimiento-candidatos/:uid"
-                      element={<Seguimiento />}
-                    />
-                    <Route
-                      path="/seguimiento-candidatos"
-                      element={<NavegacionSeguimiento />}
-                    />
-                    <Route path="/dashboard/*" element={<NotFound />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route
-                      path="/candidatos/crear"
-                      element={<CandidateCreate />}
-                    />
-                    <Route
-                      path="/candidatos/editar/:uid"
-                      element={<CandidateEdit />}
-                    />
-                    <Route
-                      path="/candidatos/historial-apoyos/:uid"
-                      element={<CandidateAidHistory />}
-                    />
-                    <Route
-                      path="/candidatos/historial-empleos/:uid"
-                      element={<CandidateJobHistory />}
-                    />
-                    <Route
-                      path="/candidatos/empleo/:uid"
-                      element={<EmploymentDashboard />}
-                    />
-                    <Route
-                      path="/candidatos/proyecto-vida/:uid"
-                      element={<ProyectoDeVidaSeguimiento />}
-                    />
-                    <Route path="/discapacidades" element={<Disabilities />} />
-                    <Route
-                      path="/apoyos/evaluacion-diagnostica"
-                      element={<TechnicalAids />}
-                    />
-                    <Route path="/apoyos/SIS" element={<SISAids />} />
-                    <Route
-                      path="/apoyos/cuadro-habilidades"
-                      element={<CHAids />}
-                    />
-                    <Route path="/configuracion" element={<Settings />} />
-                    <Route path="/anuncios" element={<Announcements />} />
-                    <Route
-                      path="/comunicacion-centros"
-                      element={<CenterChat />}
-                    />
-                    <Route path="/foro" element={<CenterForum />} />
-                    <Route path="/demo" element={<ProfileFieldDemo />} />
-                  </Route>
-                  <Route
-                    element={
-                      <ProtectedRoute allowedRoles={["agencia_laboral"]}>
-                        <SidebarProvider>
-                          <DashboardLayout />
-                        </SidebarProvider>
-                      </ProtectedRoute>
-                    }
-                  >
-                    <Route
-                      path="/agencia-laboral/dashboard"
-                      element={<AgenciaLaboralDashboard />}
-                    />
-                    <Route
-                      path="/agencia-laboral/empleo/:jobId"
-                      element={<JobCandidatesPage />}
-                    />
-                    <Route
-                      path="/agencia-laboral/administracion"
-                      element={<AdminAgencia />}
-                    />
-                    <Route
-                      path="/agencia-laboral/habilidades"
-                      element={<HabilidadesEmpleo />}
-                    />
-                  </Route>
-                </Routes>
-                <SessionExpiredDialog
-                  open={showSessionExpired}
-                  onClose={() => setShowSessionExpired(false)}
-                />
-                <ConnectionStatusDialog />
-              </LocalizationProvider>
+                  <ConnectionStatusDialog />
+                </LocalizationProvider>
+              </MapProvider>
             </ThemeProvider>
           </ColorModeContext.Provider>
         </WebSocketProvider>

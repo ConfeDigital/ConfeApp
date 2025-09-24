@@ -28,7 +28,6 @@ import ToggleOffIcon from '@mui/icons-material/ToggleOff';
 import SearchIcon from '@mui/icons-material/Search';
 import {
   GoogleMap,
-  useJsApiLoader,
   Marker,
   InfoWindow,
 } from '@react-google-maps/api';
@@ -36,6 +35,7 @@ import api from '../../api';
 import CenterFormDialog from './CenterFormDialog';
 import { CENTER_TYPES } from './centerTypes';
 import { useSelector } from "react-redux";
+import { useMap } from "../../maps/MapProvider";
 
 const mapContainerStyle = { width: '100%', height: '400px' };
 const defaultCenter = { lat: 19.4326, lng: -99.1332 }; // Mexico City by default
@@ -59,11 +59,7 @@ export default function CentersSettings() {
   const [selectedCenter, setSelectedCenter] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: ['places'],
-    language: 'es'
-  });
+  const { isLoaded, loadError } = useMap();
 
   useEffect(() => { 
     setLoadingCenters(true);

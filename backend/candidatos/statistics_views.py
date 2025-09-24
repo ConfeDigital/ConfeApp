@@ -184,16 +184,66 @@ class StatisticsView(APIView):
             domicile__address_state=''
         ).order_by('-count')[:10]
 
-        # City distribution
+        # Municipality distribution by state
+        municipality_stats = queryset.values(
+            'domicile__address_state', 
+            'domicile__address_municip'
+        ).annotate(
+            count=Count('user_id')
+        ).exclude(
+            domicile__address_state__isnull=True
+        ).exclude(
+            domicile__address_state=''
+        ).exclude(
+            domicile__address_municip__isnull=True
+        ).exclude(
+            domicile__address_municip=''
+        ).order_by('domicile__address_state', '-count')
+
+        # Group municipalities by state
+        municipalities_by_state = {}
+        for item in municipality_stats:
+            state = item['domicile__address_state']
+            if state not in municipalities_by_state:
+                municipalities_by_state[state] = []
+            municipalities_by_state[state].append({
+                'municipality': item['domicile__address_municip'],
+                'count': item['count']
+            })
+
+        # City distribution (keeping for backward compatibility)
         city_stats = queryset.values('domicile__address_city').annotate(
             count=Count('user_id')
         ).exclude(domicile__address_city__isnull=True).exclude(
             domicile__address_city=''
         ).order_by('-count')[:10]
 
+        # Heatmap data - get all candidates with valid coordinates
+        heatmap_data = queryset.filter(
+            domicile__address_lat__isnull=False,
+            domicile__address_lng__isnull=False
+        ).exclude(
+            domicile__address_lat=0,
+            domicile__address_lng=0
+        ).values(
+            'domicile__address_lat',
+            'domicile__address_lng'
+        ).annotate(
+            count=Count('user_id')
+        )
+
         return {
             'states': {item['domicile__address_state']: item['count'] for item in state_stats},
-            'cities': {item['domicile__address_city']: item['count'] for item in city_stats}
+            'cities': {item['domicile__address_city']: item['count'] for item in city_stats},
+            'municipalities_by_state': municipalities_by_state,
+            'heatmap_data': [
+                {
+                    'lat': float(item['domicile__address_lat']),
+                    'lng': float(item['domicile__address_lng']),
+                    'count': item['count']
+                }
+                for item in heatmap_data
+            ]
         }
 
     def _get_employment_stats(self, queryset):

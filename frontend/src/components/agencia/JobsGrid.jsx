@@ -3,8 +3,9 @@ import React, { useState } from 'react';
 import { DataGrid, GridToolbarContainer, GridToolbarQuickFilter, GridToolbar } from '@mui/x-data-grid';
 import { Tooltip, Typography, Box, ToggleButton, ToggleButtonGroup, CircularProgress, Button, Chip } from '@mui/material';
 import { Map as MapIcon, GridOn as GridIcon } from '@mui/icons-material';
-import { GoogleMap, Marker, InfoWindow, useJsApiLoader } from '@react-google-maps/api';
+import { GoogleMap, Marker, InfoWindow } from '@react-google-maps/api';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useMap } from '../../maps/MapProvider';
 
 const mapContainerStyle = { width: '100%', height: '64vh' };
 const defaultCenter = { lat: 19.43, lng: -99.13 };  // fallback center
@@ -16,11 +17,7 @@ export default function JobsDataGrid({ rows, companyNameVisibility, isLoading })
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: ['places'],
-    language: 'es'
-  });
+  const { isLoaded, loadError } = useMap();
 
   const handleToggle = (_, next) => {
     if (next) {

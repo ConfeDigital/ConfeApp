@@ -43,6 +43,11 @@ import {
     BarChart as MuiBarChart,
     LineChart as MuiLineChart,
 } from "@mui/x-charts";
+import {
+    GoogleMap,
+    HeatmapLayer,
+} from "@react-google-maps/api";
+import { useMap } from "../../maps/MapProvider";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import BusinessIcon from "@mui/icons-material/Business";
 import TrendingUpIcon from "@mui/icons-material/TrendingUp";
@@ -88,6 +93,124 @@ const GENDER = [
     { code: "O", label: "Otro" },
 ];
 
+// Default map center (Mexico City)
+const defaultCenter = {
+    lat: 19.4326,
+    lng: -99.1332
+};
+
+// Heatmap component
+function HeatmapComponent({ heatmapData }) {
+    const { isLoaded, loadError } = useMap();
+    
+    if (loadError) {
+        return (
+            <Box 
+                display="flex" 
+                justifyContent="center" 
+                alignItems="center" 
+                height="400px"
+                border="1px dashed #ccc"
+            >
+                <Typography color="error">
+                    Error al cargar Google Maps. Verifique su conexión a internet.
+                </Typography>
+            </Box>
+        );
+    }
+    
+    if (!isLoaded) {
+        return (
+            <Box display="flex" justifyContent="center" alignItems="center" height="400px">
+                <CircularProgress />
+                <Typography sx={{ ml: 2 }}>Cargando mapa...</Typography>
+            </Box>
+        );
+    }
+    
+    if (!heatmapData || heatmapData.length === 0) {
+        return (
+            <Box 
+                display="flex" 
+                justifyContent="center" 
+                alignItems="center" 
+                height="400px"
+                border="1px dashed #ccc"
+            >
+                <Typography color="textSecondary">
+                    No hay datos de ubicación disponibles para mostrar
+                </Typography>
+            </Box>
+        );
+    }
+    
+    // Transform data for heatmap
+    const heatmapPoints = heatmapData
+        .filter(point => point.lat && point.lng && !isNaN(point.lat) && !isNaN(point.lng))
+        .map(point => ({
+            location: new window.google.maps.LatLng(point.lat, point.lng),
+            weight: Math.max(1, point.count) // Ensure minimum weight of 1
+        }));
+    
+    // Calculate map bounds if we have data
+    const bounds = heatmapPoints.length > 0 ? new window.google.maps.LatLngBounds() : null;
+    if (bounds && heatmapPoints.length > 0) {
+        heatmapPoints.forEach(point => bounds.extend(point.location));
+    }
+    
+    return (
+        <Box>
+            {/* <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                Total de ubicaciones: {heatmapData.length} | Puntos válidos: {heatmapPoints.length}
+            </Typography> */}
+            <GoogleMap
+                mapContainerStyle={{ width: '100%', height: '400px' }}
+                center={heatmapPoints.length > 0 ? heatmapPoints[0].location : defaultCenter}
+                zoom={heatmapPoints.length > 1 ? 8 : 6}
+                options={{
+                    mapTypeId: 'roadmap',
+                    disableDefaultUI: false,
+                    zoomControl: true,
+                    streetViewControl: false,
+                    mapTypeControl: false,
+                    fullscreenControl: true,
+                }}
+                onLoad={(map) => {
+                    if (bounds && heatmapPoints.length > 1) {
+                        map.fitBounds(bounds);
+                    }
+                }}
+            >
+                {heatmapPoints.length > 0 && (
+                    <HeatmapLayer
+                        data={heatmapPoints}
+                        options={{
+                            radius: 20,
+                            opacity: 0.7,
+                            gradient: [
+                                'rgba(0, 255, 255, 0)',
+                                'rgba(0, 255, 255, 1)',
+                                'rgba(0, 191, 255, 1)',
+                                'rgba(0, 127, 255, 1)',
+                                'rgba(0, 63, 255, 1)',
+                                'rgba(0, 0, 255, 1)',
+                                'rgba(0, 0, 223, 1)',
+                                'rgba(0, 0, 191, 1)',
+                                'rgba(0, 0, 159, 1)',
+                                'rgba(0, 0, 127, 1)',
+                                'rgba(63, 0, 91, 1)',
+                                'rgba(127, 0, 63, 1)',
+                                'rgba(191, 0, 31, 1)',
+                                'rgba(255, 0, 0, 1)'
+                            ]
+                        }}
+                    />
+                )}
+            </GoogleMap>
+        </Box>
+    );
+}
+
 export default function Statistics() {
     useDocumentTitle("Estadísticas");
     const isSmallScreen = useMediaQuery("(max-width:600px)");
@@ -109,6 +232,11 @@ export default function Statistics() {
     const [isLoading, setIsLoading] = useState(true);
     const [statsData, setStatsData] = useState({});
     const [activeTab, setActiveTab] = useState(0);
+    const [selectedState, setSelectedState] = useState(null);
+    const [statePage, setStatePage] = useState(1);
+    const [municipalityPage, setMunicipalityPage] = useState(1);
+    
+    const ITEMS_PER_PAGE = 15;
 
     // Fetch centers and cycles on component mount
     useEffect(() => {
@@ -183,8 +311,16 @@ export default function Statistics() {
     const handleClearFilters = () => {
         setSelectedCenter(canViewAllCenters ? null : (centers.length > 0 ? centers[0] : null));
         setDateRange([dayjs().subtract(6, "month"), dayjs()]);
+        setSelectedState(null);
+        setStatePage(1);
+        setMunicipalityPage(1);
         setErrorMsg("");
         setSnackbarOpen(false);
+    };
+
+    const handleStateClick = (stateName) => {
+        setSelectedState(stateName);
+        setMunicipalityPage(1); // Reset to first page when selecting a state
     };
 
     const handleApplyDateFilter = async () => {
@@ -283,18 +419,45 @@ export default function Statistics() {
 
     const prepareDomicileData = () => {
         if (!statsData.domicile?.states) return [];
-        return Object.entries(statsData.domicile.states).map(([state, count]) => ({
+        const allStates = Object.entries(statsData.domicile.states).map(([state, count]) => ({
             name: state,
             value: count
         }));
+        
+        const startIndex = (statePage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return allStates.slice(startIndex, endIndex);
     };
 
-    const prepareCityData = () => {
-        if (!statsData.domicile?.cities) return [];
-        return Object.entries(statsData.domicile.cities).map(([city, count]) => ({
-            name: city,
-            value: count
+    const prepareMunicipalityData = () => {
+        if (!selectedState || !statsData.domicile?.municipalities_by_state?.[selectedState]) return [];
+        const allMunicipalities = statsData.domicile.municipalities_by_state[selectedState].map(item => ({
+            name: item.municipality,
+            value: item.count
         }));
+        
+        const startIndex = (municipalityPage - 1) * ITEMS_PER_PAGE;
+        const endIndex = startIndex + ITEMS_PER_PAGE;
+        return allMunicipalities.slice(startIndex, endIndex);
+    };
+
+    // Helper functions to get pagination info
+    const getStatePaginationInfo = () => {
+        if (!statsData.domicile?.states) return { total: 0, hasNext: false, hasPrev: false };
+        const total = Object.keys(statsData.domicile.states).length;
+        const hasNext = statePage * ITEMS_PER_PAGE < total;
+        const hasPrev = statePage > 1;
+        return { total, hasNext, hasPrev };
+    };
+
+    const getMunicipalityPaginationInfo = () => {
+        if (!selectedState || !statsData.domicile?.municipalities_by_state?.[selectedState]) {
+            return { total: 0, hasNext: false, hasPrev: false };
+        }
+        const total = statsData.domicile.municipalities_by_state[selectedState].length;
+        const hasNext = municipalityPage * ITEMS_PER_PAGE < total;
+        const hasPrev = municipalityPage > 1;
+        return { total, hasNext, hasPrev };
     };
 
     // Render overview cards
@@ -368,7 +531,7 @@ export default function Statistics() {
 
         return (
             <Box>
-                <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }}>
+                <Tabs value={activeTab} onChange={handleTabChange} sx={{ mb: 3 }} variant="scrollable">
                     <Tab label="Distribución por Etapas" />
                     <Tab label="Demografía" />
                     <Tab label="Ubicación" />
@@ -474,36 +637,119 @@ export default function Statistics() {
 
                 {activeTab === 2 && (
                     <Grid container spacing={3}>
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12}>
                             <Paper sx={{ p: 2 }}>
                                 <Typography variant="h6" gutterBottom>
-                                    Distribución por Estado
+                                    Distribución Geográfica de Candidatos
                                 </Typography>
-                                <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={prepareDomicileData()}>
-                                        <CartesianGrid strokeDasharray="3 3" />
-                                        <XAxis dataKey="name" angle={-30} textAnchor="end" height={100} />
-                                        <YAxis />
-                                        <Tooltip />
-                                        <Bar dataKey="value" name="Cantidad" fill="#82ca9d" />
-                                    </BarChart>
-                                </ResponsiveContainer>
+                                {/* <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                                    Mapa de calor mostrando la concentración de candidatos por ubicación
+                                </Typography> */}
+                                <HeatmapComponent heatmapData={statsData.domicile?.heatmap_data || []} />
                             </Paper>
                         </Grid>
-                        <Grid item xs={12} md={6}>
+                        <Grid item xs={12}>
                             <Paper sx={{ p: 2 }}>
-                                <Typography variant="h6" gutterBottom>
-                                    Distribución por Ciudad
-                                </Typography>
+                                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
+                                    <Typography variant="h6">
+                                        {selectedState 
+                                            ? `Municipios de ${selectedState}` 
+                                            : "Distribución por Estado"
+                                        }
+                                    </Typography>
+                                    <Box display="flex" gap={1} alignItems="center">
+                                        {(() => {
+                                            const paginationInfo = selectedState 
+                                                ? getMunicipalityPaginationInfo() 
+                                                : getStatePaginationInfo();
+                                            
+                                            return (
+                                                <>
+                                                    {paginationInfo.total > ITEMS_PER_PAGE && (
+                                                        <Box display="flex" alignItems="center" gap={1}>
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                disabled={!paginationInfo.hasPrev}
+                                                                onClick={() => {
+                                                                    if (selectedState) {
+                                                                        setMunicipalityPage(prev => Math.max(1, prev - 1));
+                                                                    } else {
+                                                                        setStatePage(prev => Math.max(1, prev - 1));
+                                                                    }
+                                                                }}
+                                                            >
+                                                                Anterior
+                                                            </Button>
+                                                            <Typography variant="body2" color="textSecondary">
+                                                                Página {selectedState ? municipalityPage : statePage} de {Math.ceil(paginationInfo.total / ITEMS_PER_PAGE)}
+                                                            </Typography>
+                                                            <Button
+                                                                size="small"
+                                                                variant="outlined"
+                                                                disabled={!paginationInfo.hasNext}
+                                                                onClick={() => {
+                                                                    if (selectedState) {
+                                                                        setMunicipalityPage(prev => prev + 1);
+                                                                    } else {
+                                                                        setStatePage(prev => prev + 1);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                Siguiente
+                                                            </Button>
+                                                        </Box>
+                                                    )}
+                                                    {selectedState && (
+                                                        <Button 
+                                                            size="small" 
+                                                            onClick={() => setSelectedState(null)}
+                                                            variant="outlined"
+                                                        >
+                                                            Ver Estados
+                                                        </Button>
+                                                    )}
+                                                </>
+                                            );
+                                        })()}
+                                    </Box>
+                                </Box>
                                 <ResponsiveContainer width="100%" height={300}>
-                                    <BarChart data={prepareCityData()}>
+                                    <BarChart data={selectedState ? prepareMunicipalityData() : prepareDomicileData()}>
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis dataKey="name" angle={-30} textAnchor="end" height={100} />
                                         <YAxis />
                                         <Tooltip />
-                                        <Bar dataKey="value" name="Cantidad" fill="#ffc658" />
+                                        <Bar 
+                                            dataKey="value" 
+                                            name="Cantidad" 
+                                            fill={selectedState ? "#ff7300" : "#82ca9d"}
+                                            onClick={selectedState ? null : (data) => handleStateClick(data.name)}
+                                            style={{ cursor: selectedState ? 'default' : 'pointer' }}
+                                        />
                                     </BarChart>
                                 </ResponsiveContainer>
+                                {(() => {
+                                    const paginationInfo = selectedState 
+                                        ? getMunicipalityPaginationInfo() 
+                                        : getStatePaginationInfo();
+                                    
+                                    return (
+                                        <Box display="flex" justifyContent="space-between" alignItems="center" mt={1}>
+                                            <Typography variant="caption" color="textSecondary">
+                                                {selectedState 
+                                                    ? `Mostrando ${prepareMunicipalityData().length} de ${paginationInfo.total} municipios`
+                                                    : `Mostrando ${prepareDomicileData().length} de ${paginationInfo.total} estados`
+                                                }
+                                            </Typography>
+                                            {!selectedState && (
+                                                <Typography variant="caption" color="textSecondary">
+                                                    Haga clic en una barra para ver los municipios de ese estado
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    );
+                                })()}
                             </Paper>
                         </Grid>
                     </Grid>

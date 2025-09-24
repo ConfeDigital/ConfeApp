@@ -20,10 +20,10 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import {
   GoogleMap,
   Marker,
-  useJsApiLoader,
   InfoWindow,
 } from "@react-google-maps/api";
 import { useNavigate } from "react-router-dom";
+import { useMap } from "../../maps/MapProvider";
 
 const googleMapLibraries = ["places"];
 const mapContainerStyle = {
@@ -64,11 +64,7 @@ const CanalizacionCentro = ({
   const [selectedCenterForMap, setSelectedCenterForMap] = useState(null);
   const [distances, setDistances] = useState({});
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: googleMapLibraries,
-    language: "es",
-  });
+  const { isLoaded, loadError } = useMap();
 
   // Helper function to find center by ID
   const findCenterById = useCallback((centerId) => {
