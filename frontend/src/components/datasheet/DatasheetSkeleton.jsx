@@ -90,6 +90,11 @@ const DatasheetSkeleton = () => {
           </Grid>
         </Box>
 
+        {/* PDF Download Button Skeleton */}
+        <Box display="flex" justifyContent="center" mb={{ xs: 2, md: 3 }}>
+          <Skeleton variant="rectangular" width={180} height={40} />
+        </Box>
+
         {/* Timeline Stepper Skeleton */}
         <Box mb={3}>
           {isSmallScreen ? (
@@ -129,11 +134,6 @@ const DatasheetSkeleton = () => {
               ))}
             </Box>
           )}
-        </Box>
-
-        {/* PDF Download Button Skeleton */}
-        <Box display="flex" justifyContent="center" mt={{ xs: 2, md: 3 }}>
-          <Skeleton variant="rectangular" width={180} height={40} />
         </Box>
       </Paper>
     </Box>

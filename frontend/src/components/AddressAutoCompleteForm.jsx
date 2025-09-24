@@ -16,14 +16,13 @@ import MapIcon from '@mui/icons-material/Map';
 import SearchIcon from '@mui/icons-material/Search';
 import { useFormContext, Controller } from 'react-hook-form';
 import {
-  useJsApiLoader,
   Autocomplete,
   GoogleMap,
   Marker
 } from '@react-google-maps/api';
 import axios from '../api';
+import { useMap } from '../maps/MapProvider';
 
-const libraries = ['places'];
 const round6 = n => Math.round(n * 1e6) / 1e6;
 
 export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded, domicile = false, errors, disabled = false }) {
@@ -37,11 +36,7 @@ export default function AddressAutoCompleteForm({ prefix, setDomicileFormLoaded,
   const [showMap, setShowMap] = useState(false);
   const [markerPosition, setMarkerPosition] = useState({ lat: 0, lng: 0 });
 
-  const { isLoaded } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries,
-    language: 'es'
-  });
+  const { isLoaded } = useMap();
 
   const addressLat = watch(`${prefix}.address_lat`);
   const addressLng = watch(`${prefix}.address_lng`);

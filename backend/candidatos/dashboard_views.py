@@ -24,7 +24,13 @@ class DashboardStatsView(APIView):
         current_center = self.request.user.center
 
         users = UserProfile.objects.filter(
-                user__center=current_center
+                user__center=current_center,
+                user__is_active=True
+            )
+
+        inactive_users = UserProfile.objects.filter(
+                user__center=current_center,
+                user__is_active=False
             )
         
         users_pending_transfer_to_center_ids = TransferRequest.objects.filter(
@@ -248,9 +254,9 @@ class DashboardStatsView(APIView):
                 "haciaOrganizacion": request_canalizacion_to_centro,
             },
             "candidatos": {
-                "total": users.count(),
-                "activos": users.filter(user__is_active=True).count(),
-                "inactivos": users.filter(user__is_active=False).count(),
+                "total": users.count() + inactive_users.count(),
+                "activos": users.count(),
+                "inactivos": inactive_users.count(),
             },
             "user_pks": {
                 "sinPre": list(preentrevista_stage_users.filter(stage="Reg").values_list('user_id', flat=True)),
@@ -266,8 +272,8 @@ class DashboardStatsView(APIView):
                 "vida": users_without_pv_finalizado_pks if isinstance(users_without_pv_finalizado_count, int) else [],
                 "habilidades": users_without_ch_finalizado_pks if isinstance(users_without_ch_finalizado_count, int) else [],
 
-                "activos": list(users.filter(user__is_active=True).values_list('user_id', flat=True)),
-                "inactivos": list(users.filter(user__is_active=False).values_list('user_id', flat=True)),
+                "activos": list(users.values_list('user_id', flat=True)),
+                "inactivos": list(inactive_users.values_list('user_id', flat=True)),
 
                 "desempleados": list(users.filter(stage='Agn', agency_state="Des").values_list('user_id', flat=True)),
                 "bolsa": list(users.filter(stage='Agn', agency_state="Bol").values_list('user_id', flat=True)),

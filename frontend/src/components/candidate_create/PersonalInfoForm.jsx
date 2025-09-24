@@ -266,6 +266,7 @@ const PersonalInfoForm = ({
                   <MenuItem value="Ent">Entrevista</MenuItem>
                   <MenuItem value="Cap">Capacitación</MenuItem>
                   <MenuItem value="Agn">Agencia</MenuItem>
+                  <MenuItem value="TrC">Trabajo en Casa</MenuItem>
                 </Select>
               </FormControl>
             )}

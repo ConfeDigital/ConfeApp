@@ -107,10 +107,11 @@ class UserProfile(models.Model):
     STAGE_CHOICES = [
         ('Reg', 'Registro'),
         ('Pre', 'Preentrevista'),
+        ('Can', 'Canalización'),
         ('Ent', 'Entrevista'),
         ('Cap', 'Capacitación'),
         ('Agn', 'Agencia'),
-        ('Can', 'Canalización'),
+        ('TrC',  'Trabajo en Casa'),
     ]
 
     AGENCY_STATE_CHOICES = [

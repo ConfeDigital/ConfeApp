@@ -10,9 +10,10 @@ import { DatePicker } from '@mui/x-date-pickers';
 import dayjs from 'dayjs';
 import {
   GoogleMap, Marker, InfoWindow,
-  DirectionsRenderer, useJsApiLoader
+  DirectionsRenderer
 } from '@react-google-maps/api';
 import api from '../../api';
+import { useMap } from '../../maps/MapProvider';
 
 // Haversine formula to compute distance between two coordinates.
 const haversineDistance = (lat1, lng1, lat2, lng2) => {
@@ -53,11 +54,7 @@ const AssignJobModal = ({ open, candidate, availableJobs, onClose, onAssigned })
   const [matchingData, setMatchingData] = useState(null);
   const [loadingMatching, setLoadingMatching] = useState(false);
 
-  const { isLoaded, loadError } = useJsApiLoader({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY,
-    libraries: ['places'],
-    language: 'es'
-  });
+  const { isLoaded, loadError } = useMap();
 
   // Reset modal state on open
   useEffect(() => {

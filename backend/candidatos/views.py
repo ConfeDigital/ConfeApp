@@ -923,3 +923,35 @@ class CHAidCandidateHistoryHistoryAPIView(APIView):
                 "history_type": record.get_history_type_display(),
             })
         return Response(historial)
+
+
+class CandidateToggleActiveStatusAPIView(APIView):
+    """
+    API view to toggle a candidate's active status (activate/deactivate).
+    """
+    permission_classes = [IsAuthenticated, PersonalPermission, IsInSameCenter]
+
+    def get_object(self, uid):
+        """
+        Gets the candidate user based on the ID.
+        """
+        try:
+            return User.objects.get(id=uid, groups__name='candidatos')
+        except User.DoesNotExist:
+            raise NotFound("Candidate not found.")
+
+    def patch(self, request, uid):
+        """
+        Toggles the candidate's active status.
+        """
+        candidate = self.get_object(uid)
+        self.check_object_permissions(request, candidate)
+        
+        # Toggle the is_active status
+        candidate.is_active = not candidate.is_active
+        candidate.save()
+        
+        return Response({
+            "message": f"Candidate {'activated' if candidate.is_active else 'deactivated'} successfully",
+            "is_active": candidate.is_active
+        }, status=status.HTTP_200_OK)
