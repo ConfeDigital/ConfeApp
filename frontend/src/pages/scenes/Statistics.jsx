@@ -185,7 +185,7 @@ function HeatmapComponent({ heatmapData }) {
                     <HeatmapLayer
                         data={heatmapPoints}
                         options={{
-                            radius: 20,
+                            radius: 25,
                             opacity: 0.7,
                             gradient: [
                                 'rgba(0, 255, 255, 0)',
