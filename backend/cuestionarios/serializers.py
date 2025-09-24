@@ -14,7 +14,7 @@ from .profile_fields import get_field_metadata, get_field_choices
 class DesbloqueoPreguntaSerializer(serializers.ModelSerializer):
     pregunta_origen = serializers.CharField(source='pregunta_origen.texto')
     opcion_desbloqueadora = serializers.CharField(source='opcion_desbloqueadora.texto')
-    pregunta_desbloqueada = serializers.CharField(source='pregunta_desbloqueada.texto')
+    pregunta_desbloqueada = serializers.IntegerField(source='pregunta_desbloqueada.id')
 
     class Meta:
         model = DesbloqueoPregunta
