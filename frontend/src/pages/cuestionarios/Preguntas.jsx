@@ -162,6 +162,7 @@ const Preguntas = ({
   const calculateUnlockedQuestions = useCallback(
     (respuestas) => {
       const unlocked = new Set();
+      
       Object.entries(respuestas).forEach(([preguntaId, respuesta]) => {
         const pregunta = cuestionario.preguntas.find(
           (p) => p.id === parseInt(preguntaId, 10)
@@ -341,20 +342,13 @@ const Preguntas = ({
   useEffect(() => {
     const unlocked = calculateUnlockedQuestions(respuestas);
     setUnlockedQuestions(unlocked);
-  }, [respuestas, cuestionario.id]); // Solo depender del ID del cuestionario
+  }, [respuestas, calculateUnlockedQuestions]); // Incluir calculateUnlockedQuestions en las dependencias
 
   // Función para validar que los desbloqueos estén correctos
   const validateUnlocks = useCallback(() => {
     const unlocked = calculateUnlockedQuestions(respuestas);
     setUnlockedQuestions(unlocked);
   }, [respuestas, calculateUnlockedQuestions]);
-
-  // Efecto para validar desbloqueos cuando se cargan las respuestas
-  useEffect(() => {
-    if (Object.keys(respuestas).length > 0) {
-      validateUnlocks();
-    }
-  }, [respuestas, validateUnlocks]);
 
   // Cargar respuestas existentes
   const fetchRespuestas = async () => {
@@ -907,12 +901,12 @@ const Preguntas = ({
             },
           };
 
-          console.log(
-            `[DEBOUNCE] Respuesta pendiente para pregunta ${preguntaId}:`,
-            typeof respuesta === "string"
-              ? respuesta.substring(0, 50) + "..."
-              : respuesta
-          );
+          // console.log(
+          //   `[DEBOUNCE] Respuesta pendiente para pregunta ${preguntaId}:`,
+          //   typeof respuesta === "string"
+          //     ? respuesta.substring(0, 50) + "..."
+          //     : respuesta
+          // );
 
           // Crear nuevo timeout con delay para texto
           textDebounceRefs.current[preguntaId] = setTimeout(() => {
@@ -922,12 +916,12 @@ const Preguntas = ({
             // Verificar si la respuesta es diferente a la última enviada
             const lastSent = lastSentResponses.current[preguntaId];
             if (lastSent === pending.respuesta) {
-              console.log(
-                `[DEBOUNCE] Respuesta duplicada ignorada para pregunta ${preguntaId}:`,
-                typeof pending.respuesta === "string"
-                  ? pending.respuesta.substring(0, 50) + "..."
-                  : pending.respuesta
-              );
+              // console.log(
+              //   `[DEBOUNCE] Respuesta duplicada ignorada para pregunta ${preguntaId}:`,
+              //   typeof pending.respuesta === "string"
+              //     ? pending.respuesta.substring(0, 50) + "..."
+              //     : pending.respuesta
+              // );
               delete pendingResponses.current[preguntaId];
               return;
             }
@@ -943,12 +937,12 @@ const Preguntas = ({
               // Marcar esta respuesta como enviada
               lastSentResponses.current[preguntaId] = pending.respuesta;
               lastEnqueueTime.current[preguntaId] = now;
-              console.log(
-                `[DEBOUNCE] Respuesta enviada para pregunta ${preguntaId}:`,
-                typeof pending.respuesta === "string"
-                  ? pending.respuesta.substring(0, 50) + "..."
-                  : pending.respuesta
-              );
+              // console.log(
+              //   `[DEBOUNCE] Respuesta enviada para pregunta ${preguntaId}:`,
+              //   typeof pending.respuesta === "string"
+              //     ? pending.respuesta.substring(0, 50) + "..."
+              //     : pending.respuesta
+              // );
             } else {
               setNotificacion({
                 mensaje:
@@ -969,21 +963,21 @@ const Preguntas = ({
 
           // Throttling: solo permitir envío cada 1 segundo por pregunta
           if (lastTime && timeSinceLastEnqueue < 1000) {
-            console.log(
-              `[THROTTLE] Respuesta ignorada por throttling para pregunta ${preguntaId}. Tiempo desde último envío: ${timeSinceLastEnqueue}ms`
-            );
+            // console.log(
+            //   `[THROTTLE] Respuesta ignorada por throttling para pregunta ${preguntaId}. Tiempo desde último envío: ${timeSinceLastEnqueue}ms`
+            // );
             return;
           }
 
           // Verificar si la respuesta es diferente a la última enviada
           const lastSent = lastSentResponses.current[preguntaId];
           if (lastSent === respuesta) {
-            console.log(
-              `[THROTTLE] Respuesta duplicada ignorada para pregunta ${preguntaId}:`,
-              typeof respuesta === "string"
-                ? respuesta.substring(0, 50) + "..."
-                : respuesta
-            );
+            // console.log(
+            //   `[THROTTLE] Respuesta duplicada ignorada para pregunta ${preguntaId}:`,
+            //   typeof respuesta === "string"
+            //     ? respuesta.substring(0, 50) + "..."
+            //     : respuesta
+            // );
             return;
           }
 
@@ -1005,12 +999,12 @@ const Preguntas = ({
             // Marcar esta respuesta como enviada y actualizar timestamp
             lastSentResponses.current[preguntaId] = respuesta;
             lastEnqueueTime.current[preguntaId] = now;
-            console.log(
-              `[COLA] Respuesta agregada para pregunta ${preguntaId}:`,
-              typeof respuesta === "string"
-                ? respuesta.substring(0, 50) + "..."
-                : respuesta
-            );
+            // console.log(
+            //   `[COLA] Respuesta agregada para pregunta ${preguntaId}:`,
+            //   typeof respuesta === "string"
+            //     ? respuesta.substring(0, 50) + "..."
+            //     : respuesta
+            // );
           }
 
           if (!success) {
@@ -1808,13 +1802,15 @@ const Preguntas = ({
       </Box>
 
       {/* Componente de estado de la cola */}
-      <QueueStatus
-        queueLength={queueLength}
-        isProcessing={isProcessing}
-        onClearLogs={clearOldLogs}
-        onExportLogs={exportLogs}
-        getQueueStats={getQueueStats}
-      />
+      {import.meta.env.MODE === "development" && (
+        <QueueStatus
+          queueLength={queueLength}
+          isProcessing={isProcessing}
+          onClearLogs={clearOldLogs}
+          onExportLogs={exportLogs}
+          getQueueStats={getQueueStats}
+        />
+      )}
     </div>
   );
 };

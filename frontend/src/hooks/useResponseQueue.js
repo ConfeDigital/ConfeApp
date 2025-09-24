@@ -54,25 +54,25 @@ const useResponseQueue = () => {
         logHistoryRef.current.shift();
       }
 
-      if (LOGGING_CONFIG.groupLogs) {
-        console.group(`🔄 [COLA] ${event} - ${timestamp}`);
-      } else {
-        console.log(`🔄 [COLA] ${event} - ${timestamp}`);
-      }
+      // if (LOGGING_CONFIG.groupLogs) {
+      //   console.group(`🔄 [COLA] ${event} - ${timestamp}`);
+      // } else {
+      //   console.log(`🔄 [COLA] ${event} - ${timestamp}`);
+      // }
 
-      if (LOGGING_CONFIG.showQueueState) {
-        console.log("📊 Estado de la cola:", {
-          itemsEnCola: queue.length,
-          procesando: processing,
-          estados: responseStates,
-        });
-      }
+      // if (LOGGING_CONFIG.showQueueState) {
+      //   console.log("📊 Estado de la cola:", {
+      //     itemsEnCola: queue.length,
+      //     procesando: processing,
+      //     estados: responseStates,
+      //   });
+      // }
 
-      console.log("📝 Datos del evento:", logData);
+      // console.log("📝 Datos del evento:", logData);
 
-      if (LOGGING_CONFIG.groupLogs) {
-        console.groupEnd();
-      }
+      // if (LOGGING_CONFIG.groupLogs) {
+      //   console.groupEnd();
+      // }
     },
     [queue.length, processing, responseStates]
   );
@@ -385,14 +385,14 @@ const useResponseQueue = () => {
       }, {}),
     };
 
-    console.log("📊 Estadísticas de la Cola:", stats);
+    // console.log("📊 Estadísticas de la Cola:", stats);
     return stats;
   }, [queue.length, responseStates]);
 
   const clearOldLogs = useCallback(() => {
     logHistoryRef.current = [];
-    console.clear();
-    console.log("🧹 Logs de la cola limpiados");
+    // console.clear();
+    // console.log("🧹 Logs de la cola limpiados");
   }, []);
 
   const exportLogs = useCallback(() => {
@@ -411,19 +411,19 @@ const useResponseQueue = () => {
   const setNetworkLag = useCallback((lagMs, variationMs = 0) => {
     QUEUE_CONFIG.networkLagMs = lagMs;
     QUEUE_CONFIG.randomLagVariation = variationMs;
-    console.log(
-      `🌐 [LAG] Configurado: ${lagMs}ms base + ${variationMs}ms variación`
-    );
+    // console.log(
+    //   `🌐 [LAG] Configurado: ${lagMs}ms base + ${variationMs}ms variación`
+    // );
   }, []);
 
   const enableNetworkLag = useCallback(() => {
     QUEUE_CONFIG.simulateNetworkLag = true;
-    console.log("🌐 [LAG] Simulación de lag HABILITADA");
+    // console.log("🌐 [LAG] Simulación de lag HABILITADA");
   }, []);
 
   const disableNetworkLag = useCallback(() => {
     QUEUE_CONFIG.simulateNetworkLag = false;
-    console.log("🌐 [LAG] Simulación de lag DESHABILITADA");
+    // console.log("🌐 [LAG] Simulación de lag DESHABILITADA");
   }, []);
 
   const getLagConfig = useCallback(() => {
@@ -432,7 +432,7 @@ const useResponseQueue = () => {
       baseLag: QUEUE_CONFIG.networkLagMs,
       variation: QUEUE_CONFIG.randomLagVariation,
     };
-    console.log("🌐 [LAG] Configuración actual:", config);
+    // console.log("🌐 [LAG] Configuración actual:", config);
     return config;
   }, []);
 

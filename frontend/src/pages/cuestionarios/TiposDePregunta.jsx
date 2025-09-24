@@ -60,10 +60,10 @@ const TiposDePregunta = ({
 
   // Lógica de desbloqueo
   const isQuestionUnlocked = () => {
+    // Si la pregunta no tiene desbloqueos recibidos, siempre es visible
     if (pregunta.desbloqueos_recibidos.length === 0) return true;
-    return pregunta.desbloqueos_recibidos.some((desbloqueo) =>
-      unlockedQuestions.has(desbloqueo.pregunta_desbloqueada)
-    );
+    // Si tiene desbloqueos, solo es visible si está en unlockedQuestions
+    return unlockedQuestions.has(pregunta.id);
   };
 
   // Si la pregunta no está desbloqueada, no renderizar nada

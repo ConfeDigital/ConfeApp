@@ -99,7 +99,13 @@ const ProfileField = ({
         setValue(displayValue);
         // Notify parent component of the loaded value
         if (setSeleccionOpcion && displayValue !== null) {
-          setSeleccionOpcion(displayValue.toString());
+          // For boolean fields, send the text value for unlocking mechanism
+          if (fieldMetadata?.type === "boolean") {
+            const textValue = displayValue === 0 ? "Sí" : "No";
+            setSeleccionOpcion(textValue);
+          } else {
+            setSeleccionOpcion(displayValue.toString());
+          }
         }
       } else {
         setValue(null);
@@ -186,7 +192,13 @@ const ProfileField = ({
 
     // Immediately notify parent component for validation purposes
     if (setSeleccionOpcion && initialLoaded) {
-      setSeleccionOpcion(newValue?.toString() || "");
+      // For boolean fields, send the text value for unlocking mechanism
+      if (fieldMetadata?.type === "boolean") {
+        const textValue = newValue === 0 ? "Sí" : "No";
+        setSeleccionOpcion(textValue);
+      } else {
+        setSeleccionOpcion(newValue?.toString() || "");
+      }
     }
 
     if (!initialLoaded) return;
