@@ -85,6 +85,13 @@ const CandidateConsult = ({ estadoFiltro = null, onRowClick = null }) => {
       headerName: "Domicilio", // Changed header to "Domicilio" as it represents the domicile info
       flex: 1,
       minWidth: 120,
+      cellClassName: (params) => {
+        // Check if the domicile object exists and if address_lng is missing or an empty string
+        if (params.row.domicile && (!params.row.domicile.address_lng || params.row.domicile.address_lng === '')) {
+          return 'warning-cell';
+        }
+        return '';
+      },
       renderCell: (params) => {
         const municipio = params.value;
         const domicile = params.row.domicile; // Access the full domicile object from the row data
