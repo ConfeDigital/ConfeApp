@@ -57,3 +57,7 @@
   background-color: rgba(240, 240, 240, 0.7) !important; /* Keep the background consistent on hover */
   cursor: default; /* Change cursor if interactions are implied to be disabled */
 }
+
+.warning-cell {
+  background-color: var(--mui-palette-warning-light) !important;
+}
