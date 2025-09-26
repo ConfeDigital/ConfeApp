@@ -10,6 +10,11 @@
 export const getErrorMessage = (error) => {
   if (!error) return 'Error desconocido';
 
+  // Handle string errors (like Yup validation errors)
+  if (typeof error === 'string') {
+    return error;
+  }
+
   // Handle network errors
   if (!error.response) {
     return 'Error de conexión. Verifique su conexión a internet.';

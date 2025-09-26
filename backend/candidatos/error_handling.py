@@ -169,7 +169,30 @@ def handle_serializer_errors(serializer_errors, custom_message="Error de validac
     Handle serializer validation errors and return formatted response
     """
     logger.error(f"Serializer validation errors: {serializer_errors}")
-    return create_error_response(serializer_errors, message=custom_message)
+    
+    # Create detailed error message with specific field errors
+    formatted_errors = format_validation_errors(serializer_errors)
+    error_details = []
+    
+    for field, errors in formatted_errors.items():
+        if isinstance(errors, list):
+            for error in errors:
+                error_details.append(f"{field}: {error}")
+        else:
+            error_details.append(f"{field}: {errors}")
+    
+    # Create a more specific message
+    if error_details:
+        detailed_message = f"Se encontraron {len(error_details)} errores de validación:\n" + "\n".join(error_details)
+    else:
+        detailed_message = custom_message
+    
+    return Response({
+        'success': False,
+        'message': detailed_message,
+        'errors': formatted_errors,
+        'error_count': sum(len(err) if isinstance(err, list) else 1 for err in formatted_errors.values())
+    }, status=status.HTTP_400_BAD_REQUEST)
 
 def handle_exception_errors(exception, custom_message="Error interno del servidor"):
     """
