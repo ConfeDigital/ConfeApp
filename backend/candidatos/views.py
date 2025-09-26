@@ -26,7 +26,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from .utils import process_excel_file
-from .error_handling import handle_serializer_errors, handle_exception_errors, create_error_response
+from .error_handling import format_validation_errors, handle_serializer_errors, handle_exception_errors, create_error_response
 import json
 from django.shortcuts import get_object_or_404
 from rest_framework.parsers import MultiPartParser
@@ -40,12 +40,20 @@ class BulkCandidateUploadView(APIView):
     def post(self, request):
         excel_file = request.FILES.get("file")
         if not excel_file:
-            return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                "success": False,
+                "message": "No se proporcionó ningún archivo",
+                "errors": {"file": ["Debe seleccionar un archivo Excel"]}
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             candidates_data, pre_validation_errors = process_excel_file(excel_file)
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                "success": False,
+                "message": "Error al procesar el archivo Excel",
+                "errors": {"file": [str(e)]}
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         successfully_processed = 0
         errors = []
@@ -63,17 +71,21 @@ class BulkCandidateUploadView(APIView):
                 try:
                     user = serializer.save()
                     successfully_processed += 1
+                    print(f"DEBUG VIEW: Candidato {index + 1} creado exitosamente: {user.email}")
                 except Exception as e:
+                    print(f"DEBUG VIEW: Error creando candidato {index + 1}: {e}")
                     errors.append({
                         "index": index + 1,
                         "input": candidate_data,
                         "errors": {"non_field_errors": [str(e)]}
                     })
             else:
+                # Formatear errores usando el sistema de error handling
+                formatted_errors = format_validation_errors(serializer.errors)
                 errors.append({
                     "index": index + 1,
                     "input": candidate_data,
-                    "errors": serializer.errors
+                    "errors": formatted_errors
                 })
 
         # Limpiar errores para evitar problemas de JSON
@@ -94,9 +106,17 @@ class BulkCandidateUploadView(APIView):
             except Exception:
                 cleaned_errors.append("Error no serializable")
         
+        # Determinar si la operación fue exitosa
+        total_candidates = len(candidates_data)
+        has_errors = len(cleaned_errors) > 0
+        
         return Response({
+            "success": successfully_processed > 0,
+            "message": f"Procesamiento completado. {successfully_processed} de {total_candidates} candidatos procesados exitosamente",
             "successfully_processed": successfully_processed,
-            "errors": cleaned_errors
+            "total_candidates": total_candidates,
+            "errors": cleaned_errors,
+            "error_count": len(cleaned_errors)
         })
 
 

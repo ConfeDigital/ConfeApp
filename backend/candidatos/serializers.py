@@ -792,22 +792,22 @@ class CandidateRegisterSerializer(UserCreateSerializer):
 
 class BulkCandidateCreateSerializer(serializers.ModelSerializer):
     # Campos del usuario
-    first_name = serializers.CharField(write_only=True, required=False)
-    last_name = serializers.CharField(write_only=True, required=False)
-    second_last_name = serializers.CharField(write_only=True, required=False)
+    first_name = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    last_name = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    second_last_name = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     email = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
-    password = serializers.CharField(write_only=True, required=False)
+    password = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     
     # Campos del perfil
-    birth_date = serializers.DateField(write_only=True, required=False)
-    gender = serializers.CharField(write_only=True, required=False)
+    birth_date = serializers.DateField(write_only=True, required=False, allow_null=True)
+    gender = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     curp = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     rfc = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     nss = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
-    phone_number = serializers.CharField(write_only=True, required=False)
-    stage = serializers.CharField(write_only=True, required=False)
-    disability = serializers.ListField(write_only=True, required=False)
-    cycle = serializers.IntegerField(write_only=True, required=False)
+    phone_number = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    stage = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
+    disability = serializers.ListField(write_only=True, required=False, allow_null=True)
+    cycle = serializers.IntegerField(write_only=True, required=False, allow_null=True)
     
     # Campos booleanos (solo los que existen en el modelo)
     has_disability_certificate = serializers.BooleanField(write_only=True, required=False)
@@ -825,7 +825,7 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
     allergies = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     dietary_restrictions = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
     physical_restrictions = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
-    medications = serializers.ListField(write_only=True, required=False)
+    medications = serializers.ListField(write_only=True, required=False, allow_null=True)
     
     # Campos de agencia
     agency_state = serializers.CharField(write_only=True, required=False, allow_null=True, allow_blank=True)
@@ -1200,6 +1200,52 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
         # MANEJAR CONTACTOS DE EMERGENCIA (usando campos individuales)
         emergency_contacts_list = []
         
+        # Mapeo de relaciones para convertir texto a códigos de base de datos
+        relationship_mapping = {
+            'PADRE': 'PADRE', 'Padre': 'PADRE', 'padre': 'PADRE',
+            'MADRE': 'MADRE', 'Madre': 'MADRE', 'madre': 'MADRE',
+            'HERMANO': 'HERMANO', 'Hermano': 'HERMANO', 'hermano': 'HERMANO',
+            'HERMANA': 'HERMANA', 'Hermana': 'HERMANA', 'hermana': 'HERMANA',
+            'PAREJA': 'PAREJA', 'Pareja': 'PAREJA', 'pareja': 'PAREJA',
+            'ABUELO': 'ABUELO', 'Abuelo': 'ABUELO', 'abuelo': 'ABUELO',
+            'ABUELA': 'ABUELA', 'Abuela': 'ABUELA', 'abuela': 'ABUELA',
+            'HIJO': 'HIJO', 'Hijo': 'HIJO', 'hijo': 'HIJO',
+            'HIJA': 'HIJA', 'Hija': 'HIJA', 'hija': 'HIJA',
+            'OTRO FAM': 'OTRO FAM', 'Otro Familiar': 'OTRO FAM', 'otro familiar': 'OTRO FAM',
+            'AMIGO': 'AMIGO', 'Amigo': 'AMIGO', 'amigo': 'AMIGO',
+            'AMIGA': 'AMIGA', 'Amiga': 'AMIGA', 'amiga': 'AMIGA',
+            'OTRO': 'OTRO', 'Otro': 'OTRO', 'otro': 'OTRO',
+        }
+        
+        def normalize_relationship(relationship_value):
+            """Normaliza el valor de relación al código de base de datos"""
+            if not relationship_value:
+                return None
+            return relationship_mapping.get(relationship_value, 'OTRO')
+        
+        def create_emergency_contact(contact_data, contact_type="unknown"):
+            """Crea un contacto de emergencia con validación"""
+            # Normalizar la relación
+            if 'relationship' in contact_data and contact_data['relationship']:
+                contact_data['relationship'] = normalize_relationship(contact_data['relationship'])
+            
+            # Establecer lives_at_same_address por defecto como True
+            # Solo será False si explícitamente se especifica otro domicilio
+            contact_data['lives_at_same_address'] = contact_data.get('lives_at_same_address', True)
+            
+            # Validar campos requeridos
+            if not contact_data.get('first_name') or not contact_data.get('last_name') or not contact_data.get('relationship'):
+                print(f"DEBUG SERIALIZER: Contacto {contact_type} omitido - faltan campos requeridos")
+                return None
+            
+            try:
+                contact = EmergencyContact.objects.create(**contact_data)
+                print(f"DEBUG SERIALIZER: Contacto {contact_type} creado: {contact.first_name} {contact.last_name} ({contact.relationship})")
+                return contact
+            except Exception as e:
+                print(f"DEBUG SERIALIZER: Error creando contacto {contact_type}: {e}")
+                return None
+        
         # Procesar contacto individual (legacy)
         if any(validated_data.get(field) for field in ['emergency_first_name', 'emergency_last_name', 'emergency_relationship']):
             print(f"DEBUG SERIALIZER: Procesando contacto legacy para {user.first_name}")
@@ -1210,14 +1256,11 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
                 'relationship': validated_data.pop('emergency_relationship', None),
                 'phone_number': validated_data.pop('emergency_phone', None),
                 'email': validated_data.pop('emergency_email', None),
-                'lives_at_same_address': False
             }
             
-            # Solo crear si tiene los campos mínimos
-            if contact_data['first_name'] and contact_data['last_name'] and contact_data['relationship']:
-                contact = EmergencyContact.objects.create(**contact_data)
+            contact = create_emergency_contact(contact_data, "legacy")
+            if contact:
                 emergency_contacts_list.append(contact)
-                print(f"DEBUG SERIALIZER: Contacto legacy creado: {contact.first_name} {contact.last_name}")
         
         # Procesar múltiples contactos (nuevo formato)
         for contact_num in range(1, 6):  # 1, 2, 3, 4, 5
@@ -1233,12 +1276,11 @@ class BulkCandidateCreateSerializer(serializers.ModelSerializer):
                     'relationship': relationship,
                     'phone_number': validated_data.pop(f'emergency_phone_{contact_num}', None),
                     'email': validated_data.pop(f'emergency_email_{contact_num}', None),
-                    'lives_at_same_address': False
                 }
                 
-                contact = EmergencyContact.objects.create(**contact_data)
-                emergency_contacts_list.append(contact)
-                print(f"DEBUG SERIALIZER: Contacto {contact_num} creado: {contact.first_name} {contact.last_name}")
+                contact = create_emergency_contact(contact_data, f"{contact_num}")
+                if contact:
+                    emergency_contacts_list.append(contact)
         
         # Asignar todos los contactos usando .set()
         if emergency_contacts_list:
