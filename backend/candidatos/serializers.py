@@ -8,6 +8,7 @@ from discapacidad.models import TechnicalAid, SISHelp, CHItem
 from discapacidad.serializers import TechnicalAidSerializer, SISHelpFlatSerializer, CHItemSerializer
 from .models import UserProfile, EmergencyContact, Cycle, Domicile, Medication, Disability, TAidCandidateHistory, SISAidCandidateHistory, CHAidCandidateHistory, CandidatoHabilidadEvaluada
 from api.fields import SASImageField, SASFileField
+from .error_handling import SpanishValidationError, translate_field_name, translate_error_message, validate_required_fields, validate_field_format
 import json
 
 User = get_user_model()
@@ -243,14 +244,34 @@ class CandidateListSerializer(serializers.ModelSerializer):
 
 class CandidateCreateSerializer(serializers.ModelSerializer):
     # Profile fields
-    birth_date = serializers.DateField(write_only=True)
-    gender = serializers.ChoiceField(choices=UserProfile.GENDER_CHOICES, write_only=True)
-    curp = serializers.CharField(write_only=True, required=False)
-    rfc = serializers.CharField(write_only=True, required=False)
-    nss = serializers.CharField(write_only=True, required=False)
-    phone_number = serializers.CharField(write_only=True)
-    stage = serializers.CharField(write_only=True, required=False, default='Reg')
-    photo = serializers.ImageField(write_only=True, required=False)
+    birth_date = serializers.DateField(write_only=True, error_messages={
+        'required': 'La fecha de nacimiento es obligatoria',
+        'invalid': 'Ingrese una fecha válida'
+    })
+    gender = serializers.ChoiceField(choices=UserProfile.GENDER_CHOICES, write_only=True, error_messages={
+        'required': 'El género es obligatorio',
+        'invalid_choice': 'Seleccione un género válido'
+    })
+    curp = serializers.CharField(write_only=True, required=False, allow_blank=True, error_messages={
+        'invalid': 'Ingrese un CURP válido'
+    })
+    rfc = serializers.CharField(write_only=True, required=False, allow_blank=True, error_messages={
+        'invalid': 'Ingrese un RFC válido'
+    })
+    nss = serializers.CharField(write_only=True, required=False, allow_blank=True, error_messages={
+        'invalid': 'Ingrese un NSS válido'
+    })
+    phone_number = serializers.CharField(write_only=True, error_messages={
+        'required': 'El número de teléfono es obligatorio',
+        'invalid': 'Ingrese un número de teléfono válido'
+    })
+    stage = serializers.CharField(write_only=True, required=False, default='Reg', error_messages={
+        'invalid_choice': 'Seleccione una etapa válida'
+    })
+    photo = serializers.ImageField(write_only=True, required=False, error_messages={
+        'invalid_image': 'El archivo debe ser una imagen válida',
+        'invalid': 'Formato de imagen no válido'
+    })
     
     receives_pension = serializers.CharField(write_only=True, required=False, allow_blank=True)
     social_security = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -306,6 +327,60 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
             'disability', 'cycle', 'emergency_contacts', 'photo'
         ]
         extra_kwargs = {'password': {'write_only': True}}
+
+    def validate_email(self, value):
+        """Validate email format"""
+        if value:
+            validate_field_format('email', value, 'email')
+        return value
+
+    def validate_phone_number(self, value):
+        """Validate phone number format"""
+        if value:
+            validate_field_format('phone_number', value, 'phone')
+        return value
+
+    def validate_curp(self, value):
+        """Validate CURP format"""
+        if value:
+            validate_field_format('curp', value, 'curp')
+        return value
+
+    def validate_rfc(self, value):
+        """Validate RFC format"""
+        if value:
+            validate_field_format('rfc', value, 'rfc')
+        return value
+
+    def validate_nss(self, value):
+        """Validate NSS format"""
+        if value:
+            validate_field_format('nss', value, 'nss')
+        return value
+
+    def validate_emergency_contacts(self, value):
+        """Validate emergency contacts"""
+        if not value:
+            return value
+        
+        for i, contact in enumerate(value):
+            if not isinstance(contact, dict):
+                continue
+                
+            # Validate required fields for each contact
+            required_contact_fields = ['first_name', 'last_name', 'relationship']
+            missing_fields = []
+            
+            for field in required_contact_fields:
+                if not contact.get(field):
+                    missing_fields.append(f"{translate_field_name(field)} (Contacto {i+1})")
+            
+            if missing_fields:
+                raise SpanishValidationError({
+                    f'contacto_{i+1}': [f"Campos obligatorios: {', '.join(missing_fields)}"]
+                })
+        
+        return value
 
     def create(self, validated_data):
         photo = validated_data.pop('photo', None)
@@ -414,13 +489,27 @@ class CandidateCreateSerializer(serializers.ModelSerializer):
     
 class CandidateUpdateSerializer(serializers.ModelSerializer):
     # Define the same write-only fields as in CandidateCreateSerializer
-    birth_date = serializers.DateField(write_only=True, required=False)
-    gender = serializers.ChoiceField(choices=UserProfile.GENDER_CHOICES, write_only=True, required=False)
-    curp = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    rfc = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    nss = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    phone_number = serializers.CharField(write_only=True, required=False)
-    stage = serializers.CharField(write_only=True, required=False)
+    birth_date = serializers.DateField(write_only=True, required=False, error_messages={
+        'invalid': 'Ingrese una fecha válida'
+    })
+    gender = serializers.ChoiceField(choices=UserProfile.GENDER_CHOICES, write_only=True, required=False, error_messages={
+        'invalid_choice': 'Seleccione un género válido'
+    })
+    curp = serializers.CharField(write_only=True, required=False, allow_blank=True, error_messages={
+        'invalid': 'Ingrese un CURP válido'
+    })
+    rfc = serializers.CharField(write_only=True, required=False, allow_blank=True, error_messages={
+        'invalid': 'Ingrese un RFC válido'
+    })
+    nss = serializers.CharField(write_only=True, required=False, allow_blank=True, error_messages={
+        'invalid': 'Ingrese un NSS válido'
+    })
+    phone_number = serializers.CharField(write_only=True, required=False, error_messages={
+        'invalid': 'Ingrese un número de teléfono válido'
+    })
+    stage = serializers.CharField(write_only=True, required=False, error_messages={
+        'invalid_choice': 'Seleccione una etapa válida'
+    })
     
     receives_pension = serializers.CharField(write_only=True, required=False, allow_blank=True)
     social_security = serializers.CharField(write_only=True, required=False, allow_blank=True)
@@ -468,6 +557,60 @@ class CandidateUpdateSerializer(serializers.ModelSerializer):
             'address_municip', 'address_col', 'address_state', 'address_city', 'address_lat', 'address_lng', 'residence_type',
             'disability', 'cycle', 'emergency_contacts', 'agency_state',
         ]
+
+    def validate_email(self, value):
+        """Validate email format"""
+        if value:
+            validate_field_format('email', value, 'email')
+        return value
+
+    def validate_phone_number(self, value):
+        """Validate phone number format"""
+        if value:
+            validate_field_format('phone_number', value, 'phone')
+        return value
+
+    def validate_curp(self, value):
+        """Validate CURP format"""
+        if value:
+            validate_field_format('curp', value, 'curp')
+        return value
+
+    def validate_rfc(self, value):
+        """Validate RFC format"""
+        if value:
+            validate_field_format('rfc', value, 'rfc')
+        return value
+
+    def validate_nss(self, value):
+        """Validate NSS format"""
+        if value:
+            validate_field_format('nss', value, 'nss')
+        return value
+
+    def validate_emergency_contacts(self, value):
+        """Validate emergency contacts"""
+        if not value:
+            return value
+        
+        for i, contact in enumerate(value):
+            if not isinstance(contact, dict):
+                continue
+                
+            # Validate required fields for each contact
+            required_contact_fields = ['first_name', 'last_name', 'relationship']
+            missing_fields = []
+            
+            for field in required_contact_fields:
+                if not contact.get(field):
+                    missing_fields.append(f"{translate_field_name(field)} (Contacto {i+1})")
+            
+            if missing_fields:
+                raise SpanishValidationError({
+                    f'contacto_{i+1}': [f"Campos obligatorios: {', '.join(missing_fields)}"]
+                })
+        
+        return value
 
     def update(self, instance, validated_data):
         # Update user fields
