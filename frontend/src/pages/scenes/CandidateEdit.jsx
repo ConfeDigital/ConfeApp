@@ -18,6 +18,7 @@ import AccordionHeader from "../../components/candidate_create/AccordionHeader";
 
 import useDocumentTitle from "../../hooks/useDocumentTitle";
 import { processValidationErrors, formatErrorMessage } from "../../components/candidate_create/validationUtils";
+import { getErrorMessage, formatErrorForDisplay, createErrorHandler, handleSuccessResponse, clearErrorStates } from "../../utils/errorHandling";
 
 const CandidateEdit = () => {
   useDocumentTitle('Editar Candidato');
@@ -220,7 +221,7 @@ const CandidateEdit = () => {
   }, [uid, reset]);
 
   const onSubmit = async (formData) => {
-    setError('');
+    clearErrorStates(setError);
     setLoading(true);
 
     if (formData.birth_date) {
@@ -231,7 +232,7 @@ const CandidateEdit = () => {
     delete fieldsData.photo;
     try {
       // Update candidate fields as JSON
-      await axios.put(`/api/candidatos/editar/${uid}/`, fieldsData, {
+      const response = await axios.put(`/api/candidatos/editar/${uid}/`, fieldsData, {
         headers: { 'Content-Type': 'application/json' }
       });
     
@@ -248,9 +249,13 @@ const CandidateEdit = () => {
           headers: { "Content-Type": "multipart/form-data" },
         });
       } 
+      
+      // Show success message and redirect
+      handleSuccessResponse(response, () => {}, "Candidato actualizado exitosamente");
       navigate(`/candidatos/${uid}`);
     } catch (err) {
-      setError(err);
+      const errorHandler = createErrorHandler(setError);
+      errorHandler(err);
       console.error(err);
     }    
     setLoading(false);
@@ -383,11 +388,7 @@ const CandidateEdit = () => {
             whiteSpace: 'pre-line'
           }}
         >
-          {typeof error === 'string'
-            ? error
-            : (error.response?.data?.detail 
-               || JSON.stringify(error.response?.data) 
-               || 'Unknown error')}
+          {getErrorMessage(error)}
         </Alert>
       </Snackbar>
     </Box>

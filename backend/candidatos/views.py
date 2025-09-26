@@ -26,6 +26,7 @@ from django.contrib.auth.tokens import default_token_generator
 from django.core.files.storage import default_storage
 from django.core.files.base import ContentFile
 from .utils import process_excel_file
+from .error_handling import format_validation_errors, handle_serializer_errors, handle_exception_errors, create_error_response
 import json
 from django.shortcuts import get_object_or_404
 from rest_framework.parsers import MultiPartParser
@@ -39,12 +40,20 @@ class BulkCandidateUploadView(APIView):
     def post(self, request):
         excel_file = request.FILES.get("file")
         if not excel_file:
-            return Response({"error": "No file provided."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                "success": False,
+                "message": "No se proporcionó ningún archivo",
+                "errors": {"file": ["Debe seleccionar un archivo Excel"]}
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             candidates_data, pre_validation_errors = process_excel_file(excel_file)
         except ValueError as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                "success": False,
+                "message": "Error al procesar el archivo Excel",
+                "errors": {"file": [str(e)]}
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         successfully_processed = 0
         errors = []
@@ -62,17 +71,21 @@ class BulkCandidateUploadView(APIView):
                 try:
                     user = serializer.save()
                     successfully_processed += 1
+                    print(f"DEBUG VIEW: Candidato {index + 1} creado exitosamente: {user.email}")
                 except Exception as e:
+                    print(f"DEBUG VIEW: Error creando candidato {index + 1}: {e}")
                     errors.append({
                         "index": index + 1,
                         "input": candidate_data,
                         "errors": {"non_field_errors": [str(e)]}
                     })
             else:
+                # Formatear errores usando el sistema de error handling
+                formatted_errors = format_validation_errors(serializer.errors)
                 errors.append({
                     "index": index + 1,
                     "input": candidate_data,
-                    "errors": serializer.errors
+                    "errors": formatted_errors
                 })
 
         # Limpiar errores para evitar problemas de JSON
@@ -93,9 +106,17 @@ class BulkCandidateUploadView(APIView):
             except Exception:
                 cleaned_errors.append("Error no serializable")
         
+        # Determinar si la operación fue exitosa
+        total_candidates = len(candidates_data)
+        has_errors = len(cleaned_errors) > 0
+        
         return Response({
+            "success": successfully_processed > 0,
+            "message": f"Procesamiento completado. {successfully_processed} de {total_candidates} candidatos procesados exitosamente",
             "successfully_processed": successfully_processed,
-            "errors": cleaned_errors
+            "total_candidates": total_candidates,
+            "errors": cleaned_errors,
+            "error_count": len(cleaned_errors)
         })
 
 
@@ -214,15 +235,30 @@ class CandidateCreateAPIView(generics.CreateAPIView):
         user.groups.set([group])
 
     def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        candidate = serializer.instance
+        try:
+            serializer = self.get_serializer(data=request.data)
+            if not serializer.is_valid():
+                return handle_serializer_errors(
+                    serializer.errors, 
+                    "Error al crear el candidato. Por favor, revise los datos ingresados."
+                )
+            
+            self.perform_create(serializer)
+            candidate = serializer.instance
 
-        return Response(
-            {"message": "Candidate created successfully", "user_id": candidate.id},
-            status=status.HTTP_201_CREATED,
-        )
+            return Response({
+                "success": True,
+                "message": "Candidato creado exitosamente",
+                "user_id": candidate.id,
+                "data": {
+                    "id": candidate.id,
+                    "email": candidate.email,
+                    "name": f"{candidate.first_name} {candidate.last_name} {candidate.second_last_name}".strip()
+                }
+            }, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return handle_exception_errors(e, "Error interno al crear el candidato")
 
 class CandidateUpdateAPIView(generics.RetrieveUpdateAPIView):
     permission_classes = [IsAuthenticated, PersonalPermission, IsInSameCenter]
@@ -239,15 +275,34 @@ class CandidateUpdateAPIView(generics.RetrieveUpdateAPIView):
             raise NotFound("Candidate not found.")
         
     def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        self.check_object_permissions(request, instance)
-        data = request.data.copy()
-        serializer = self.get_serializer(
-            instance, data=data, partial=kwargs.get('partial', False)
-        )
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data)
+        try:
+            instance = self.get_object()
+            self.check_object_permissions(request, instance)
+            data = request.data.copy()
+            serializer = self.get_serializer(
+                instance, data=data, partial=kwargs.get('partial', False)
+            )
+            
+            if not serializer.is_valid():
+                return handle_serializer_errors(
+                    serializer.errors,
+                    "Error al actualizar el candidato. Por favor, revise los datos ingresados."
+                )
+            
+            self.perform_update(serializer)
+            
+            return Response({
+                "success": True,
+                "message": "Candidato actualizado exitosamente",
+                "data": {
+                    "id": instance.id,
+                    "email": instance.email,
+                    "name": f"{instance.first_name} {instance.last_name} {instance.second_last_name}".strip()
+                }
+            })
+            
+        except Exception as e:
+            return handle_exception_errors(e, "Error interno al actualizar el candidato")
         
 class CandidateRegisterView(generics.CreateAPIView):
     permission_classes = [AllowAny]
@@ -287,15 +342,31 @@ class CandidatePhotoUploadAPIView(generics.UpdateAPIView):
             raise NotFound("Candidate profile not found.")
 
     def update(self, request, *args, **kwargs):
-        # This view expects only the photo in the payload
-        instance = self.get_object()
-        self.check_object_permissions(request, instance)
-        partial = kwargs.pop('partial', True)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        try:
+            # This view expects only the photo in the payload
+            instance = self.get_object()
+            self.check_object_permissions(request, instance)
+            partial = kwargs.pop('partial', True)
+            serializer = self.get_serializer(instance, data=request.data, partial=partial)
+            
+            if not serializer.is_valid():
+                return handle_serializer_errors(
+                    serializer.errors,
+                    "Error al subir la foto. Por favor, verifique que el archivo sea una imagen válida."
+                )
+            
+            self.perform_update(serializer)
+            
+            return Response({
+                "success": True,
+                "message": "Foto actualizada exitosamente",
+                "data": {
+                    "photo_url": serializer.data.get('photo')
+                }
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return handle_exception_errors(e, "Error interno al subir la foto")
 
 class TAidCandidateHistoryViewSet(viewsets.ModelViewSet):
     serializer_class = TAidCandidateHistorySerializer
@@ -445,9 +516,15 @@ class CandidateDomicileUpdateAPIView(APIView):
         
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Domicile updated successfully"}, status=status.HTTP_200_OK)
+            return Response({
+                "success": True,
+                "message": "Domicilio actualizado exitosamente"
+            }, status=status.HTTP_200_OK)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return handle_serializer_errors(
+            serializer.errors,
+            "Error al actualizar el domicilio. Por favor, revise los datos ingresados."
+        )
 
 
 class CandidateDomicileMeAPIView(APIView):
@@ -488,9 +565,15 @@ class CandidateDomicileMeAPIView(APIView):
 
         if serializer.is_valid():
             serializer.save()
-            return Response({"message": "Domicile updated successfully"}, status=status.HTTP_200_OK)
+            return Response({
+                "success": True,
+                "message": "Domicilio actualizado exitosamente"
+            }, status=status.HTTP_200_OK)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return handle_serializer_errors(
+            serializer.errors,
+            "Error al actualizar el domicilio. Por favor, revise los datos ingresados."
+        )
 
 
 class EmergencyContactUpdateAPIView(APIView):
@@ -529,9 +612,15 @@ class EmergencyContactUpdateAPIView(APIView):
         if serializer.is_valid():
             contacts = serializer.save()
             candidate_profile.emergency_contacts.set(contacts)
-            return Response({"message": "Contactos de emergencia actualizados"}, status=status.HTTP_200_OK)
+            return Response({
+                "success": True,
+                "message": "Contactos de emergencia actualizados exitosamente"
+            }, status=status.HTTP_200_OK)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return handle_serializer_errors(
+            serializer.errors,
+            "Error al procesar la solicitud. Por favor, revise los datos ingresados."
+        )
     
 class EmergencyContactMeAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -569,9 +658,15 @@ class EmergencyContactMeAPIView(APIView):
         if serializer.is_valid():
             contacts = serializer.save()
             candidate_profile.emergency_contacts.set(contacts)
-            return Response({"message": "Contactos de emergencia actualizados"}, status=status.HTTP_200_OK)
+            return Response({
+                "success": True,
+                "message": "Contactos de emergencia actualizados exitosamente"
+            }, status=status.HTTP_200_OK)
         
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return handle_serializer_errors(
+            serializer.errors,
+            "Error al procesar la solicitud. Por favor, revise los datos ingresados."
+        )
 
 
 class DatosMedicosAPIView(APIView):
@@ -697,7 +792,10 @@ class SISAidCandidateHistoryCreateAPIView(APIView):
             update_change_reason(instance, f"Creado/modificado con resultado: {instance.is_successful}")
             print("🧠 Objeto creado:", instance)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return handle_serializer_errors(
+            serializer.errors,
+            "Error al procesar la solicitud. Por favor, revise los datos ingresados."
+        )
 
 
 class SISAidCandidateHistoryListAPIView(generics.ListAPIView):
@@ -746,7 +844,10 @@ class SISAidCandidateHistoryDetailAPIView(APIView):
             print("🧠 Object updated:", instance)
             return Response(serializer.data, status=status.HTTP_200_OK)
         print("❌ Validation errors:", serializer.errors)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return handle_serializer_errors(
+            serializer.errors,
+            "Error al procesar la solicitud. Por favor, revise los datos ingresados."
+        )
 
     def delete(self, request, pk):
         print(f"🗑️ DELETE received for ID {pk}")
@@ -798,7 +899,10 @@ class TAidCandidateHistoryCreateAPIView(APIView):
             update_change_reason(instance, f"Creado/modificado con resultado: {instance.is_successful}")
             print("🧠 Objeto creado:", instance)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return handle_serializer_errors(
+            serializer.errors,
+            "Error al procesar la solicitud. Por favor, revise los datos ingresados."
+        )
 
 
 class TAidCandidateHistoryListAPIView(generics.ListAPIView):
@@ -870,7 +974,10 @@ class CHAidCandidateHistoryCreateAPIView(APIView):
                 update_change_reason(instance, f"Creado/modificado con resultado: {instance.is_successful}")
                 print("🧠 Objeto creado:", instance)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return handle_serializer_errors(
+            serializer.errors,
+            "Error al procesar la solicitud. Por favor, revise los datos ingresados."
+        )
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 

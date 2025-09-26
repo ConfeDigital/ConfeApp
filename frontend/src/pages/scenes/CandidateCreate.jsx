@@ -27,6 +27,7 @@ import AccordionHeader from "../../components/candidate_create/AccordionHeader";
 
 import useDocumentTitle from "../../hooks/useDocumentTitle";
 import { processValidationErrors, formatErrorMessage } from "../../components/candidate_create/validationUtils";
+import { getErrorMessage, formatErrorForDisplay, createErrorHandler, handleSuccessResponse, clearErrorStates } from "../../utils/errorHandling";
 
 const CandidateCreate = () => {
   useDocumentTitle('Crear Candidato');
@@ -124,7 +125,7 @@ const CandidateCreate = () => {
   }, [errors]); // <-- Dependencia ajustada para evitar el bucle
 
   const onSubmit = async (formData) => {
-    setError("");
+    clearErrorStates(setError);
     setLoading(true);
 
     if (formData.birth_date) {
@@ -157,9 +158,12 @@ const CandidateCreate = () => {
         });
       }
     
+      // Show success message and redirect
+      handleSuccessResponse(response, () => {}, "Candidato creado exitosamente");
       navigate(`/candidatos/${user_id}`); // Redirect to candidate profile or list
     } catch (err) {
-      setError(err);
+      const errorHandler = createErrorHandler(setError);
+      errorHandler(err);
       console.error(err);
     }    
 
@@ -278,11 +282,7 @@ const CandidateCreate = () => {
             whiteSpace: 'pre-line'
           }}
         >
-          {typeof error === 'string'
-            ? error
-            : (error.response?.data?.detail
-              || JSON.stringify(error.response?.data)
-              || 'Unknown error')}
+          {getErrorMessage(error)}
         </Alert>
       </Snackbar>
     </Box>
